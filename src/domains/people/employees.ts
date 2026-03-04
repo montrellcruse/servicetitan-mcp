@@ -199,7 +199,7 @@ export function registerPeopleEmployeeTools(
   });
 
   registry.register({
-    name: "people_employees_account_actions",
+    name: "people_employees_accountactions",
     domain: "people",
     operation: "write",
     description: "Run account actions for an employee",

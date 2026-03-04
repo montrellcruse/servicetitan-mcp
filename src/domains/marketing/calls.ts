@@ -12,14 +12,6 @@ import {
   toolResult,
 } from "../../utils.js";
 
-const optOutCreateSchema = z.object({
-  contactNumbers: z.array(z.string()).describe("Phone numbers to opt out"),
-});
-
-const optOutLookupSchema = z.object({
-  contactNumbers: z.array(z.string()).describe("Phone numbers to check"),
-});
-
 const callIdSchema = z.object({
   id: z.number().int().describe("Call ID"),
 });
@@ -34,16 +26,8 @@ const v3CallsListSchema = paginationParams(
     z.object({
       ...activeFilterParam(),
       ids: z.string().optional().describe("Comma-delimited call IDs"),
-      createdAfter: z
-        .string()
-        .datetime()
-        .optional()
-        .describe("Created after this UTC timestamp"),
-      modifiedAfter: z
-        .string()
-        .datetime()
-        .optional()
-        .describe("Modified after this UTC timestamp"),
+      createdAfter: z.string().datetime().optional().describe("Created after UTC timestamp"),
+      modifiedAfter: z.string().datetime().optional().describe("Modified after UTC timestamp"),
       campaignId: z.number().int().optional().describe("Campaign ID"),
       agentId: z.number().int().optional().describe("Agent ID"),
       minDuration: z.number().int().optional().describe("Minimum duration in seconds"),
@@ -59,26 +43,18 @@ const v3CallsListSchema = paginationParams(
 
 const v2CallsListSchema = paginationParams(
   z.object({
-    modifiedBefore: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Modified before this UTC timestamp"),
+    modifiedBefore: z.string().datetime().optional().describe("Modified before UTC timestamp"),
     modifiedOnOrAfter: z
       .string()
       .datetime()
       .optional()
-      .describe("Modified on or after this UTC timestamp"),
+      .describe("Modified on or after UTC timestamp"),
     createdOnOrAfter: z
       .string()
       .datetime()
       .optional()
-      .describe("Created on or after this UTC timestamp"),
-    modifiedAfter: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Modified after this UTC timestamp"),
+      .describe("Created on or after UTC timestamp"),
+    modifiedAfter: z.string().datetime().optional().describe("Modified after UTC timestamp"),
     minDuration: z.number().int().optional().describe("Minimum duration in seconds"),
     phoneNumberCalled: z.string().optional().describe("Phone number called"),
     campaignId: z.number().int().optional().describe("Campaign ID"),
@@ -92,16 +68,8 @@ const v2CallsListSchema = paginationParams(
       .describe("Field used for ordering"),
     orderByDirection: z.enum(["asc", "desc"]).optional().describe("Sort direction"),
     activeOnly: z.boolean().optional().describe("Return only active calls"),
-    createdAfter: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Created after this UTC timestamp"),
-    createdBefore: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Created before this UTC timestamp"),
+    createdAfter: z.string().datetime().optional().describe("Created after UTC timestamp"),
+    createdBefore: z.string().datetime().optional().describe("Created before UTC timestamp"),
     ids: z.array(z.number().int()).optional().describe("Specific call IDs"),
   }),
 );
@@ -114,63 +82,6 @@ export function registerMarketingCallTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,
 ): void {
-  registry.register({
-    name: "marketing_opt_in_outs_list",
-    domain: "marketing",
-    operation: "read",
-    description: "List all opt-out records",
-    schema: {},
-    handler: async () => {
-      try {
-        const data = await client.get("/v3/tenant/{tenant}/optinouts/optouts");
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
-    name: "marketing_opt_in_outs_create",
-    domain: "marketing",
-    operation: "write",
-    description: "Create opt-out records for phone numbers",
-    schema: optOutCreateSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof optOutCreateSchema>;
-
-      try {
-        const data = await client.post("/v3/tenant/{tenant}/optinouts/optouts", {
-          contactNumbers: input.contactNumbers,
-        });
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
-    name: "marketing_opt_in_outs_lookup_create",
-    domain: "marketing",
-    operation: "write",
-    description: "Check opt-out status for a list of phone numbers",
-    schema: optOutLookupSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof optOutLookupSchema>;
-
-      try {
-        const data = await client.post(
-          "/v3/tenant/{tenant}/optinouts/optouts/getlist",
-          input.contactNumbers,
-        );
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
   registry.register({
     name: "marketing_calls_v3_list",
     domain: "marketing",
@@ -206,6 +117,7 @@ export function registerMarketingCallTools(
             sort: input.sort,
           }),
         );
+
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
@@ -319,6 +231,7 @@ export function registerMarketingCallTools(
             pageSize: input.pageSize,
           }),
         );
+
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

@@ -25,10 +25,28 @@ const timesheetCodeGetSchema = z.object({
   id: z.number().int().describe("Timesheet code ID"),
 });
 
+const jobTimesheetPayloadSchema = z
+  .object({
+    technicianId: z.number().int().optional().describe("Technician ID"),
+    employeeId: z.number().int().optional().describe("Employee ID"),
+    employeeType: z
+      .enum(["Technician", "Employee"])
+      .optional()
+      .describe("Employee type"),
+    startedOn: z.string().datetime().optional().describe("Start timestamp"),
+    endedOn: z.string().datetime().optional().describe("End timestamp"),
+    durationMinutes: z.number().int().optional().describe("Duration in minutes"),
+    timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
+    payrollId: z.number().int().optional().describe("Payroll ID"),
+    note: z.string().optional().describe("Timesheet note"),
+    memo: z.string().optional().describe("Timesheet memo"),
+    active: z.boolean().optional().describe("Whether timesheet is active"),
+  })
+  .passthrough();
+
 const createJobTimesheetSchema = z.object({
   jobId: z.number().int().describe("Job ID"),
-  payload: z
-    .record(z.unknown())
+  payload: jobTimesheetPayloadSchema
     .optional()
     .describe("Optional payload for job timesheet creation"),
 });
@@ -68,8 +86,7 @@ const jobsTimesheetsListSchema = paginationParams(
 const updateJobTimesheetSchema = z.object({
   jobId: z.number().int().describe("Job ID"),
   id: z.number().int().describe("Job timesheet ID"),
-  payload: z
-    .record(z.unknown())
+  payload: jobTimesheetPayloadSchema
     .optional()
     .describe("Payload for updating a job timesheet"),
 });
@@ -87,6 +104,34 @@ const nonJobTimesheetsListSchema = paginationParams(
     }),
   ),
 );
+
+const nonJobTimesheetIdSchema = z.object({
+  id: z.number().int().describe("Non-job timesheet ID"),
+});
+
+const nonJobTimesheetPayloadSchema = z
+  .object({
+    employeeId: z.number().int().optional().describe("Employee ID"),
+    employeeType: z
+      .enum(["Technician", "Employee"])
+      .optional()
+      .describe("Employee type"),
+    startedOn: z.string().datetime().optional().describe("Start timestamp"),
+    endedOn: z.string().datetime().optional().describe("End timestamp"),
+    durationMinutes: z.number().int().optional().describe("Duration in minutes"),
+    timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
+    payrollId: z.number().int().optional().describe("Payroll ID"),
+    note: z.string().optional().describe("Timesheet note"),
+    memo: z.string().optional().describe("Timesheet memo"),
+    active: z.boolean().optional().describe("Whether timesheet is active"),
+  })
+  .passthrough();
+
+const createNonJobTimesheetSchema = nonJobTimesheetPayloadSchema;
+
+const updateNonJobTimesheetSchema = nonJobTimesheetPayloadSchema.extend({
+  id: z.number().int().describe("Non-job timesheet ID"),
+});
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -138,6 +183,45 @@ export function registerPayrollTimesheetTools(
             sort: input.sort,
           }),
         );
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "payroll_timesheets_non_job_create",
+    domain: "payroll",
+    operation: "write",
+    description: "Create a non-job timesheet",
+    schema: createNonJobTimesheetSchema.shape,
+    handler: async (params) => {
+      const input = createNonJobTimesheetSchema.parse(params);
+
+      try {
+        const data = await client.post(
+          "/tenant/{tenant}/non-job-timesheets",
+          buildParams(input),
+        );
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "payroll_timesheets_non_job_get",
+    domain: "payroll",
+    operation: "read",
+    description: "Get a non-job timesheet by ID",
+    schema: nonJobTimesheetIdSchema.shape,
+    handler: async (params) => {
+      const input = nonJobTimesheetIdSchema.parse(params);
+
+      try {
+        const data = await client.get(`/tenant/{tenant}/non-job-timesheets/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
@@ -281,6 +365,49 @@ export function registerPayrollTimesheetTools(
           }),
         );
         return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "payroll_timesheets_non_job_update",
+    domain: "payroll",
+    operation: "write",
+    description: "Update a non-job timesheet",
+    schema: updateNonJobTimesheetSchema.shape,
+    handler: async (params) => {
+      const parsed = updateNonJobTimesheetSchema.parse(params);
+      const { id, ...payload } = parsed;
+
+      try {
+        const data = await client.put(
+          `/tenant/{tenant}/non-job-timesheets/${id}`,
+          buildParams(payload),
+        );
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "payroll_timesheets_non_job_delete",
+    domain: "payroll",
+    operation: "delete",
+    description: "Delete a non-job timesheet",
+    schema: nonJobTimesheetIdSchema.shape,
+    handler: async (params) => {
+      const input = nonJobTimesheetIdSchema.parse(params);
+
+      try {
+        await client.delete(`/tenant/{tenant}/non-job-timesheets/${input.id}`);
+        return toolResult({
+          success: true,
+          message: "Non-job timesheet deleted",
+        });
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
       }

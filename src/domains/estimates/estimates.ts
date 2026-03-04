@@ -159,6 +159,17 @@ const estimateActionSchema = z.object({
   id: z.number().int().describe("Estimate ID"),
 });
 
+const estimateExportSchema = z.object({
+  from: z
+    .string()
+    .optional()
+    .describe("Continuation token or custom date to begin export"),
+  includeRecentChanges: z
+    .boolean()
+    .optional()
+    .describe("Include recent changes (may include duplicates)"),
+});
+
 export function registerEstimateTools(client: ServiceTitanClient, registry: ToolRegistry) {
   registry.register({
     name: "estimates_get",
@@ -319,6 +330,30 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
 
       try {
         const data = await client.put(`/tenant/{tenant}/estimates/${id}/dismiss`);
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "estimates_export_estimates",
+    domain: "estimates",
+    operation: "read",
+    description: "Export estimates",
+    schema: estimateExportSchema.shape,
+    handler: async (params) => {
+      const input = estimateExportSchema.parse(params);
+
+      try {
+        const data = await client.get(
+          "/tenant/{tenant}/estimates/export",
+          buildParams({
+            from: input.from,
+            includeRecentChanges: input.includeRecentChanges,
+          }),
+        );
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

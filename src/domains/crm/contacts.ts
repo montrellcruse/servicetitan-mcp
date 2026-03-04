@@ -25,7 +25,7 @@ const contactPayloadSchema = z.object({
   createdBy: z.number().int().optional().describe("Created by user ID"),
   modifiedOn: z.string().datetime().optional().describe("Modified timestamp"),
   modifiedBy: z.number().int().optional().describe("Modified by user ID"),
-});
+}).passthrough();
 
 const contactReplaceSchema = z.object({
   id: z.string().uuid().describe("Contact ID"),

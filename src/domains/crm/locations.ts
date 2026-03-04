@@ -181,6 +181,24 @@ const locationCustomFieldTypesSchema = dateFilterParams(
   ),
 );
 
+const locationLaborTypesListSchema = paginationParams(
+  z
+    .object({
+      locationIds: z.string().optional().describe("Comma-delimited location IDs"),
+      createdBefore: z.string().datetime().optional().describe("Created before timestamp"),
+      createdOnOrAfter: z
+        .string()
+        .datetime()
+        .optional()
+        .describe("Created on or after timestamp"),
+      sort: z
+        .string()
+        .optional()
+        .describe("Sort: +Location/-Location or +CreatedOn/-CreatedOn"),
+    })
+    .extend(activeFilterParam()),
+);
+
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
@@ -587,6 +605,37 @@ export function registerLocationTools(
             sort: input.sort,
           }),
         );
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(errorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "crm_location_labor_types_list",
+    domain: "crm",
+    operation: "read",
+    description: "List location labor types by locations",
+    schema: locationLaborTypesListSchema.shape,
+    handler: async (params) => {
+      const input = params as z.infer<typeof locationLaborTypesListSchema>;
+
+      try {
+        const data = await client.get(
+          "/tenant/{tenant}/locations/rates",
+          buildParams({
+            locationIds: input.locationIds,
+            createdBefore: input.createdBefore,
+            createdOnOrAfter: input.createdOnOrAfter,
+            page: input.page,
+            pageSize: input.pageSize,
+            includeTotal: input.includeTotal,
+            active: input.active,
+            sort: input.sort,
+          }),
+        );
+
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(errorMessage(error));
