@@ -1,13 +1,40 @@
 import { z } from "zod";
 
 import type { ToolResponse } from "./types.js";
+export { sanitizeParams } from "./audit.js";
+
+const DEFAULT_MAX_RESPONSE_CHARS = 100_000;
+let maxResponseChars = DEFAULT_MAX_RESPONSE_CHARS;
+
+export function setMaxResponseChars(value: number): void {
+  if (!Number.isInteger(value) || value <= 0) {
+    throw new Error(`maxResponseChars must be a positive integer. Received: ${value}`);
+  }
+
+  maxResponseChars = value;
+}
 
 export function toolResult(data: unknown): ToolResponse {
+  const json = JSON.stringify(data, null, 2);
+
+  if (json.length > maxResponseChars) {
+    return {
+      content: [
+        {
+          type: "text",
+          text:
+            json.slice(0, maxResponseChars) +
+            `\n\n[TRUNCATED - Response was ${json.length.toLocaleString()} characters. Use pagination (page/pageSize) to get smaller result sets.]`,
+        },
+      ],
+    };
+  }
+
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(data, null, 2),
+        text: json,
       },
     ],
   };

@@ -20,6 +20,8 @@ describe("loadConfig", () => {
       tenantId: "tenant-id",
       environment: "integration",
       readonlyMode: true,
+      confirmWrites: false,
+      maxResponseChars: 100000,
       enabledDomains: null,
       logLevel: "info",
     });
@@ -67,6 +69,15 @@ describe("loadConfig", () => {
     expect(loadConfig(env).readonlyMode).toBe(true);
   });
 
+  it("defaults ST_CONFIRM_WRITES to false", () => {
+    const env: NodeJS.ProcessEnv = {
+      ...validEnv,
+      ST_CONFIRM_WRITES: undefined,
+    };
+
+    expect(loadConfig(env).confirmWrites).toBe(false);
+  });
+
   it.each([
     ["true", true],
     ["TRUE", true],
@@ -81,6 +92,22 @@ describe("loadConfig", () => {
     };
 
     expect(loadConfig(env).readonlyMode).toBe(expected);
+  });
+
+  it.each([
+    ["true", true],
+    ["TRUE", true],
+    ["1", true],
+    ["false", false],
+    ["FALSE", false],
+    ["0", false],
+  ])("parses ST_CONFIRM_WRITES value %s", (value, expected) => {
+    const env: NodeJS.ProcessEnv = {
+      ...validEnv,
+      ST_CONFIRM_WRITES: value,
+    };
+
+    expect(loadConfig(env).confirmWrites).toBe(expected);
   });
 
   it("parses ST_DOMAINS as comma-separated, trimmed, lowercased list", () => {
@@ -100,4 +127,36 @@ describe("loadConfig", () => {
 
     expect(loadConfig(env).enabledDomains).toBeNull();
   });
+
+  it("defaults ST_MAX_RESPONSE_CHARS to 100000", () => {
+    const env: NodeJS.ProcessEnv = {
+      ...validEnv,
+      ST_MAX_RESPONSE_CHARS: undefined,
+    };
+
+    expect(loadConfig(env).maxResponseChars).toBe(100000);
+  });
+
+  it("parses ST_MAX_RESPONSE_CHARS when valid", () => {
+    const env: NodeJS.ProcessEnv = {
+      ...validEnv,
+      ST_MAX_RESPONSE_CHARS: "2048",
+    };
+
+    expect(loadConfig(env).maxResponseChars).toBe(2048);
+  });
+
+  it.each(["0", "-1", "1.5", "abc"])(
+    "throws on invalid ST_MAX_RESPONSE_CHARS value %s",
+    (value) => {
+      const env: NodeJS.ProcessEnv = {
+        ...validEnv,
+        ST_MAX_RESPONSE_CHARS: value,
+      };
+
+      expect(() => loadConfig(env)).toThrow(
+        /ST_MAX_RESPONSE_CHARS must be a positive integer/,
+      );
+    },
+  );
 });

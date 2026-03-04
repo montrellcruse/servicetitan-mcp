@@ -4,10 +4,12 @@ import { fileURLToPath } from "node:url";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
+import { AuditLogger } from "./audit.js";
 import { ServiceTitanClient } from "./client.js";
 import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 import { type DomainLoader, ToolRegistry } from "./registry.js";
+import { setMaxResponseChars, toolResult } from "./utils.js";
 
 async function loadDomainModules(
   registry: ToolRegistry,
@@ -45,6 +47,7 @@ async function loadDomainModules(
 async function main(): Promise<void> {
   // 1. Load and validate config (throws on missing vars)
   const config = loadConfig();
+  setMaxResponseChars(config.maxResponseChars);
 
   // 2. Initialize logger
   const logger = new Logger(config.logLevel);
@@ -59,8 +62,50 @@ async function main(): Promise<void> {
   const client = new ServiceTitanClient(config);
 
   // 5. Create tool registry
-  const registry = new ToolRegistry(server, config, logger);
+  const auditLogger = new AuditLogger(logger);
+  const registry = new ToolRegistry(server, config, logger, auditLogger);
   registry.attachClient(client);
+
+  registry.register({
+    name: "st_health_check",
+    domain: "_system",
+    operation: "read",
+    description:
+      "Verify ServiceTitan API connectivity, authentication, tenant access, and server config",
+    schema: {},
+    handler: async () => {
+      const checks: Record<string, string> = {};
+
+      try {
+        await client.ensureToken();
+        checks.authentication = "OK";
+      } catch (error: unknown) {
+        checks.authentication = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      }
+
+      try {
+        await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
+        checks.tenant_access = "OK";
+      } catch (error: unknown) {
+        checks.tenant_access = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      }
+
+      checks.environment = config.environment;
+      checks.readonly_mode = String(config.readonlyMode);
+      checks.confirm_writes = String(config.confirmWrites);
+      checks.max_response_chars = String(config.maxResponseChars);
+      checks.enabled_domains =
+        config.enabledDomains && config.enabledDomains.length > 0
+          ? config.enabledDomains.join(", ")
+          : "all";
+
+      const stats = registry.getStats();
+      checks.tools_registered = String(stats.registered);
+      checks.tools_skipped = String(stats.skipped);
+
+      return toolResult(checks);
+    },
+  });
 
   // 6. Load domain modules (dynamic imports from ./domains/)
   // Spec 01 has no domain modules yet, this just keeps the hook in place.

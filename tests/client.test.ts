@@ -134,6 +134,8 @@ function createConfig(
     tenantId: "tenant-42",
     environment,
     readonlyMode: true,
+    confirmWrites: false,
+    maxResponseChars: 100000,
     enabledDomains: null,
     logLevel: "info",
   };

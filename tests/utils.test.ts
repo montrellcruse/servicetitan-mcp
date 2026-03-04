@@ -1,6 +1,16 @@
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 
-import { buildParams, toolError, toolResult } from "../src/utils.js";
+import {
+  buildParams,
+  sanitizeParams,
+  setMaxResponseChars,
+  toolError,
+  toolResult,
+} from "../src/utils.js";
+
+beforeEach(() => {
+  setMaxResponseChars(100000);
+});
 
 describe("toolResult", () => {
   it("wraps data correctly", () => {
@@ -15,6 +25,16 @@ describe("toolResult", () => {
         },
       ],
     });
+  });
+
+  it("truncates oversized responses with pagination hint", () => {
+    setMaxResponseChars(80);
+    const payload = { data: "x".repeat(500) };
+    const result = toolResult(payload);
+    const text = result.content[0]?.text ?? "";
+
+    expect(text).toContain("[TRUNCATED - Response was");
+    expect(text).toContain("Use pagination (page/pageSize)");
   });
 });
 
@@ -58,6 +78,27 @@ describe("buildParams", () => {
       count: 0,
       enabled: false,
       query: "",
+    });
+  });
+});
+
+describe("sanitizeParams", () => {
+  it("strips sensitive fields and preserves others", () => {
+    expect(
+      sanitizeParams({
+        username: "user",
+        token: "hide-me",
+        password: "hide-me-too",
+        nested: {
+          key: "hide",
+          keep: "ok",
+        },
+      }),
+    ).toEqual({
+      username: "user",
+      nested: {
+        keep: "ok",
+      },
     });
   });
 });

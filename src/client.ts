@@ -100,6 +100,10 @@ export class ServiceTitanClient {
     return this.request("delete", path, undefined, params);
   }
 
+  async ensureToken(): Promise<void> {
+    await this.getAccessToken();
+  }
+
   private async request(
     method: "get" | "post" | "put" | "patch" | "delete",
     path: string,

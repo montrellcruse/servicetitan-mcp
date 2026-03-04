@@ -5,6 +5,8 @@ export interface ServiceTitanConfig {
   tenantId: string;
   environment: "integration" | "production";
   readonlyMode: boolean;
+  confirmWrites: boolean;
+  maxResponseChars: number;
   enabledDomains: string[] | null;
   logLevel: "debug" | "info" | "warn" | "error";
 }
@@ -22,9 +24,13 @@ const VALID_LOG_LEVELS = ["debug", "info", "warn", "error"] as const;
 type Environment = (typeof VALID_ENVIRONMENTS)[number];
 type LogLevel = (typeof VALID_LOG_LEVELS)[number];
 
-function parseBoolean(value: string | undefined, variableName: string): boolean {
+function parseBoolean(
+  value: string | undefined,
+  variableName: string,
+  defaultValue: boolean,
+): boolean {
   if (value === undefined) {
-    return true;
+    return defaultValue;
   }
 
   const normalized = value.trim().toLowerCase();
@@ -40,6 +46,24 @@ function parseBoolean(value: string | undefined, variableName: string): boolean 
   throw new Error(
     `${variableName} must be one of: true, false, 1, 0 (case-insensitive)`,
   );
+}
+
+function parsePositiveInteger(
+  value: string | undefined,
+  variableName: string,
+  defaultValue: number,
+): number {
+  if (value === undefined || value.trim() === "") {
+    return defaultValue;
+  }
+
+  const parsed = Number(value.trim());
+
+  if (Number.isInteger(parsed) && parsed > 0) {
+    return parsed;
+  }
+
+  throw new Error(`${variableName} must be a positive integer. Received: ${value}`);
 }
 
 function parseEnvironment(value: string | undefined): Environment {
@@ -101,7 +125,13 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     appKey: requiredValue(env, "ST_APP_KEY"),
     tenantId: requiredValue(env, "ST_TENANT_ID"),
     environment: parseEnvironment(env.ST_ENVIRONMENT),
-    readonlyMode: parseBoolean(env.ST_READONLY, "ST_READONLY"),
+    readonlyMode: parseBoolean(env.ST_READONLY, "ST_READONLY", true),
+    confirmWrites: parseBoolean(env.ST_CONFIRM_WRITES, "ST_CONFIRM_WRITES", false),
+    maxResponseChars: parsePositiveInteger(
+      env.ST_MAX_RESPONSE_CHARS,
+      "ST_MAX_RESPONSE_CHARS",
+      100_000,
+    ),
     enabledDomains: parseDomains(env.ST_DOMAINS),
     logLevel: parseLogLevel(env.ST_LOG_LEVEL),
   };
