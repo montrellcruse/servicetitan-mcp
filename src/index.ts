@@ -16,28 +16,29 @@ async function loadDomainModules(
   const domainsDirectory = fileURLToPath(new URL("./domains", import.meta.url));
 
   const entries = await readdir(domainsDirectory, { withFileTypes: true });
-  const domainFiles = entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .filter((name) => name.endsWith(".js"));
+  const domainDirs = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name);
 
-  for (const fileName of domainFiles) {
-    const domainName = fileName.replace(/\.js$/, "");
-    const fileUrl = new URL(`./domains/${fileName}`, import.meta.url).href;
+  for (const dirName of domainDirs) {
+    const fileUrl = new URL(`./domains/${dirName}/index.js`, import.meta.url).href;
 
-    const module = (await import(fileUrl)) as {
-      default?: DomainLoader;
-      loadDomain?: DomainLoader;
-    };
+    let module: { default?: DomainLoader; loadDomain?: DomainLoader };
+    try {
+      module = (await import(fileUrl)) as typeof module;
+    } catch {
+      logger.debug("No index.js in domain directory", { domain: dirName });
+      continue;
+    }
 
     const loader = module.default ?? module.loadDomain;
 
     if (!loader) {
-      logger.warn("Domain module missing loader export", { domain: domainName });
+      logger.warn("Domain module missing loader export", { domain: dirName });
       continue;
     }
 
-    registry.registerDomain(domainName, loader);
+    registry.registerDomain(dirName, loader);
   }
 }
 

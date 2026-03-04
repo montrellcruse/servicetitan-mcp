@@ -1,0 +1,21 @@
+import type { DomainLoader } from "../../registry.js";
+
+import { registerBookingProviderTagTools } from "./booking-provider-tags.js";
+import { registerBookingTools } from "./bookings.js";
+import { registerContactMethodTools } from "./contact-methods.js";
+import { registerContactTools } from "./contacts.js";
+import { registerCustomerTools } from "./customers.js";
+import { registerLeadTools } from "./leads.js";
+import { registerLocationTools } from "./locations.js";
+
+export const loadCrmDomain: DomainLoader = (client, registry) => {
+  registerBookingTools(client, registry);
+  registerBookingProviderTagTools(client, registry);
+  registerContactMethodTools(client, registry);
+  registerContactTools(client, registry);
+  registerCustomerTools(client, registry);
+  registerLeadTools(client, registry);
+  registerLocationTools(client, registry);
+};
+
+export default loadCrmDomain;
