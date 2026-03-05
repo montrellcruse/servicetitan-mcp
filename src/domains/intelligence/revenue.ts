@@ -4,56 +4,88 @@ import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
-  asArray,
   fetchAllPages,
   fetchWithWarning,
-  firstValue,
   getErrorMessage,
+  isRecord,
   round,
   safeDivide,
   sumBy,
-  toDateRange,
   toNumber,
-  toText,
 } from "./helpers.js";
 
 const revenueSummarySchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
-  businessUnitId: z.number().int().optional().describe("Filter by business unit"),
+  businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
 });
 
 type GenericRecord = Record<string, unknown>;
 
-function invoiceTotal(invoice: GenericRecord): number {
-  return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
+/**
+ * Revenue report field indices (Report 175: "Revenue" under business-unit-dashboard).
+ * This is ServiceTitan's native revenue calculation — matches the dashboard exactly.
+ *
+ * TotalRevenue = CompletedRevenue + NonJobRevenue + AdjustmentRevenue
+ */
+const FIELD = {
+  Name: 0,
+  CompletedRevenue: 1,
+  OpportunityJobAverage: 2,
+  OpportunityConversionRate: 3,
+  Opportunity: 4,
+  ConvertedJobs: 5,
+  CustomerSatisfaction: 6,
+  AdjustmentRevenue: 7,
+  TotalRevenue: 8,
+  NonJobRevenue: 9,
+} as const;
+
+interface BURevenue {
+  name: string;
+  totalRevenue: number;
+  completedRevenue: number;
+  nonJobRevenue: number;
+  adjustmentRevenue: number;
+  opportunities: number;
+  convertedJobs: number;
+  conversionRate: number;
+}
+
+function parseReportRows(response: unknown): BURevenue[] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
+  }
+
+  const results: BURevenue[] = [];
+
+  for (const row of response.data) {
+    if (!Array.isArray(row)) continue;
+
+    const totalRevenue = toNumber(row[FIELD.TotalRevenue]);
+    const completedRevenue = toNumber(row[FIELD.CompletedRevenue]);
+
+    // Skip BUs with zero activity
+    if (totalRevenue === 0 && completedRevenue === 0) continue;
+
+    results.push({
+      name: String(row[FIELD.Name] ?? "Unknown"),
+      totalRevenue: round(totalRevenue, 2),
+      completedRevenue: round(completedRevenue, 2),
+      nonJobRevenue: round(toNumber(row[FIELD.NonJobRevenue]), 2),
+      adjustmentRevenue: round(toNumber(row[FIELD.AdjustmentRevenue]), 2),
+      opportunities: Math.round(toNumber(row[FIELD.Opportunity])),
+      convertedJobs: Math.round(toNumber(row[FIELD.ConvertedJobs])),
+      conversionRate: round(toNumber(row[FIELD.OpportunityConversionRate]) * 100, 1),
+    });
+  }
+
+  return results.sort((a, b) => b.totalRevenue - a.totalRevenue);
 }
 
 function paymentAmount(payment: GenericRecord): number {
-  return toNumber(firstValue(payment, ["amount", "total", "paymentAmount"]));
-}
-
-function lineItemRevenue(item: GenericRecord): number {
-  const directTotal = toNumber(firstValue(item, ["total", "amount", "price"]));
-  if (directTotal > 0) {
-    return directTotal;
-  }
-
-  const quantity = toNumber(firstValue(item, ["quantity", "qty"]));
-  const unitPrice = toNumber(firstValue(item, ["unitPrice", "unitRate", "rate"]));
-
-  if (quantity > 0 && unitPrice > 0) {
-    return quantity * unitPrice;
-  }
-
-  return 0;
-}
-
-function lineItemName(item: GenericRecord): string {
-  return (
-    toText(firstValue(item, ["name", "description", "displayName", "skuName", "itemName"])) ??
-    "Unknown"
-  );
+  const amt = payment.amount ?? payment.total ?? payment.paymentAmount;
+  return toNumber(amt);
 }
 
 export function registerIntelligenceRevenueTool(
@@ -65,25 +97,56 @@ export function registerIntelligenceRevenueTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Revenue summary for a date range: invoiced totals, collected totals, outstanding balance, average ticket, and top services by revenue",
+      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, and conversion rates.",
     schema: revenueSummarySchema.shape,
     handler: async (params) => {
       try {
         const input = revenueSummarySchema.parse(params);
-        const { startIso, endIso } = toDateRange(input.startDate, input.endDate);
         const warnings: string[] = [];
 
-        const invoices = await fetchWithWarning(
+        // ── Revenue from ST's native reporting engine (Report 175) ──
+        // This uses the same calculation as the ST dashboard.
+        // TotalRevenue = CompletedRevenue + NonJobRevenue + AdjustmentRevenue
+        const reportParams: { name: string; value: string }[] = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        if (input.businessUnitId !== undefined) {
+          reportParams.push({
+            name: "BusinessUnitIds",
+            value: String(input.businessUnitId),
+          });
+        }
+
+        const reportResponse = await fetchWithWarning(
           warnings,
-          "Invoice data",
+          "Revenue report (Report 175)",
           () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-              invoicedOnOrAfter: startIso,
-              invoicedOnBefore: endIso,
-              businessUnitId: input.businessUnitId,
-            }),
-          [],
+            client.post(
+              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+              { parameters: reportParams },
+            ),
+          null,
         );
+
+        const byBU = reportResponse ? parseReportRows(reportResponse) : [];
+
+        const totalRevenue = round(sumBy(byBU, (bu) => bu.totalRevenue), 2);
+        const completedRevenue = round(sumBy(byBU, (bu) => bu.completedRevenue), 2);
+        const nonJobRevenue = round(sumBy(byBU, (bu) => bu.nonJobRevenue), 2);
+        const adjustmentRevenue = round(sumBy(byBU, (bu) => bu.adjustmentRevenue), 2);
+        const totalOpportunities = byBU.reduce((s, bu) => s + bu.opportunities, 0);
+        const totalConvertedJobs = byBU.reduce((s, bu) => s + bu.convertedJobs, 0);
+        const avgTicket = round(safeDivide(completedRevenue, totalConvertedJobs), 2);
+        const overallConversionRate = round(
+          safeDivide(totalConvertedJobs, totalOpportunities) * 100,
+          1,
+        );
+
+        // ── Payments for collections data ──
+        const startIso = `${input.startDate}T00:00:00.000Z`;
+        const endIso = `${input.endDate}T23:59:59.999Z`;
 
         const payments = await fetchWithWarning(
           warnings,
@@ -93,64 +156,31 @@ export function registerIntelligenceRevenueTool(
               paidOnAfter: startIso,
               paidOnBefore: endIso,
               businessUnitIds:
-                input.businessUnitId === undefined ? undefined : String(input.businessUnitId),
+                input.businessUnitId === undefined
+                  ? undefined
+                  : String(input.businessUnitId),
             }),
           [],
         );
 
-        const totalInvoiced = round(sumBy(invoices, invoiceTotal), 2);
         const totalCollected = round(sumBy(payments, paymentAmount), 2);
-        const invoiceCount = invoices.length;
-        const outstanding = round(totalInvoiced - totalCollected, 2);
-        const averageTicket = round(safeDivide(totalInvoiced, invoiceCount), 2);
-
-        const byService = new Map<string, { revenue: number; count: number }>();
-
-        for (const invoice of invoices) {
-          const items = asArray<GenericRecord>(
-            firstValue(invoice, ["items", "invoiceItems", "lineItems"]),
-          );
-
-          for (const item of items) {
-            const revenue = lineItemRevenue(item);
-            if (revenue <= 0) {
-              continue;
-            }
-
-            const name = lineItemName(item);
-            const current = byService.get(name) ?? { revenue: 0, count: 0 };
-            current.revenue += revenue;
-            current.count += 1;
-            byService.set(name, current);
-          }
-        }
-
-        const topServicesByRevenue = Array.from(byService.entries())
-          .map(([name, data]) => ({
-            name,
-            revenue: round(data.revenue, 2),
-            count: data.count,
-          }))
-          .sort((a, b) => {
-            if (b.revenue !== a.revenue) {
-              return b.revenue - a.revenue;
-            }
-
-            return b.count - a.count;
-          })
-          .slice(0, 10);
+        const outstanding = round(totalRevenue - totalCollected, 2);
 
         const result: Record<string, unknown> = {
-          period: {
-            start: input.startDate,
-            end: input.endDate,
+          period: { start: input.startDate, end: input.endDate },
+          totalRevenue,
+          revenueBreakdown: {
+            completedRevenue,
+            nonJobRevenue,
+            adjustmentRevenue,
           },
-          totalInvoiced,
           totalCollected,
           outstanding,
-          invoiceCount,
-          averageTicket,
-          topServicesByRevenue,
+          avgTicket,
+          totalOpportunities,
+          totalConvertedJobs,
+          overallConversionRate,
+          byBusinessUnit: byBU,
         };
 
         if (warnings.length > 0) {

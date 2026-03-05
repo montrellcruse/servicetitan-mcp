@@ -10,9 +10,18 @@ const reportListSchema = paginationParams(
   }),
 );
 
+const reportParameterSchema = z.object({
+  name: z.string().describe("Parameter name (from report definition)"),
+  value: z.string().describe("Parameter value"),
+});
+
 const reportDataSchema = z.object({
   reportCategory: z.string().describe("Report category ID"),
   reportId: z.number().int().describe("Report ID"),
+  parameters: z
+    .array(reportParameterSchema)
+    .optional()
+    .describe("Report parameters (name/value pairs from report definition)"),
   page: z.number().int().optional().describe("Page number (starts at 1)"),
   pageSize: z
     .number()
@@ -84,16 +93,19 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
   registry.register({
     name: "reporting_reports_data_create",
     domain: "reporting",
-    operation: "write",
-    description: "Fetch report data rows",
+    operation: "read",
+    description:
+      "Fetch report data rows. Use the report definition to discover required parameters. Date parameters use YYYY-MM-DD format.",
     schema: reportDataSchema.shape,
     handler: async (params) => {
-      const { reportCategory, reportId, ...query } = params as z.infer<typeof reportDataSchema>;
+      const { reportCategory, reportId, parameters, ...query } = params as z.infer<
+        typeof reportDataSchema
+      >;
 
       try {
         const data = await client.post(
           `/tenant/{tenant}/report-category/${reportCategory}/reports/${reportId}/data`,
-          {},
+          parameters ? { parameters } : {},
           buildParams(query),
         );
         return toolResult(data);

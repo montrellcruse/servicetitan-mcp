@@ -9,6 +9,7 @@ import type { ToolResponse } from "../../src/types.js";
 
 interface TestContext {
   getMock: ReturnType<typeof vi.fn>;
+  postMock: ReturnType<typeof vi.fn>;
   handlers: Map<string, (params: unknown) => Promise<ToolResponse>>;
   registry: ToolRegistry;
   server: { tool: ReturnType<typeof vi.fn> };
@@ -42,6 +43,7 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext
   const registry = new ToolRegistry(server as any, createConfig(overrides), logger as any);
   const client = {
     get: vi.fn(),
+    post: vi.fn(),
   } as unknown as ServiceTitanClient;
 
   registry.attachClient(client);
@@ -54,6 +56,7 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext
 
   return {
     getMock: (client as any).get,
+    postMock: (client as any).post,
     handlers,
     registry,
     server,
@@ -145,47 +148,35 @@ describe("intelligence domain", () => {
     );
   });
 
-  it("intel_revenue_summary computes totals, averages, service ranking, and date params", async () => {
-    const { handlers, getMock } = createContext();
+  it("intel_revenue_summary uses Report 175 for revenue and payments for collections", async () => {
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_revenue_summary");
 
-    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
-      if (path === "/tenant/{tenant}/invoices") {
-        if (params?.page === 1) {
-          return {
-            data: [
-              {
-                id: 1,
-                total: 100,
-                items: [
-                  { description: "AC Repair", total: 70 },
-                  { description: "Filter", total: 30 },
-                ],
-              },
-              {
-                id: 2,
-                total: 200,
-                items: [{ description: "AC Repair", total: 200 }],
-              },
-            ],
-            hasMore: true,
-            page: 1,
-          };
-        }
+    // Report 175 returns array-of-arrays with field order:
+    // [Name, CompletedRevenue, OpportunityJobAvg, ConversionRate, Opportunity, ConvertedJobs,
+    //  CustomerSatisfaction, AdjustmentRevenue, TotalRevenue, NonJobRevenue]
+    postMock.mockResolvedValue({
+      fields: [
+        { name: "Name" },
+        { name: "CompletedRevenue" },
+        { name: "OpportunityJobAverage" },
+        { name: "OpportunityConversionRate" },
+        { name: "Opportunity" },
+        { name: "ConvertedJobs" },
+        { name: "CustomerSatisfaction" },
+        { name: "AdjustmentRevenue" },
+        { name: "TotalRevenue" },
+        { name: "NonJobRevenue" },
+      ],
+      data: [
+        ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
+        ["HVAC - Service", 100, 100, 0.5, 10, 5, 0, 0, 150, 50],
+        ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0],
+      ],
+      hasMore: false,
+    });
 
-        return {
-          data: [
-            {
-              id: 3,
-              total: 300,
-              items: [{ description: "Install", total: 300 }],
-            },
-          ],
-          hasMore: false,
-          page: 2,
-        };
-      }
-
+    getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/payments") {
         return {
           data: [
@@ -196,7 +187,6 @@ describe("intelligence domain", () => {
           page: 1,
         };
       }
-
       throw new Error(`Unexpected path: ${path}`);
     });
 
@@ -207,52 +197,44 @@ describe("intelligence domain", () => {
     });
     const payload = payloadFrom(result);
 
-    expect(payload.totalInvoiced).toBe(600);
+    expect(payload.totalRevenue).toBe(600);
+    expect(payload.revenueBreakdown).toEqual({
+      completedRevenue: 500,
+      nonJobRevenue: 100,
+      adjustmentRevenue: 0,
+    });
     expect(payload.totalCollected).toBe(350);
     expect(payload.outstanding).toBe(250);
-    expect(payload.invoiceCount).toBe(3);
-    expect(payload.averageTicket).toBe(200);
-    expect(payload.topServicesByRevenue).toEqual([
-      { name: "Install", revenue: 300, count: 1 },
-      { name: "AC Repair", revenue: 270, count: 2 },
-      { name: "Filter", revenue: 30, count: 1 },
-    ]);
+    expect(payload.avgTicket).toBe(50);
+    expect(payload.totalConvertedJobs).toBe(10);
+    expect(payload.totalOpportunities).toBe(15);
+    expect(payload.overallConversionRate).toBe(66.7);
 
-    expect(getMock).toHaveBeenNthCalledWith(
-      1,
-      "/tenant/{tenant}/invoices",
-      expect.objectContaining({
-        invoicedOnOrAfter: "2026-01-01T00:00:00.000Z",
-        invoicedOnBefore: "2026-01-31T23:59:59.999Z",
-        businessUnitId: 7,
-        page: 1,
-      }),
-    );
-    expect(getMock).toHaveBeenNthCalledWith(
-      2,
-      "/tenant/{tenant}/invoices",
-      expect.objectContaining({ page: 2 }),
-    );
-    expect(getMock).toHaveBeenNthCalledWith(
-      3,
-      "/tenant/{tenant}/payments",
-      expect.objectContaining({
-        paidOnAfter: "2026-01-01T00:00:00.000Z",
-        paidOnBefore: "2026-01-31T23:59:59.999Z",
-        businessUnitIds: "7",
-      }),
+    // Verify BU breakdown (zero-revenue "Admin" should be filtered out)
+    expect(payload.byBusinessUnit).toHaveLength(2);
+    expect((payload.byBusinessUnit as any[])[0].name).toBe("HVAC - Install");
+    expect((payload.byBusinessUnit as any[])[1].name).toBe("HVAC - Service");
+
+    // Verify Report 175 was called with correct parameters
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+          { name: "BusinessUnitIds", value: "7" },
+        ],
+      },
     );
   });
 
-  it("intel_revenue_summary returns partial results with warnings on endpoint failure", async () => {
-    const { handlers, getMock } = createContext();
+  it("intel_revenue_summary returns partial results with warnings on report failure", async () => {
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_revenue_summary");
 
-    getMock.mockImplementation(async (path: string) => {
-      if (path === "/tenant/{tenant}/invoices") {
-        throw new Error("invoice outage");
-      }
+    postMock.mockRejectedValue(new Error("report outage"));
 
+    getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/payments") {
         return {
           data: [{ amount: 125 }],
@@ -260,7 +242,6 @@ describe("intelligence domain", () => {
           page: 1,
         };
       }
-
       throw new Error(`Unexpected path: ${path}`);
     });
 
@@ -270,28 +251,28 @@ describe("intelligence domain", () => {
     });
     const payload = payloadFrom(result);
 
-    expect(payload.totalInvoiced).toBe(0);
+    expect(payload.totalRevenue).toBe(0);
     expect(payload.totalCollected).toBe(125);
     expect(payload._warnings).toEqual([
-      "Invoice data unavailable: invoice outage",
+      "Revenue report (Report 175) unavailable: report outage",
     ]);
   });
 
   it("intel_revenue_summary handles empty datasets with zero values", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_revenue_summary");
 
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.totalInvoiced).toBe(0);
+    expect(payload.totalRevenue).toBe(0);
     expect(payload.totalCollected).toBe(0);
     expect(payload.outstanding).toBe(0);
-    expect(payload.invoiceCount).toBe(0);
-    expect(payload.averageTicket).toBe(0);
-    expect(payload.topServicesByRevenue).toEqual([]);
+    expect(payload.avgTicket).toBe(0);
+    expect(payload.byBusinessUnit).toEqual([]);
   });
 
   it("intel_technician_scorecard computes per-tech and team metrics with date handling", async () => {

@@ -103,6 +103,7 @@ const ROUTE_TABLE: Record<string, string> = {
 
   // Reporting
   "/report-categories": "reporting",
+  "/report-category": "reporting",
   "/dynamic-value-sets": "reporting",
   "/data": "reporting",
 
