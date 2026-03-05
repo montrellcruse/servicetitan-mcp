@@ -28,6 +28,14 @@ import { Logger } from "./logger.js";
 import { type DomainLoader, ToolRegistry } from "./registry.js";
 import { setMaxResponseChars, toolResult } from "./utils.js";
 
+// Catch crashes that would otherwise exit silently
+process.on("uncaughtException", (err) => {
+  process.stderr.write(`UNCAUGHT EXCEPTION: ${err.stack ?? err.message}\n`);
+});
+process.on("unhandledRejection", (reason) => {
+  process.stderr.write(`UNHANDLED REJECTION: ${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}\n`);
+});
+
 const PORT = Number(process.env.PORT ?? process.env.ST_MCP_PORT ?? 3100);
 const API_KEY = process.env.ST_MCP_API_KEY ?? "";
 
@@ -174,6 +182,19 @@ async function main(): Promise<void> {
 
     // SSE connection endpoint
     if (url.pathname === "/sse" && req.method === "GET") {
+      // Close any existing connection — McpServer only supports one transport at a time
+      try {
+        await server.close();
+      } catch {
+        // No active connection — that's fine
+      }
+
+      // Clean up all previous transports
+      for (const [id, t] of transports) {
+        try { await t.close(); } catch { /* already closed */ }
+        transports.delete(id);
+      }
+
       const transport = new SSEServerTransport("/messages", res);
       transports.set(transport.sessionId, transport);
 
