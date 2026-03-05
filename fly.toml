@@ -1,0 +1,33 @@
+# Fly.io configuration for ServiceTitan MCP Server (SSE)
+# Deploy: fly launch / fly deploy
+# Secrets: fly secrets set ST_CLIENT_ID=... ST_CLIENT_SECRET=... etc.
+
+app = "servicetitan-mcp"
+primary_region = "iad"  
+
+[build]
+
+[env]
+  ST_ENVIRONMENT = "production"
+  ST_READONLY = "true"
+  ST_TIMEZONE = "America/New_York"
+  ST_LOG_LEVEL = "info"
+  PORT = "8080"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1
