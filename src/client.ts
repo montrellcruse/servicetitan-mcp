@@ -10,6 +10,164 @@ import { buildParams } from "./utils.js";
 
 const TOKEN_EXPIRY_BUFFER_MS = 60_000;
 
+/**
+ * Maps resource path segments to their ServiceTitan API module prefix.
+ * ST production API requires: /{module}/v2/tenant/{id}/{resource}
+ */
+const ROUTE_TABLE: Record<string, string> = {
+  // CRM
+  "/customers": "crm",
+  "/contacts": "crm",
+  "/leads": "crm",
+  "/locations": "crm",
+  "/bookings": "crm",
+  "/booking-provider-tags": "crm",
+  "/tags": "crm",
+
+  // Job Planning & Management (dispatch/jobs)
+  "/jobs": "jpm",
+  "/appointments": "jpm",
+  "/job-cancel-reasons": "jpm",
+  "/job-hold-reasons": "jpm",
+  "/job-types": "jpm",
+  "/projects": "jpm",
+  "/project-types": "jpm",
+  "/technicians": "jpm",
+  "/images": "jpm",
+  "/installed-equipment": "jpm",
+
+  // Dispatch
+  "/appointment-assignments": "dispatch",
+  "/arrival-windows": "dispatch",
+  "/capacity": "dispatch",
+  "/teams": "dispatch",
+  "/zones": "dispatch",
+
+  // Accounting
+  "/invoices": "accounting",
+  "/invoice-items": "accounting",
+  "/payments": "accounting",
+  "/ap-credits": "accounting",
+  "/ap-payments": "accounting",
+  "/gl-accounts": "accounting",
+  "/journal-entries": "accounting",
+  "/tax-zones": "accounting",
+
+  // Estimates / Sales
+  "/estimates": "sales",
+
+  // Pricebook
+  "/services": "pricebook",
+  "/materials": "pricebook",
+  "/equipment": "pricebook",
+  "/categories": "pricebook",
+  "/discounts": "pricebook",
+
+  // Payroll
+  "/payrolls": "payroll",
+  "/payroll-adjustments": "payroll",
+  "/gross-pay-items": "payroll",
+  "/timesheets": "payroll",
+  "/non-job-timesheets": "payroll",
+  "/splits": "payroll",
+
+  // Memberships
+  "/memberships": "memberships",
+  "/membership-types": "memberships",
+  "/recurring-services": "memberships",
+  "/recurring-service-types": "memberships",
+  "/recurring-service-events": "memberships",
+
+  // Marketing
+  "/campaigns": "marketing",
+  "/costs": "marketing",
+  "/attributed-leads": "marketing",
+  "/suppressions": "marketing",
+  "/submissions": "marketing",
+
+  // Marketing - Telecom (calls)
+  "/calls": "telecom",
+  "/call-reasons": "telecom",
+
+  // Inventory
+  "/purchase-orders": "inventory",
+  "/purchase-order-types": "inventory",
+  "/purchase-order-markups": "inventory",
+  "/vendors": "inventory",
+  "/warehouses": "inventory",
+  "/adjustments": "inventory",
+  "/transfers": "inventory",
+  "/receipts": "inventory",
+  "/returns": "inventory",
+  "/return-types": "inventory",
+
+  // Reporting
+  "/report-categories": "reporting",
+  "/dynamic-value-sets": "reporting",
+  "/data": "reporting",
+
+  // Settings
+  "/business-units": "settings",
+  "/employees": "settings",
+  "/tag-types": "settings",
+  "/user-roles": "settings",
+  "/activities": "settings",
+  "/activity-categories": "settings",
+  "/activity-types": "settings",
+  "/business-hours": "settings",
+  "/performance": "settings",
+  "/tasks": "task-management",
+
+  // Forms
+  "/forms": "forms",
+
+  // Opt-in/out (marketing v3)
+  "/optinouts": "marketing",
+};
+
+/**
+ * For /tenant/{id}/export/{resource} paths, maps the resource to its API module.
+ * Export endpoints live under their parent domain: /{module}/v2/tenant/{id}/export/{resource}
+ */
+const EXPORT_ROUTE_TABLE: Record<string, string> = {
+  "/customers": "crm",
+  "/contacts": "crm",
+  "/leads": "crm",
+  "/locations": "crm",
+  "/bookings": "crm",
+  "/jobs": "jpm",
+  "/appointments": "jpm",
+  "/job-types": "jpm",
+  "/projects": "jpm",
+  "/job-cancel-reasons": "jpm",
+  "/invoices": "accounting",
+  "/invoice-items": "accounting",
+  "/payments": "accounting",
+  "/estimates": "sales",
+  "/estimate-items": "sales",
+  "/services": "pricebook",
+  "/materials": "pricebook",
+  "/equipment": "pricebook",
+  "/campaigns": "marketing",
+  "/calls": "telecom",
+  "/membership-types": "memberships",
+  "/memberships": "memberships",
+  "/recurring-services": "memberships",
+  "/purchase-orders": "inventory",
+  "/vendors": "inventory",
+  "/employees": "settings",
+  "/business-units": "settings",
+  "/tag-types": "settings",
+  "/technicians": "jpm",
+  "/activities": "settings",
+  "/activity-codes": "settings",
+  "/adjustments": "inventory",
+  "/payrolls": "payroll",
+  "/payroll-adjustments": "payroll",
+  "/gross-pay-items": "payroll",
+  "/timesheets": "payroll",
+};
+
 export const ENVIRONMENTS = {
   integration: {
     authUrl: "https://auth-integration.servicetitan.io",
@@ -128,7 +286,54 @@ export class ServiceTitanClient {
 
   private resolvePath(path: string): string {
     const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    return normalizedPath.replaceAll("{tenant}", this.config.tenantId);
+    const withTenant = normalizedPath.replaceAll("{tenant}", this.config.tenantId);
+    return this.addApiPrefix(withTenant);
+  }
+
+  /**
+   * ServiceTitan's v2 API requires versioned module prefixes on all endpoints.
+   * e.g. `/tenant/123/customers` → `/crm/v2/tenant/123/customers`
+   *
+   * This mapping routes each resource path to its correct API module prefix.
+   * Paths that already include a prefix (e.g. `/v3/...`, `/crm/v2/...`) are left untouched.
+   */
+  private addApiPrefix(path: string): string {
+    // Skip paths that already have an API prefix
+    if (/^\/(?:crm|accounting|jpm|dispatch|settings|pricebook|payroll|memberships|marketing|telecom|inventory|reporting|sales|equipment-systems|task-management|export)\//i.test(path)) {
+      return path;
+    }
+    // Skip versioned paths (e.g. /v3/tenant/...)
+    if (/^\/v\d+\//.test(path)) {
+      return path;
+    }
+
+    // Extract the resource segment after /tenant/{id}/
+    const match = path.match(/^\/tenant\/[^/]+(\/export)?(\/[^/?]+)/);
+    if (!match) return path;
+
+    const isExport = match[1] === "/export";
+    const resource = match[2]; // e.g. "/customers", "/jobs"
+
+    // Export endpoints are nested under their parent domain prefix
+    if (isExport) {
+      const exportPrefix = EXPORT_ROUTE_TABLE[resource];
+      if (exportPrefix) {
+        return `/${exportPrefix}/v2${path}`;
+      }
+      // Default: try matching the exported resource to a regular domain
+      const regularPrefix = ROUTE_TABLE[resource];
+      if (regularPrefix) {
+        return `/${regularPrefix}/v2${path}`;
+      }
+    }
+
+    const prefix = ROUTE_TABLE[resource];
+    if (prefix) {
+      return `/${prefix}/v2${path}`;
+    }
+
+    // Fallback: return path as-is (will likely 404, but better than silently misrouting)
+    return path;
   }
 
   private setupInterceptors(): void {
