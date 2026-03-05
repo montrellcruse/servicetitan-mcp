@@ -3,3 +3,4 @@ build/
 .env
 *.tgz
 coverage/
+.DS_Store
