@@ -215,8 +215,8 @@ async function main(): Promise<void> {
     sendJson(res, 404, { error: "Not found" });
   });
 
-  httpServer.listen(PORT, () => {
-    logger.info(`SSE server listening on port ${PORT}`);
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    logger.info(`SSE server listening on 0.0.0.0:${PORT}`);
     logger.info(`Connect Claude Desktop with: http://localhost:${PORT}/sse`);
   });
 }
