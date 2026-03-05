@@ -83,6 +83,9 @@ function payloadFrom(result: ToolResponse): Record<string, any> {
   return JSON.parse(text ?? "{}");
 }
 
+const PER_CAMPAIGN_REVENUE_WARNING =
+  "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
+
 describe("intelligence domain", () => {
   it("registers all 6 intelligence tools as read operations", () => {
     const { server, registry } = createContext();
@@ -287,6 +290,7 @@ describe("intelligence domain", () => {
           data: [
             ["Mike Johnson", 1000, 250, 0.5, 4, 2, 4.8, 10, 0, 1000],
             ["Nina Lopez", 0, 0, 0, 0, 0, 0, 11, 0, 0],
+            ["Install Leader", 0, 0, 0, 0, 0, 0, 12, 0, 0],
           ],
           hasMore: false,
         };
@@ -298,6 +302,7 @@ describe("intelligence domain", () => {
           data: [
             ["Mike Johnson", 200, 0.85, 300, 0, 0, 1, 10, 0, 1000],
             ["Nina Lopez", 0, 0, 0, 0, 0, 0, 11, 0, 0],
+            ["Install Leader", 0, 0, 0, 0, 0, 0, 12, 0, 0],
           ],
           hasMore: false,
         };
@@ -310,6 +315,8 @@ describe("intelligence domain", () => {
             ["INV-1", "HVAC Service", "Mike Johnson, Kevin Herrera"],
             ["INV-2", "HVAC Service", "Mike Johnson"],
             ["INV-3", "HVAC Service", "Kevin Herrera"],
+            ["INV-4", "HVAC Service", "Install Leader"],
+            ["INV-5", "HVAC Service", "Install Leader"],
           ],
           hasMore: false,
         };
@@ -475,7 +482,7 @@ describe("intelligence domain", () => {
     });
   });
 
-  it("intel_membership_health computes retention and member revenue mix", async () => {
+  it("intel_membership_health computes retention and total revenue context", async () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
@@ -503,10 +510,10 @@ describe("intelligence domain", () => {
       if (path === "/tenant/{tenant}/invoices") {
         return {
           data: [
-            { id: 1, total: 100, membershipTypeId: 1, membershipTypeName: "Gold Plan" },
-            { id: 2, total: 200, membershipTypeId: 1 },
-            { id: 3, total: 50, membershipTypeId: 2, membershipType: { name: "Silver Plan" } },
-            { id: 4, total: 80, isMember: true },
+            { id: 1, total: 100 },
+            { id: 2, total: 200 },
+            { id: 3, total: 50 },
+            { id: 4, total: 80 },
             { id: 5, total: 150 },
           ],
           hasMore: false,
@@ -529,10 +536,7 @@ describe("intelligence domain", () => {
     expect(payload.reactivated).toBe(1);
     expect(payload.deleted).toBe(1);
     expect(payload.retentionRate).toBeCloseTo(0.88, 3);
-    expect(payload.memberRevenue).toBe(430);
-    expect(payload.nonMemberRevenue).toBe(150);
-    expect(payload.memberAverageTicket).toBe(107.5);
-    expect(payload.nonMemberAverageTicket).toBe(150);
+    expect(payload.totalRevenue).toBe(580);
     expect(payload.membershipTypes).toEqual([
       {
         name: "Gold Plan",
@@ -543,7 +547,6 @@ describe("intelligence domain", () => {
         renewed: 5,
         suspended: 2,
         reactivated: 1,
-        revenue: 300,
       },
       {
         name: "Silver Plan",
@@ -554,7 +557,6 @@ describe("intelligence domain", () => {
         renewed: 4,
         suspended: 1,
         reactivated: 0,
-        revenue: 50,
       },
     ]);
 
@@ -587,8 +589,8 @@ describe("intelligence domain", () => {
       if (path === "/tenant/{tenant}/invoices") {
         return {
           data: [
-            { total: 50, isMember: true },
-            { total: 75, membershipTypeId: 99 },
+            { total: 50 },
+            { total: 75 },
           ],
           hasMore: false,
           page: 1,
@@ -609,9 +611,7 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(0);
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
-    expect(payload.memberRevenue).toBe(125);
-    expect(payload.nonMemberRevenue).toBe(0);
-    expect(payload.memberAverageTicket).toBe(62.5);
+    expect(payload.totalRevenue).toBe(125);
     expect(payload.membershipTypes).toEqual([]);
     expect(payload._warnings).toEqual([
       "Membership summary report (Report 182) unavailable: report outage",
@@ -637,8 +637,7 @@ describe("intelligence domain", () => {
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
     expect(payload.retentionRate).toBe(0);
-    expect(payload.memberRevenue).toBe(0);
-    expect(payload.nonMemberRevenue).toBe(0);
+    expect(payload.totalRevenue).toBe(0);
     expect(payload.membershipTypes).toEqual([]);
   });
 
@@ -913,16 +912,17 @@ describe("intelligence domain", () => {
     ]);
   });
 
-  it("intel_campaign_performance computes campaign-level and total ROI metrics", async () => {
+  it("intel_campaign_performance sorts by activity and keeps revenue in totals only", async () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
+    getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/campaigns") {
         return {
           data: [
-            { id: 1, name: "Google Ads - AC Repair" },
-            { id: 2, name: "Direct Mail" },
+            { id: 1, name: "zExisting Client" },
+            { id: 2, name: "Google Ads - AC Repair" },
+            { id: 3, name: "zYelp" },
           ],
           hasMore: false,
           page: 1,
@@ -933,14 +933,14 @@ describe("intelligence domain", () => {
         // v3 calls nest campaign inside leadCall (matches real ST API structure)
         return {
           data: [
-            { id: 101, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
-            { id: 102, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
-            { id: 103, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
-            { id: 104, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
-            { id: 105, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
-            { id: 106, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
-            { id: 107, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
-            { id: 108, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
+            { id: 101, leadCall: { campaign: { id: 2, name: "Google Ads" } } },
+            { id: 102, leadCall: { campaign: { id: 2, name: "Google Ads" } } },
+            { id: 103, leadCall: { campaign: { id: 2, name: "Google Ads" } } },
+            { id: 104, leadCall: { campaign: { id: 2, name: "Google Ads" } } },
+            { id: 105, leadCall: { campaign: { id: 2, name: "Google Ads" } } },
+            { id: 106, leadCall: { campaign: { id: 1, name: "Existing Client" } } },
+            { id: 107, leadCall: { campaign: { id: 3, name: "Yelp" } } },
+            { id: 108, leadCall: { campaign: { id: 3, name: "Yelp" } } },
           ],
           hasMore: false,
           page: 1,
@@ -949,28 +949,18 @@ describe("intelligence domain", () => {
 
       if (path === "/tenant/{tenant}/bookings") {
         return {
-          data: [{ campaignId: 1 }, { campaignId: 1 }, { campaignId: 2 }],
+          data: [{ campaignId: 2 }, { campaignId: 2 }, { campaignId: 3 }],
           hasMore: false,
           page: 1,
         };
       }
 
       if (path === "/tenant/{tenant}/invoices") {
-        if (params?.campaignId === 1) {
-          return {
-            data: [{ total: 1000 }, { total: 500 }],
-            hasMore: false,
-            page: 1,
-          };
-        }
-
-        if (params?.campaignId === 2) {
-          return {
-            data: [{ total: 700 }],
-            hasMore: false,
-            page: 1,
-          };
-        }
+        return {
+          data: [{ total: 1000 }, { total: 500 }, { total: 700 }],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       throw new Error(`Unexpected path: ${path}`);
@@ -995,22 +985,31 @@ describe("intelligence domain", () => {
 
     expect(payload.campaigns).toEqual([
       {
-        id: 1,
+        id: 2,
         name: "Google Ads - AC Repair",
         calls: 5,
         bookings: 2,
         conversionRate: 0.4,
-        revenue: 1500,
-        revenuePerCall: 300,
+        revenue: 0,
+        revenuePerCall: 0,
       },
       {
-        id: 2,
-        name: "Direct Mail",
-        calls: 3,
+        id: 3,
+        name: "zYelp",
+        calls: 2,
         bookings: 1,
-        conversionRate: 0.333,
-        revenue: 700,
-        revenuePerCall: 233.33,
+        conversionRate: 0.5,
+        revenue: 0,
+        revenuePerCall: 0,
+      },
+      {
+        id: 1,
+        name: "zExisting Client",
+        calls: 1,
+        bookings: 0,
+        conversionRate: 0,
+        revenue: 0,
+        revenuePerCall: 0,
       },
     ]);
 
@@ -1020,6 +1019,7 @@ describe("intelligence domain", () => {
       conversionRate: 0.375,
       revenue: 2200,
     });
+    expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
 
     // Zero-activity "Admin" BU should be filtered out
     expect(payload.leadGeneration).toHaveLength(2);
@@ -1062,6 +1062,17 @@ describe("intelligence domain", () => {
         active: "Any",
       }),
     );
+    expect(getMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/invoices",
+      expect.objectContaining({
+        invoicedOnOrAfter: "2026-01-01T00:00:00.000Z",
+        invoicedOnBefore: "2026-01-31T23:59:59.999Z",
+      }),
+    );
+    expect(getMock).not.toHaveBeenCalledWith(
+      "/tenant/{tenant}/invoices",
+      expect.objectContaining({ campaignId: expect.anything() }),
+    );
 
     expect(postMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data",
@@ -1078,7 +1089,7 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
+    getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/campaigns") {
         return {
           data: [{ id: 1, name: "Google Ads - AC Repair" }],
@@ -1103,9 +1114,7 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/tenant/{tenant}/invoices") {
-        if (params?.campaignId === 1) {
-          return { data: [{ total: 500 }], hasMore: false, page: 1 };
-        }
+        return { data: [{ total: 500 }], hasMore: false, page: 1 };
       }
 
       throw new Error(`Unexpected path: ${path}`);
@@ -1123,12 +1132,14 @@ describe("intelligence domain", () => {
       expect.objectContaining({
         calls: 2,
         bookings: 0,
-        revenue: 500,
+        revenue: 0,
         conversionRate: 0,
       }),
     );
+    expect(payload.totals.revenue).toBe(500);
     expect(payload._warnings).toEqual([
       "Booking data unavailable: bookings unavailable",
+      PER_CAMPAIGN_REVENUE_WARNING,
     ]);
   });
 
@@ -1136,7 +1147,7 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
+    getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/campaigns") {
         return {
           data: [{ id: 1, name: "Google Ads - AC Repair" }],
@@ -1158,9 +1169,7 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/tenant/{tenant}/invoices") {
-        if (params?.campaignId === 1) {
-          return { data: [{ total: 250 }], hasMore: false, page: 1 };
-        }
+        return { data: [{ total: 250 }], hasMore: false, page: 1 };
       }
 
       throw new Error(`Unexpected path: ${path}`);
@@ -1177,6 +1186,7 @@ describe("intelligence domain", () => {
     expect(payload.leadGeneration).toEqual([]);
     expect(payload._warnings).toEqual([
       "Lead generation report (Report 176) unavailable: lead report unavailable",
+      PER_CAMPAIGN_REVENUE_WARNING,
     ]);
   });
 
@@ -1189,7 +1199,11 @@ describe("intelligence domain", () => {
         return { data: [], hasMore: false, page: 1 };
       }
 
-      if (path === "/v3/tenant/{tenant}/calls" || path === "/tenant/{tenant}/bookings") {
+      if (
+        path === "/v3/tenant/{tenant}/calls" ||
+        path === "/tenant/{tenant}/bookings" ||
+        path === "/tenant/{tenant}/invoices"
+      ) {
         return { data: [], hasMore: false, page: 1 };
       }
 
@@ -1212,6 +1226,7 @@ describe("intelligence domain", () => {
       revenue: 0,
     });
     expect(payload.leadGeneration).toEqual([]);
+    expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
   });
 
   it("intel_daily_snapshot computes counts, revenues, highlights, and date params", async () => {
@@ -1271,10 +1286,12 @@ describe("intelligence domain", () => {
       if (path === "/v3/tenant/{tenant}/calls") {
         return {
           data: [
-            { status: "Answered", bookingId: 9 },
-            { status: "Missed" },
+            { leadCall: { callType: "Booked" } },
+            { leadCall: { callType: "booked" } },
+            { leadCall: { callType: "Missed" } },
+            { leadCall: { callType: "Abandoned" } },
             { status: "NoAnswer" },
-            { status: "Answered", booked: true },
+            { bookingId: 9 },
           ],
           hasMore: false,
           page: 1,
@@ -1305,13 +1322,13 @@ describe("intelligence domain", () => {
       estimatesSold: 1000,
     });
     expect(payload.calls).toEqual({
-      total: 4,
-      booked: 2,
-      missed: 2,
+      total: 6,
+      booked: 3,
+      missed: 3,
     });
     expect(payload.highlights).toEqual([
       "1 of 4 appointments completed (25%)",
-      "2 missed calls today may need follow-up",
+      "3 missed calls today may need follow-up",
       "$1,000 in estimates sold",
     ]);
 

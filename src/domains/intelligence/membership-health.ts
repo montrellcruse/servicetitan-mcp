@@ -46,7 +46,6 @@ interface MembershipTypeSummary {
   suspended: number;
   reactivated: number;
   deleted: number;
-  revenue: number;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -89,7 +88,6 @@ function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[
       reactivated: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Reactivated]),
       newSales: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.NewSales]),
       activeAtEnd: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.ActiveAtEnd]),
-      revenue: 0,
     };
 
     if (!hasAnyReportActivity(summary)) {
@@ -100,26 +98,6 @@ function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[
   }
 
   return summaries;
-}
-
-function normalizeTypeName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function membershipTypeId(source: GenericRecord): number {
-  return Math.round(toNumber(firstValue(source, ["membershipTypeId", "membershipType.id", "typeId"])));
-}
-
-function invoiceMembershipTypeName(source: GenericRecord): string | null {
-  return toText(
-    firstValue(source, [
-      "membershipType.name",
-      "membershipTypeName",
-      "membership.name",
-      "type.name",
-      "typeName",
-    ]),
-  );
 }
 
 function invoiceTotal(invoice: GenericRecord): number {
@@ -135,7 +113,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and member vs non-member revenue",
+      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and total invoiced revenue",
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
       try {
@@ -172,63 +150,7 @@ export function registerIntelligenceMembershipHealthTool(
             }),
           [],
         );
-
-        const statsByNormalizedName = new Map<string, MembershipTypeSummary>();
-        for (const type of membershipTypeStats) {
-          statsByNormalizedName.set(normalizeTypeName(type.name), type);
-        }
-
-        const reportTypeNameByInvoiceTypeId = new Map<number, string>();
-        for (const invoice of invoices) {
-          const typeId = membershipTypeId(invoice);
-          if (typeId <= 0 || reportTypeNameByInvoiceTypeId.has(typeId)) {
-            continue;
-          }
-
-          const typeName = invoiceMembershipTypeName(invoice);
-          if (!typeName) {
-            continue;
-          }
-
-          const normalizedName = normalizeTypeName(typeName);
-          if (statsByNormalizedName.has(normalizedName)) {
-            reportTypeNameByInvoiceTypeId.set(typeId, normalizedName);
-          }
-        }
-
-        let memberRevenue = 0;
-        let nonMemberRevenue = 0;
-        let memberInvoiceCount = 0;
-        let nonMemberInvoiceCount = 0;
-
-        for (const invoice of invoices) {
-          const total = invoiceTotal(invoice);
-          const typeId = membershipTypeId(invoice);
-          const isMemberInvoice = typeId > 0 || firstValue(invoice, ["isMember"]) === true;
-
-          if (isMemberInvoice) {
-            memberRevenue += total;
-            memberInvoiceCount += 1;
-
-            if (typeId > 0) {
-              const directName = invoiceMembershipTypeName(invoice);
-              const normalizedTypeName =
-                directName && statsByNormalizedName.has(normalizeTypeName(directName))
-                  ? normalizeTypeName(directName)
-                  : reportTypeNameByInvoiceTypeId.get(typeId);
-
-              if (normalizedTypeName) {
-                const bucket = statsByNormalizedName.get(normalizedTypeName);
-                if (bucket) {
-                  bucket.revenue += total;
-                }
-              }
-            }
-          } else {
-            nonMemberRevenue += total;
-            nonMemberInvoiceCount += 1;
-          }
-        }
+        const totalRevenue = round(sumBy(invoices, invoiceTotal), 2);
 
         const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));
         const newSignups = Math.round(sumBy(membershipTypeStats, (type) => type.newSales));
@@ -249,7 +171,6 @@ export function registerIntelligenceMembershipHealthTool(
             renewed: type.renewed,
             suspended: type.suspended,
             reactivated: type.reactivated,
-            revenue: round(type.revenue, 2),
           }))
           .sort((a, b) => b.activeAtEnd - a.activeAtEnd);
 
@@ -270,10 +191,7 @@ export function registerIntelligenceMembershipHealthTool(
             safeDivide(activeMemberships - cancellations, activeMemberships),
             3,
           ),
-          memberRevenue: round(memberRevenue, 2),
-          nonMemberRevenue: round(nonMemberRevenue, 2),
-          memberAverageTicket: round(safeDivide(memberRevenue, memberInvoiceCount), 2),
-          nonMemberAverageTicket: round(safeDivide(nonMemberRevenue, nonMemberInvoiceCount), 2),
+          totalRevenue,
           membershipTypes,
         };
 

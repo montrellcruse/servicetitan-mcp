@@ -62,6 +62,9 @@ interface LeadGenerationByBusinessUnit {
   nonJobRevenue: number;
 }
 
+const PER_CAMPAIGN_REVENUE_WARNING =
+  "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
+
 function campaignId(campaign: GenericRecord): number {
   return toNumber(firstValue(campaign, ["id", "campaignId"]));
 }
@@ -186,14 +189,6 @@ export function registerIntelligenceCampaignPerformanceTool(
               ? []
               : [{ id: input.campaignId, name: `Campaign ${input.campaignId}` }];
 
-        const totalAvailable = campaigns.length;
-        if (campaigns.length > maxCampaigns) {
-          campaigns = campaigns.slice(0, maxCampaigns);
-          warnings.push(
-            `Limited to ${maxCampaigns} of ${totalAvailable} active campaigns. Use 'limit' param to increase (max 50) or 'campaignId' for a specific campaign.`,
-          );
-        }
-
         const calls = await fetchWithWarning(
           warnings,
           "Call data",
@@ -213,6 +208,17 @@ export function registerIntelligenceCampaignPerformanceTool(
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/bookings", {
               createdOnOrAfter: startIso,
               createdBefore: endIso,
+            }),
+          [],
+        );
+
+        const invoices = await fetchWithWarning(
+          warnings,
+          "Revenue data",
+          () =>
+            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
+              invoicedOnOrAfter: startIso,
+              invoicedOnBefore: endIso,
             }),
           [],
         );
@@ -254,21 +260,8 @@ export function registerIntelligenceCampaignPerformanceTool(
 
           const name = campaignName(campaign, id);
 
-          const invoices = await fetchWithWarning(
-            warnings,
-            `Revenue data for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-                campaignId: id,
-                invoicedOnOrAfter: startIso,
-                invoicedOnBefore: endIso,
-              }),
-            [],
-          );
-
           const callCount = callsByCampaignId.get(id) ?? 0;
           const bookingCount = bookingsByCampaignId.get(id) ?? 0;
-          const revenue = round(sumBy(invoices, invoiceRevenue), 2);
 
           campaignRows.push({
             id,
@@ -276,26 +269,39 @@ export function registerIntelligenceCampaignPerformanceTool(
             calls: callCount,
             bookings: bookingCount,
             conversionRate: round(safeDivide(bookingCount, callCount), 3),
-            revenue,
-            revenuePerCall: round(safeDivide(revenue, callCount), 2),
+            revenue: 0,
+            revenuePerCall: 0,
           });
         }
 
-        const totalsCalls = campaignRows.reduce((total, row) => total + row.calls, 0);
-        const totalsBookings = campaignRows.reduce((total, row) => total + row.bookings, 0);
-        const totalsRevenue = campaignRows.reduce((total, row) => total + row.revenue, 0);
+        campaignRows.sort((a, b) => b.calls + b.bookings - (a.calls + a.bookings));
+
+        const totalAvailable = campaignRows.length;
+        const limitedCampaignRows =
+          campaignRows.length > maxCampaigns ? campaignRows.slice(0, maxCampaigns) : campaignRows;
+        if (campaignRows.length > maxCampaigns) {
+          warnings.push(
+            `Limited to ${maxCampaigns} of ${totalAvailable} active campaigns. Use 'limit' param to increase (max 50) or 'campaignId' for a specific campaign.`,
+          );
+        }
+
+        warnings.push(PER_CAMPAIGN_REVENUE_WARNING);
+
+        const totalsCalls = limitedCampaignRows.reduce((total, row) => total + row.calls, 0);
+        const totalsBookings = limitedCampaignRows.reduce((total, row) => total + row.bookings, 0);
+        const totalsRevenue = round(sumBy(invoices, invoiceRevenue), 2);
 
         const result: Record<string, unknown> = {
           period: {
             start: input.startDate,
             end: input.endDate,
           },
-          campaigns: campaignRows,
+          campaigns: limitedCampaignRows,
           totals: {
             calls: totalsCalls,
             bookings: totalsBookings,
             conversionRate: round(safeDivide(totalsBookings, totalsCalls), 3),
-            revenue: round(totalsRevenue, 2),
+            revenue: totalsRevenue,
           },
           leadGeneration,
         };

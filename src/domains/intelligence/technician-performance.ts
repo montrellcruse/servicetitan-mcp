@@ -226,18 +226,10 @@ function countCompletedJobsByTech(
 
 function hasAnyActivity(tech: TechnicianScorecard): boolean {
   return (
-    tech.jobsCompleted !== 0 ||
-    tech.revenue !== 0 ||
-    tech.averageTicket !== 0 ||
-    tech.opportunities !== 0 ||
-    tech.convertedJobs !== 0 ||
-    tech.conversionRate !== 0 ||
-    tech.customerSatisfaction !== 0 ||
-    tech.revenuePerHour !== 0 ||
-    tech.billableEfficiency !== 0 ||
-    tech.recallsCaused !== 0 ||
-    tech.upsold !== 0 ||
-    tech.jobsPerDay !== 0
+    tech.revenue > 0 ||
+    tech.opportunities > 0 ||
+    tech.revenuePerHour > 0 ||
+    tech.upsold > 0
   );
 }
 
