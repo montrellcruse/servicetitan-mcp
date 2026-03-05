@@ -643,7 +643,7 @@ describe("intelligence domain", () => {
   });
 
   it("intel_estimate_pipeline computes funnel, age buckets, stale list, and date params", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
     getMock.mockImplementation(async (path: string) => {
@@ -680,6 +680,15 @@ describe("intelligence domain", () => {
       };
     });
 
+    postMock.mockResolvedValue({
+      fields: [],
+      data: [
+        ["Jamie Tech", 15000, 7500, 0.5, 6, 1.8, 77, 100, 15100],
+        ["Pat Tech", 9000, 4500, 0.25, 8, 1.2, 88, 0, 9000],
+      ],
+      hasMore: false,
+    });
+
     const result = await handler({
       startDate: "2026-01-01",
       endDate: "2026-01-31",
@@ -704,6 +713,23 @@ describe("intelligence domain", () => {
     expect(payload.staleEstimates).toEqual([
       { id: 4, customer: "D", value: 4000, daysOld: 47 },
     ]);
+    expect(payload.salesFunnel).toEqual({
+      totalSales: 15000,
+      averageCloseRate: 50,
+      totalOpportunities: 6,
+      averageClosedSale: 7500,
+      byTechnician: [
+        {
+          id: 77,
+          name: "Jamie Tech",
+          totalSales: 15000,
+          closedAverageSale: 7500,
+          closeRate: 50,
+          salesOpportunity: 6,
+          optionsPerOpportunity: 1.8,
+        },
+      ],
+    });
 
     expect(getMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/estimates",
@@ -713,13 +739,28 @@ describe("intelligence domain", () => {
         soldById: 77,
       }),
     );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/172/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+        ],
+      },
+    );
   });
 
   it("intel_estimate_pipeline returns warning and zeroed funnel on failure", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
     getMock.mockRejectedValue(new Error("pipeline unavailable"));
+    postMock.mockResolvedValue({
+      fields: [],
+      data: [["Jordan Tech", 1200, 600, 0.5, 2, 1.1, 10, 0, 1200]],
+      hasMore: false,
+    });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
@@ -730,16 +771,34 @@ describe("intelligence domain", () => {
       sold: { count: 0, value: 0 },
       dismissed: { count: 0, value: 0 },
     });
+    expect(payload.salesFunnel).toEqual({
+      totalSales: 1200,
+      averageCloseRate: 50,
+      totalOpportunities: 2,
+      averageClosedSale: 600,
+      byTechnician: [
+        {
+          id: 10,
+          name: "Jordan Tech",
+          totalSales: 1200,
+          closedAverageSale: 600,
+          closeRate: 50,
+          salesOpportunity: 2,
+          optionsPerOpportunity: 1.1,
+        },
+      ],
+    });
     expect(payload._warnings).toEqual([
       "Estimate data unavailable: pipeline unavailable",
     ]);
   });
 
   it("intel_estimate_pipeline handles empty estimate data", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
 
     const result = await handler({});
     const payload = payloadFrom(result);
@@ -748,10 +807,111 @@ describe("intelligence domain", () => {
     expect(payload.conversionRate).toBe(0);
     expect(payload.averageDaysToClose).toBe(0);
     expect(payload.staleEstimates).toEqual([]);
+    expect(payload.salesFunnel).toEqual({
+      totalSales: 0,
+      averageCloseRate: 0,
+      totalOpportunities: 0,
+      averageClosedSale: 0,
+      byTechnician: [],
+    });
+  });
+
+  it("intel_estimate_pipeline returns report 172 sales funnel output shape", async () => {
+    const { handlers, getMock, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_estimate_pipeline");
+
+    getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
+    postMock.mockResolvedValue({
+      fields: [],
+      data: [
+        ["Sam Keller", 1000, 500, 0.4, 5, 1.2, 20, 0, 1000],
+        ["Ria Brooks", 2000, 1000, 0.6, 10, 1.6, 21, 0, 2000],
+      ],
+      hasMore: false,
+    });
+
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const payload = payloadFrom(result);
+
+    expect(payload.salesFunnel).toEqual({
+      totalSales: 3000,
+      averageCloseRate: 50,
+      totalOpportunities: 15,
+      averageClosedSale: 750,
+      byTechnician: [
+        {
+          id: 20,
+          name: "Sam Keller",
+          totalSales: 1000,
+          closedAverageSale: 500,
+          closeRate: 40,
+          salesOpportunity: 5,
+          optionsPerOpportunity: 1.2,
+        },
+        {
+          id: 21,
+          name: "Ria Brooks",
+          totalSales: 2000,
+          closedAverageSale: 1000,
+          closeRate: 60,
+          salesOpportunity: 10,
+          optionsPerOpportunity: 1.6,
+        },
+      ],
+    });
+  });
+
+  it("intel_estimate_pipeline keeps existing metrics when report 172 fails", async () => {
+    const { handlers, getMock, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_estimate_pipeline");
+
+    getMock.mockResolvedValue({
+      data: [
+        {
+          id: 1,
+          status: "Open",
+          createdOn: "2026-01-10T08:00:00.000Z",
+          total: 1000,
+          customerName: "Alpha",
+        },
+        {
+          id: 2,
+          status: "Sold",
+          createdOn: "2026-01-05T08:00:00.000Z",
+          soldOn: "2026-01-06T08:00:00.000Z",
+          total: 2000,
+          customerName: "Beta",
+        },
+      ],
+      hasMore: false,
+      page: 1,
+    });
+    postMock.mockRejectedValue(new Error("report outage"));
+
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const payload = payloadFrom(result);
+
+    expect(payload.totalEstimates).toBe(2);
+    expect(payload.pipeline).toEqual({
+      open: { count: 1, value: 1000 },
+      sold: { count: 1, value: 2000 },
+      dismissed: { count: 0, value: 0 },
+    });
+    expect(payload.conversionRate).toBe(0.5);
+    expect(payload.salesFunnel).toEqual({
+      totalSales: 0,
+      averageCloseRate: 0,
+      totalOpportunities: 0,
+      averageClosedSale: 0,
+      byTechnician: [],
+    });
+    expect(payload._warnings).toEqual([
+      "Technician sales report (Report 172) unavailable: report outage",
+    ]);
   });
 
   it("intel_campaign_performance computes campaign-level and total ROI metrics", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
     getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
@@ -767,39 +927,28 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/v3/tenant/{tenant}/calls") {
-        if (params?.campaignId === 1) {
-          return {
-            data: [{}, {}, {}, {}, {}],
-            hasMore: false,
-            page: 1,
-          };
-        }
-
-        if (params?.campaignId === 2) {
-          return {
-            data: [{}, {}, {}],
-            hasMore: false,
-            page: 1,
-          };
-        }
+        return {
+          data: [
+            { campaignId: 1 },
+            { campaignId: 1 },
+            { campaignId: 1 },
+            { campaignId: 1 },
+            { campaignId: 1 },
+            { campaignId: 2 },
+            { campaignId: 2 },
+            { campaignId: 2 },
+          ],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       if (path === "/tenant/{tenant}/bookings") {
-        if (params?.campaignId === 1) {
-          return {
-            data: [{}, {}],
-            hasMore: false,
-            page: 1,
-          };
-        }
-
-        if (params?.campaignId === 2) {
-          return {
-            data: [{}],
-            hasMore: false,
-            page: 1,
-          };
-        }
+        return {
+          data: [{ campaignId: 1 }, { campaignId: 1 }, { campaignId: 2 }],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       if (path === "/tenant/{tenant}/invoices") {
@@ -821,6 +970,15 @@ describe("intelligence domain", () => {
       }
 
       throw new Error(`Unexpected path: ${path}`);
+    });
+
+    postMock.mockResolvedValue({
+      fields: [],
+      data: [
+        ["HVAC", 10, 4, 0.4, 2500, 5, 2, 0.4, 1200, 50, 2750, 25],
+        ["Plumbing", 3, 1, 0.333, 1500, 2, 1, 0.5, 300, 0, 1800, 0],
+      ],
+      hasMore: false,
     });
 
     const result = await handler({
@@ -857,21 +1015,62 @@ describe("intelligence domain", () => {
       revenue: 2200,
     });
 
+    expect(payload.leadGeneration).toEqual([
+      {
+        name: "HVAC",
+        leadGenerationOpportunity: 10,
+        leadsSet: 4,
+        leadConversionRate: 0.4,
+        averageLeadSale: 2500,
+        replacementOpportunity: 5,
+        replacementLeadsSet: 2,
+        replacementLeadConversionRate: 0.4,
+        membershipSales: 1200,
+        adjustmentRevenue: 50,
+        totalRevenue: 2750,
+        nonJobRevenue: 25,
+      },
+      {
+        name: "Plumbing",
+        leadGenerationOpportunity: 3,
+        leadsSet: 1,
+        leadConversionRate: 0.333,
+        averageLeadSale: 1500,
+        replacementOpportunity: 2,
+        replacementLeadsSet: 1,
+        replacementLeadConversionRate: 0.5,
+        membershipSales: 300,
+        adjustmentRevenue: 0,
+        totalRevenue: 1800,
+        nonJobRevenue: 0,
+      },
+    ]);
+
     expect(getMock).toHaveBeenCalledWith(
       "/v3/tenant/{tenant}/calls",
       expect.objectContaining({
-        campaignId: 1,
         createdOnOrAfter: "2026-01-01T00:00:00.000Z",
         createdBefore: "2026-01-31T23:59:59.999Z",
+        active: "Any",
       }),
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+        ],
+      },
     );
   });
 
-  it("intel_campaign_performance continues when one per-campaign endpoint fails", async () => {
-    const { handlers, getMock } = createContext();
+  it("intel_campaign_performance continues when batch bookings endpoint fails", async () => {
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/campaigns") {
         return {
           data: [{ id: 1, name: "Google Ads - AC Repair" }],
@@ -881,7 +1080,7 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/v3/tenant/{tenant}/calls") {
-        return { data: [{}, {}], hasMore: false, page: 1 };
+        return { data: [{ campaignId: 1 }, { campaignId: 1 }], hasMore: false, page: 1 };
       }
 
       if (path === "/tenant/{tenant}/bookings") {
@@ -889,11 +1088,15 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/tenant/{tenant}/invoices") {
-        return { data: [{ total: 500 }], hasMore: false, page: 1 };
+        if (params?.campaignId === 1) {
+          return { data: [{ total: 500 }], hasMore: false, page: 1 };
+        }
       }
 
       throw new Error(`Unexpected path: ${path}`);
     });
+
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
 
     const result = await handler({
       startDate: "2026-01-01",
@@ -910,15 +1113,71 @@ describe("intelligence domain", () => {
       }),
     );
     expect(payload._warnings).toEqual([
-      "Booking data for Google Ads - AC Repair unavailable: bookings unavailable",
+      "Booking data unavailable: bookings unavailable",
+    ]);
+  });
+
+  it("intel_campaign_performance warns when Report 176 is unavailable", async () => {
+    const { handlers, getMock, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_campaign_performance");
+
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
+      if (path === "/tenant/{tenant}/campaigns") {
+        return {
+          data: [{ id: 1, name: "Google Ads - AC Repair" }],
+          hasMore: false,
+          page: 1,
+        };
+      }
+
+      if (path === "/v3/tenant/{tenant}/calls") {
+        return { data: [{ campaignId: 1 }], hasMore: false, page: 1 };
+      }
+
+      if (path === "/tenant/{tenant}/bookings") {
+        return { data: [{ campaignId: 1 }], hasMore: false, page: 1 };
+      }
+
+      if (path === "/tenant/{tenant}/invoices") {
+        if (params?.campaignId === 1) {
+          return { data: [{ total: 250 }], hasMore: false, page: 1 };
+        }
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    postMock.mockRejectedValue(new Error("lead report unavailable"));
+
+    const result = await handler({
+      startDate: "2026-01-01",
+      endDate: "2026-01-31",
+    });
+    const payload = payloadFrom(result);
+
+    expect(payload.leadGeneration).toEqual([]);
+    expect(payload._warnings).toEqual([
+      "Lead generation report (Report 176) unavailable: lead report unavailable",
     ]);
   });
 
   it("intel_campaign_performance handles no campaign data", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
+    getMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/campaigns") {
+        return { data: [], hasMore: false, page: 1 };
+      }
+
+      if (path === "/v3/tenant/{tenant}/calls" || path === "/tenant/{tenant}/bookings") {
+        return { data: [], hasMore: false, page: 1 };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
 
     const result = await handler({
       startDate: "2026-01-01",
@@ -933,6 +1192,7 @@ describe("intelligence domain", () => {
       conversionRate: 0,
       revenue: 0,
     });
+    expect(payload.leadGeneration).toEqual([]);
   });
 
   it("intel_daily_snapshot computes counts, revenues, highlights, and date params", async () => {

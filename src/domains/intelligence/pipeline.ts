@@ -9,6 +9,7 @@ import {
   fetchWithWarning,
   firstValue,
   getErrorMessage,
+  isRecord,
   normalizeStatus,
   round,
   safeDivide,
@@ -27,6 +28,60 @@ const estimatePipelineSchema = z.object({
 type GenericRecord = Record<string, unknown>;
 
 type PipelineGroup = "open" | "sold" | "dismissed";
+
+const SALES_FIELD = {
+  Name: 0,
+  TotalSales: 1,
+  ClosedAverageSale: 2,
+  CloseRate: 3,
+  SalesOpportunity: 4,
+  OptionsPerOpportunity: 5,
+  TechnicianId: 6,
+  AdjustmentRevenue: 7,
+  CompletedRevenueWithAdjustments: 8,
+} as const;
+
+interface SalesByTechnician {
+  id: number;
+  name: string;
+  totalSales: number;
+  closedAverageSale: number;
+  closeRate: number;
+  salesOpportunity: number;
+  optionsPerOpportunity: number;
+}
+
+function extractReportRows(response: unknown): unknown[][] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
+  }
+
+  return response.data.filter(Array.isArray);
+}
+
+function parseSalesReport(response: unknown): SalesByTechnician[] {
+  const rows = extractReportRows(response);
+  const result: SalesByTechnician[] = [];
+
+  for (const row of rows) {
+    const id = Math.round(toNumber(row[SALES_FIELD.TechnicianId]));
+    if (id <= 0) {
+      continue;
+    }
+
+    result.push({
+      id,
+      name: toText(row[SALES_FIELD.Name]) ?? `Technician ${id}`,
+      totalSales: round(toNumber(row[SALES_FIELD.TotalSales]), 2),
+      closedAverageSale: round(toNumber(row[SALES_FIELD.ClosedAverageSale]), 2),
+      closeRate: round(toNumber(row[SALES_FIELD.CloseRate]) * 100, 1),
+      salesOpportunity: Math.round(toNumber(row[SALES_FIELD.SalesOpportunity])),
+      optionsPerOpportunity: round(toNumber(row[SALES_FIELD.OptionsPerOpportunity]), 2),
+    });
+  }
+
+  return result;
+}
 
 function estimateValue(estimate: GenericRecord): number {
   return toNumber(firstValue(estimate, ["total", "amount", "subtotal"]));
@@ -101,6 +156,25 @@ export function registerIntelligenceEstimatePipelineTool(
             }),
           [],
         );
+
+        const salesReport = await fetchWithWarning(
+          warnings,
+          "Technician sales report (Report 172)",
+          () =>
+            client.post("/tenant/{tenant}/report-category/technician-dashboard/reports/172/data", {
+              parameters: [
+                { name: "From", value: input.startDate ?? "" },
+                { name: "To", value: input.endDate ?? "" },
+              ],
+            }),
+          null,
+        );
+
+        const allSalesByTechnician = parseSalesReport(salesReport);
+        const salesByTechnician =
+          input.soldById === undefined
+            ? allSalesByTechnician
+            : allSalesByTechnician.filter((tech) => tech.id === input.soldById);
 
         const referenceDate =
           input.endDate === undefined
@@ -179,6 +253,29 @@ export function registerIntelligenceEstimatePipelineTool(
             ? 0
             : round(daysToClose.reduce((total, dayCount) => total + dayCount, 0) / daysToClose.length, 1);
 
+        const totalSales = round(
+          salesByTechnician.reduce((total, tech) => total + tech.totalSales, 0),
+          2,
+        );
+        const totalOpportunities = salesByTechnician.reduce(
+          (total, tech) => total + tech.salesOpportunity,
+          0,
+        );
+        const averageCloseRate = round(
+          safeDivide(
+            salesByTechnician.reduce((total, tech) => total + tech.closeRate, 0),
+            salesByTechnician.length,
+          ),
+          1,
+        );
+        const averageClosedSale = round(
+          safeDivide(
+            salesByTechnician.reduce((total, tech) => total + tech.closedAverageSale, 0),
+            salesByTechnician.length,
+          ),
+          2,
+        );
+
         const result: Record<string, unknown> = {
           totalEstimates: estimates.length,
           pipeline: {
@@ -197,6 +294,13 @@ export function registerIntelligenceEstimatePipelineTool(
           },
           conversionRate: round(safeDivide(pipeline.sold.count, estimates.length), 3),
           averageDaysToClose,
+          salesFunnel: {
+            totalSales,
+            averageCloseRate,
+            totalOpportunities,
+            averageClosedSale,
+            byTechnician: salesByTechnician,
+          },
           openByAge: [
             {
               bucket: openBuckets["0-7"].bucket,

@@ -169,6 +169,31 @@ ST_TIMEZONE="" \
 node /absolute/path/to/servicetitan-mcp-server/build/index.js
 ```
 
+### Remote Hosting (SSE + mcp-remote)
+
+If you deploy the SSE server (for example on Fly.io), use your `/sse` endpoint:
+
+- URL pattern: `https://<your-app>.fly.dev/sse`
+- Remote host auth: set `ST_MCP_API_KEY` on the server and send it as `x-api-key` from the client.
+
+Example MCP client config using `mcp-remote`:
+
+```json
+{
+  "mcpServers": {
+    "servicetitan": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "https://your-instance.fly.dev/sse",
+        "--header",
+        "x-api-key: YOUR_MCP_API_KEY"
+      ]
+    }
+  }
+}
+```
+
 ## Available Domains
 
 Tool counts are from:
@@ -202,8 +227,8 @@ The intelligence domain includes 6 high-value analytical tools:
 | Tool | What It Returns | Example Use Case |
 | --- | --- | --- |
 | `intel_revenue_summary` | Total revenue (matches ST dashboard), breakdown by BU (completed, non-job, adjustment), collections, outstanding, conversion rates. | "Summarize January revenue by business unit." |
-| `intel_technician_scorecard` | Per-tech jobs completed, revenue, avg ticket, close rate, jobs/day, plus team averages. | "Compare technician productivity and close rates this month." |
-| `intel_membership_health` | Active membership metrics, signups/cancellations/renewals, retention rate, member vs non-member revenue. | "Check churn pressure and membership revenue mix for last quarter." |
+| `intel_technician_scorecard` | Per-tech completed jobs, revenue, avg ticket, opportunities/conversion, customer satisfaction, revenue per hour, billable efficiency, upsold amount, recalls caused, jobs/day, plus team averages. Uses ST Reporting API reports 168, 170, and 165 for dashboard-accurate metrics. | "Compare technician productivity and close rates this month." |
+| `intel_membership_health` | Dashboard-accurate membership metrics via ST Reporting API Report 182: active counts, signups, cancellations, renewals, expirations, suspended/reactivated/deleted counts, retention rate, and member vs non-member revenue. | "Check churn pressure and membership revenue mix for last quarter." |
 | `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities. | "Find stale open estimates older than 30 days and quantify pipeline risk." |
 | `intel_campaign_performance` | Campaign calls, bookings, conversion, revenue, revenue per call. | "Rank campaigns by revenue efficiency and identify low-conversion spend." |
 | `intel_daily_snapshot` | Same-day appointment/job progress, revenue-to-date, call outcomes, and highlights. | "Get a daily ops briefing before end-of-day dispatch review." |
@@ -219,6 +244,22 @@ The intelligence domain includes 6 high-value analytical tools:
 Raw invoice or job endpoint sums will **not** match the dashboard. The invoices API returns invoice-level totals (which include tax and exclude non-job revenue), while the jobs API only captures job-level totals. Both miss the non-job revenue component that ST's internal reporting engine includes.
 
 If you need invoice-level detail (line items, individual invoice totals), use `accounting_invoices_list`. For dashboard-matching revenue figures, use `intel_revenue_summary`.
+
+### Reporting API Integration
+
+Intelligence tools now use a mix of ServiceTitan Reporting API and REST endpoints:
+
+| Tool | Data Source | Notes |
+| --- | --- | --- |
+| `intel_revenue_summary` | Reporting API + REST | Revenue comes from Report 175 (dashboard-accurate). Payments/collections still use REST. |
+| `intel_technician_scorecard` | Reporting API | Uses Reports 168, 170, and 165. Replaced 51+ REST N+1 calls with 3 report calls. |
+| `intel_membership_health` | Reporting API + REST | Core membership metrics come from Report 182; invoice revenue split uses REST. |
+| `intel_estimate_pipeline` | REST | Funnel + age-bucket logic currently computed from REST estimate data. |
+| `intel_campaign_performance` | REST | Currently REST-based; Reporting API rewire tracked separately. |
+| `intel_daily_snapshot` | REST | Real-time daily operations data; REST is the right fit for low-latency snapshots. |
+
+- **Timezone matters:** Set `ST_TIMEZONE` to the tenant's IANA timezone for all reporting/date-bound intelligence tools. This prevents day-boundary drift from UTC interpretation.
+- **Report IDs are universal:** Built-in dashboard report IDs (for example 165, 168, 170, 175, 182) are standardized across ServiceTitan tenants.
 
 ## Safety Features
 

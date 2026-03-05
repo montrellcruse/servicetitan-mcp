@@ -8,6 +8,7 @@ import {
   fetchWithWarning,
   firstValue,
   getErrorMessage,
+  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -31,6 +32,36 @@ const campaignPerformanceSchema = z.object({
 
 type GenericRecord = Record<string, unknown>;
 
+const LEAD_GENERATION_FIELD = {
+  Name: 0,
+  LeadGenerationOpportunity: 1,
+  LeadsSet: 2,
+  LeadConversionRate: 3,
+  AverageLeadSale: 4,
+  ReplacementOpportunity: 5,
+  ReplacementLeadsSet: 6,
+  ReplacementLeadConversionRate: 7,
+  MembershipSales: 8,
+  AdjustmentRevenue: 9,
+  TotalRevenue: 10,
+  NonJobRevenue: 11,
+} as const;
+
+interface LeadGenerationByBusinessUnit {
+  name: string;
+  leadGenerationOpportunity: number;
+  leadsSet: number;
+  leadConversionRate: number;
+  averageLeadSale: number;
+  replacementOpportunity: number;
+  replacementLeadsSet: number;
+  replacementLeadConversionRate: number;
+  membershipSales: number;
+  adjustmentRevenue: number;
+  totalRevenue: number;
+  nonJobRevenue: number;
+}
+
 function campaignId(campaign: GenericRecord): number {
   return toNumber(firstValue(campaign, ["id", "campaignId"]));
 }
@@ -41,6 +72,66 @@ function campaignName(campaign: GenericRecord, id: number): string {
 
 function invoiceRevenue(invoice: GenericRecord): number {
   return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
+}
+
+function recordCampaignId(source: GenericRecord): number {
+  return Math.round(toNumber(firstValue(source, ["campaignId", "campaign.id"])));
+}
+
+function countByCampaign(records: GenericRecord[]): Map<number, number> {
+  const result = new Map<number, number>();
+
+  for (const record of records) {
+    const id = recordCampaignId(record);
+    if (id <= 0) {
+      continue;
+    }
+
+    result.set(id, (result.get(id) ?? 0) + 1);
+  }
+
+  return result;
+}
+
+function extractReportRows(response: unknown): unknown[][] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
+  }
+
+  return response.data.filter(Array.isArray);
+}
+
+function parseLeadGenerationReport(response: unknown): LeadGenerationByBusinessUnit[] {
+  const rows = extractReportRows(response);
+  const result: LeadGenerationByBusinessUnit[] = [];
+
+  for (const row of rows) {
+    result.push({
+      name: toText(row[LEAD_GENERATION_FIELD.Name]) ?? "Unknown",
+      leadGenerationOpportunity: Math.round(
+        toNumber(row[LEAD_GENERATION_FIELD.LeadGenerationOpportunity]),
+      ),
+      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
+      leadConversionRate: round(toNumber(row[LEAD_GENERATION_FIELD.LeadConversionRate]), 3),
+      averageLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
+      replacementOpportunity: Math.round(
+        toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity]),
+      ),
+      replacementLeadsSet: Math.round(
+        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadsSet]),
+      ),
+      replacementLeadConversionRate: round(
+        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]),
+        3,
+      ),
+      membershipSales: round(toNumber(row[LEAD_GENERATION_FIELD.MembershipSales]), 2),
+      adjustmentRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.AdjustmentRevenue]), 2),
+      totalRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.TotalRevenue]), 2),
+      nonJobRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.NonJobRevenue]), 2),
+    });
+  }
+
+  return result;
 }
 
 export function registerIntelligenceCampaignPerformanceTool(
@@ -88,6 +179,48 @@ export function registerIntelligenceCampaignPerformanceTool(
           );
         }
 
+        const calls = await fetchWithWarning(
+          warnings,
+          "Call data",
+          () =>
+            fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
+              createdOnOrAfter: startIso,
+              createdBefore: endIso,
+              active: "Any",
+            }),
+          [],
+        );
+
+        const bookings = await fetchWithWarning(
+          warnings,
+          "Booking data",
+          () =>
+            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/bookings", {
+              createdOnOrAfter: startIso,
+              createdBefore: endIso,
+            }),
+          [],
+        );
+
+        const leadGenerationReport = await fetchWithWarning(
+          warnings,
+          "Lead generation report (Report 176)",
+          () =>
+            client.post("/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data", {
+              parameters: [
+                { name: "From", value: input.startDate },
+                { name: "To", value: input.endDate },
+              ],
+            }),
+          null,
+        );
+
+        const callsByCampaignId = countByCampaign(calls);
+        const bookingsByCampaignId = countByCampaign(bookings);
+        const leadGeneration = leadGenerationReport
+          ? parseLeadGenerationReport(leadGenerationReport)
+          : [];
+
         const campaignRows: Array<{
           id: number;
           name: string;
@@ -106,31 +239,6 @@ export function registerIntelligenceCampaignPerformanceTool(
 
           const name = campaignName(campaign, id);
 
-          const calls = await fetchWithWarning(
-            warnings,
-            `Call data for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
-                campaignId: id,
-                createdOnOrAfter: startIso,
-                createdBefore: endIso,
-                active: "Any",
-              }),
-            [],
-          );
-
-          const bookings = await fetchWithWarning(
-            warnings,
-            `Booking data for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/bookings", {
-                campaignId: id,
-                createdOnOrAfter: startIso,
-                createdBefore: endIso,
-              }),
-            [],
-          );
-
           const invoices = await fetchWithWarning(
             warnings,
             `Revenue data for ${name}`,
@@ -143,8 +251,8 @@ export function registerIntelligenceCampaignPerformanceTool(
             [],
           );
 
-          const callCount = calls.length;
-          const bookingCount = bookings.length;
+          const callCount = callsByCampaignId.get(id) ?? 0;
+          const bookingCount = bookingsByCampaignId.get(id) ?? 0;
           const revenue = round(sumBy(invoices, invoiceRevenue), 2);
 
           campaignRows.push({
@@ -174,6 +282,7 @@ export function registerIntelligenceCampaignPerformanceTool(
             conversionRate: round(safeDivide(totalsBookings, totalsCalls), 3),
             revenue: round(totalsRevenue, 2),
           },
+          leadGeneration,
         };
 
         if (warnings.length > 0) {
