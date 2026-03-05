@@ -277,40 +277,41 @@ describe("intelligence domain", () => {
   });
 
   it("intel_technician_scorecard computes per-tech and team metrics with date handling", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
 
-    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
-      if (path === "/tenant/{tenant}/technicians") {
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data") {
         return {
-          data: [{ id: 10, name: "Mike Johnson" }],
+          fields: [],
+          data: [
+            ["Mike Johnson", 1000, 250, 0.5, 4, 2, 4.8, 10, 0, 1000],
+            ["Nina Lopez", 0, 0, 0, 0, 0, 0, 11, 0, 0],
+          ],
           hasMore: false,
-          page: 1,
         };
       }
 
-      if (path === "/tenant/{tenant}/jobs" && params?.technicianId === 10) {
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data") {
         return {
+          fields: [],
           data: [
-            { id: 1, status: "Completed", total: 500 },
-            { id: 2, status: "Done", total: 250 },
-            { id: 3, status: "InProgress", total: 100 },
+            ["Mike Johnson", 200, 0.85, 300, 0, 0, 1, 10, 0, 1000],
+            ["Nina Lopez", 0, 0, 0, 0, 0, 0, 11, 0, 0],
           ],
           hasMore: false,
-          page: 1,
         };
       }
 
-      if (path === "/tenant/{tenant}/estimates" && params?.soldById === 10) {
+      if (path === "/tenant/{tenant}/report-category/operations/reports/165/data") {
         return {
+          fields: [],
           data: [
-            { status: "Sold" },
-            { status: "Sold" },
-            { status: "Open" },
-            { status: "Dismissed" },
+            ["INV-1", "HVAC Service", "Mike Johnson, Kevin Herrera"],
+            ["INV-2", "HVAC Service", "Mike Johnson"],
+            ["INV-3", "HVAC Service", "Kevin Herrera"],
           ],
           hasMore: false,
-          page: 1,
         };
       }
 
@@ -329,79 +330,149 @@ describe("intelligence domain", () => {
         id: 10,
         name: "Mike Johnson",
         jobsCompleted: 2,
-        revenue: 750,
-        averageTicket: 375,
-        estimatesPresented: 4,
-        estimatesSold: 2,
-        closeRate: 0.5,
+        revenue: 1000,
+        averageTicket: 250,
+        opportunities: 4,
+        convertedJobs: 2,
+        conversionRate: 50,
+        customerSatisfaction: 4.8,
+        revenuePerHour: 200,
+        billableEfficiency: 0.85,
+        recallsCaused: 1,
+        upsold: 300,
         jobsPerDay: 0.29,
       },
     ]);
 
     expect(payload.teamAverages).toEqual({
-      averageTicket: 375,
-      closeRate: 0.5,
+      jobsCompleted: 2,
+      revenue: 1000,
+      averageTicket: 250,
+      opportunities: 4,
+      convertedJobs: 2,
+      conversionRate: 50,
+      customerSatisfaction: 4.8,
+      revenuePerHour: 200,
+      billableEfficiency: 0.85,
+      recallsCaused: 1,
+      upsold: 300,
       jobsPerDay: 0.29,
     });
 
-    expect(getMock).toHaveBeenCalledWith(
-      "/tenant/{tenant}/jobs",
-      expect.objectContaining({
-        technicianId: 10,
-        completedOnOrAfter: "2026-01-01T00:00:00.000Z",
-        completedBefore: "2026-01-10T23:59:59.999Z",
-      }),
+    expect(payload._warnings).toEqual([
+      "Business unit filtering only applies to completed jobs (Report 165). Revenue/productivity metrics are tenant-wide.",
+    ]);
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitIds", value: "3" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/operations/reports/165/data",
+      {
+        parameters: [
+          { name: "DateType", value: "1" },
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitId", value: "3" },
+        ],
+      },
     );
   });
 
   it("intel_technician_scorecard keeps partial data when one endpoint fails", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
 
-    getMock.mockImplementation(async (path: string) => {
-      if (path === "/tenant/{tenant}/technicians") {
-        return { data: [{ id: 10, name: "Mike Johnson" }], hasMore: false, page: 1 };
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data") {
+        throw new Error("report outage");
       }
 
-      if (path === "/tenant/{tenant}/jobs") {
-        throw new Error("jobs endpoint down");
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data") {
+        return {
+          fields: [],
+          data: [["Mike Johnson", 150, 0.6, 80, 0, 0, 2, 10, 0, 0]],
+          hasMore: false,
+        };
       }
 
-      if (path === "/tenant/{tenant}/estimates") {
-        return { data: [{ status: "Sold" }], hasMore: false, page: 1 };
+      if (path === "/tenant/{tenant}/report-category/operations/reports/165/data") {
+        return {
+          fields: [],
+          data: [["INV-101", "HVAC Service", "Mike Johnson"]],
+          hasMore: false,
+        };
       }
 
-      return { data: [], hasMore: false, page: 1 };
+      throw new Error(`Unexpected path: ${path}`);
     });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.technicians[0]).toEqual(
-      expect.objectContaining({
-        jobsCompleted: 0,
-        revenue: 0,
-        averageTicket: 0,
-        estimatesPresented: 1,
-        estimatesSold: 1,
-      }),
-    );
+    expect(payload.technicians[0]).toEqual({
+      id: 10,
+      name: "Mike Johnson",
+      jobsCompleted: 1,
+      revenue: 0,
+      averageTicket: 0,
+      opportunities: 0,
+      convertedJobs: 0,
+      conversionRate: 0,
+      customerSatisfaction: 0,
+      revenuePerHour: 150,
+      billableEfficiency: 0.6,
+      recallsCaused: 2,
+      upsold: 80,
+      jobsPerDay: 0.05,
+    });
     expect(payload._warnings).toEqual([
-      "Jobs for Mike Johnson unavailable: jobs endpoint down",
+      "Technician revenue report (Report 168) unavailable: report outage",
     ]);
   });
 
   it("intel_technician_scorecard returns zeros for empty technician data", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
 
-    getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
     expect(payload.technicians).toEqual([]);
-    expect(payload.teamAverages).toEqual({ averageTicket: 0, closeRate: 0, jobsPerDay: 0 });
+    expect(payload.teamAverages).toEqual({
+      jobsCompleted: 0,
+      revenue: 0,
+      averageTicket: 0,
+      opportunities: 0,
+      convertedJobs: 0,
+      conversionRate: 0,
+      customerSatisfaction: 0,
+      revenuePerHour: 0,
+      billableEfficiency: 0,
+      recallsCaused: 0,
+      upsold: 0,
+      jobsPerDay: 0,
+    });
   });
 
   it("intel_membership_health computes retention and member revenue mix", async () => {

@@ -5,14 +5,11 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   countWeekdaysInclusive,
-  fetchAllPages,
   fetchWithWarning,
-  firstValue,
   getErrorMessage,
-  normalizeStatus,
+  isRecord,
   round,
   safeDivide,
-  sumBy,
   toDateRange,
   toNumber,
   toText,
@@ -29,44 +26,228 @@ const technicianScorecardSchema = z.object({
     .min(1)
     .max(50)
     .optional()
-    .describe("Max technicians to analyze (default 25, max 50). Only active technicians are included."),
+    .describe("Max technicians to analyze (default 25, max 50)"),
 });
 
-type GenericRecord = Record<string, unknown>;
+const REVENUE_FIELD = {
+  Name: 0,
+  CompletedRevenue: 1,
+  OpportunityJobAverage: 2,
+  OpportunityConversionRate: 3,
+  Opportunity: 4,
+  ConvertedJobs: 5,
+  CustomerSatisfaction: 6,
+  TechnicianId: 7,
+} as const;
 
-function technicianId(technician: GenericRecord): number {
-  return toNumber(firstValue(technician, ["id", "technicianId", "userId"]));
+const PRODUCTIVITY_FIELD = {
+  Name: 0,
+  RevenuePerHour: 1,
+  BillableEfficiency: 2,
+  Upsold: 3,
+  RecallsCaused: 6,
+  TechnicianId: 7,
+} as const;
+
+const JOB_DETAIL_FIELD = {
+  AssignedTechnicians: 2,
+} as const;
+
+interface RevenueByTech {
+  id: number;
+  name: string;
+  revenue: number;
+  averageTicket: number;
+  opportunities: number;
+  convertedJobs: number;
+  conversionRate: number;
+  customerSatisfaction: number;
 }
 
-function technicianName(technician: GenericRecord, id: number): string {
-  const direct = toText(firstValue(technician, ["name", "displayName"]));
-  if (direct) {
-    return direct;
+interface ProductivityByTech {
+  id: number;
+  name: string;
+  revenuePerHour: number;
+  billableEfficiency: number;
+  recallsCaused: number;
+  upsold: number;
+}
+
+interface TechnicianScorecard {
+  id: number;
+  name: string;
+  jobsCompleted: number;
+  revenue: number;
+  averageTicket: number;
+  opportunities: number;
+  convertedJobs: number;
+  conversionRate: number;
+  customerSatisfaction: number;
+  revenuePerHour: number;
+  billableEfficiency: number;
+  recallsCaused: number;
+  upsold: number;
+  jobsPerDay: number;
+}
+
+function extractReportRows(response: unknown): unknown[][] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
   }
 
-  const first = toText(firstValue(technician, ["firstName"]));
-  const last = toText(firstValue(technician, ["lastName"]));
-  const combined = `${first ?? ""} ${last ?? ""}`.trim();
-
-  return combined.length > 0 ? combined : `Technician ${id}`;
+  return response.data.filter(Array.isArray);
 }
 
-function jobIsCompleted(job: GenericRecord): boolean {
-  const status = normalizeStatus(job, ["statusValue"]);
-  return status.includes("completed") || status.includes("done");
+function parseTechnicianId(raw: unknown): number {
+  return Math.round(toNumber(raw));
 }
 
-function estimateIsSold(estimate: GenericRecord): boolean {
-  const status = normalizeStatus(estimate, ["statusValue"]);
-  if (status.includes("sold") || status.includes("accepted")) {
-    return true;
+function parseTechnicianName(raw: unknown, id: number): string {
+  return toText(raw) ?? `Technician ${id}`;
+}
+
+function parseRevenueReport(response: unknown): RevenueByTech[] {
+  const rows = extractReportRows(response);
+  const result: RevenueByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[REVENUE_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    result.push({
+      id,
+      name: parseTechnicianName(row[REVENUE_FIELD.Name], id),
+      revenue: round(toNumber(row[REVENUE_FIELD.CompletedRevenue]), 2),
+      averageTicket: round(toNumber(row[REVENUE_FIELD.OpportunityJobAverage]), 2),
+      opportunities: Math.round(toNumber(row[REVENUE_FIELD.Opportunity])),
+      convertedJobs: Math.round(toNumber(row[REVENUE_FIELD.ConvertedJobs])),
+      conversionRate: round(toNumber(row[REVENUE_FIELD.OpportunityConversionRate]) * 100, 1),
+      customerSatisfaction: round(toNumber(row[REVENUE_FIELD.CustomerSatisfaction]), 2),
+    });
   }
 
-  return firstValue(estimate, ["soldOn", "soldDate"]) !== undefined;
+  return result;
 }
 
-function jobRevenue(job: GenericRecord): number {
-  return toNumber(firstValue(job, ["total", "amount"]));
+function parseProductivityReport(response: unknown): ProductivityByTech[] {
+  const rows = extractReportRows(response);
+  const result: ProductivityByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[PRODUCTIVITY_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    result.push({
+      id,
+      name: parseTechnicianName(row[PRODUCTIVITY_FIELD.Name], id),
+      revenuePerHour: round(toNumber(row[PRODUCTIVITY_FIELD.RevenuePerHour]), 2),
+      billableEfficiency: round(toNumber(row[PRODUCTIVITY_FIELD.BillableEfficiency]), 3),
+      recallsCaused: Math.round(toNumber(row[PRODUCTIVITY_FIELD.RecallsCaused])),
+      upsold: round(toNumber(row[PRODUCTIVITY_FIELD.Upsold]), 2),
+    });
+  }
+
+  return result;
+}
+
+function normalizeTechnicianName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
+function buildNameToTechIds(
+  revenueRows: RevenueByTech[],
+  productivityRows: ProductivityByTech[],
+): Map<string, Set<number>> {
+  const byName = new Map<string, Set<number>>();
+
+  const add = (name: string, id: number): void => {
+    const key = normalizeTechnicianName(name);
+    if (key.length === 0 || id <= 0) {
+      return;
+    }
+
+    const existing = byName.get(key) ?? new Set<number>();
+    existing.add(id);
+    byName.set(key, existing);
+  };
+
+  for (const tech of revenueRows) {
+    add(tech.name, tech.id);
+  }
+
+  for (const tech of productivityRows) {
+    add(tech.name, tech.id);
+  }
+
+  return byName;
+}
+
+function countCompletedJobsByTech(
+  response: unknown,
+  nameToTechIds: Map<string, Set<number>>,
+): Map<number, number> {
+  const rows = extractReportRows(response);
+  const completedByTechId = new Map<number, number>();
+
+  for (const row of rows) {
+    const assigned = toText(row[JOB_DETAIL_FIELD.AssignedTechnicians]);
+    if (!assigned) {
+      continue;
+    }
+
+    const matchedIds = new Set<number>();
+    for (const rawName of assigned.split(",")) {
+      const normalizedName = normalizeTechnicianName(rawName);
+      if (normalizedName.length === 0) {
+        continue;
+      }
+
+      const ids = nameToTechIds.get(normalizedName);
+      if (!ids) {
+        continue;
+      }
+
+      for (const id of ids) {
+        matchedIds.add(id);
+      }
+    }
+
+    for (const id of matchedIds) {
+      completedByTechId.set(id, (completedByTechId.get(id) ?? 0) + 1);
+    }
+  }
+
+  return completedByTechId;
+}
+
+function hasAnyActivity(tech: TechnicianScorecard): boolean {
+  return (
+    tech.jobsCompleted !== 0 ||
+    tech.revenue !== 0 ||
+    tech.averageTicket !== 0 ||
+    tech.opportunities !== 0 ||
+    tech.convertedJobs !== 0 ||
+    tech.conversionRate !== 0 ||
+    tech.customerSatisfaction !== 0 ||
+    tech.revenuePerHour !== 0 ||
+    tech.billableEfficiency !== 0 ||
+    tech.recallsCaused !== 0 ||
+    tech.upsold !== 0 ||
+    tech.jobsPerDay !== 0
+  );
+}
+
+function averageBy(
+  scorecards: TechnicianScorecard[],
+  mapper: (tech: TechnicianScorecard) => number,
+  decimals = 2,
+): number {
+  const total = scorecards.reduce((sum, tech) => sum + mapper(tech), 0);
+  return round(safeDivide(total, scorecards.length), decimals);
 }
 
 export function registerIntelligenceTechnicianPerformanceTool(
@@ -78,137 +259,150 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Technician performance scorecard with jobs completed, revenue, average ticket, estimate close rate, and team averages",
+      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, and team averages",
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
       try {
         const input = technicianScorecardSchema.parse(params);
-        const { start, end, startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
+        const { start, end } = toDateRange(input.startDate, input.endDate, registry.timezone);
         const workingDays = countWeekdaysInclusive(start, end);
         const warnings: string[] = [];
-
         const maxTechnicians = input.limit ?? 25;
 
-        const fetchedTechnicians = await fetchWithWarning(
-          warnings,
-          "Technician data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/technicians", {
-              ids: input.technicianId === undefined ? undefined : String(input.technicianId),
-              active: input.technicianId === undefined ? "True" : "Any",
-            }),
-          [],
-        );
+        const revenueParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
 
-        let technicians =
-          fetchedTechnicians.length > 0
-            ? fetchedTechnicians
-            : input.technicianId === undefined
-              ? []
-              : [{ id: input.technicianId, name: `Technician ${input.technicianId}` }];
-
-        const totalAvailable = technicians.length;
-        if (technicians.length > maxTechnicians) {
-          technicians = technicians.slice(0, maxTechnicians);
+        if (input.businessUnitId !== undefined) {
+          revenueParams.push({
+            name: "BusinessUnitIds",
+            value: String(input.businessUnitId),
+          });
           warnings.push(
-            `Limited to ${maxTechnicians} of ${totalAvailable} active technicians. Use 'limit' param to increase (max 50) or 'technicianId' for a specific tech.`,
+            "Business unit filtering only applies to completed jobs (Report 165). Revenue/productivity metrics are tenant-wide.",
           );
         }
 
-        const scorecards: Array<{
-          id: number;
-          name: string;
-          jobsCompleted: number;
-          revenue: number;
-          averageTicket: number;
-          estimatesPresented: number;
-          estimatesSold: number;
-          closeRate: number;
-          jobsPerDay: number;
-        }> = [];
+        const productivityParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
 
-        for (const technician of technicians) {
-          const id = technicianId(technician);
-          if (id <= 0) {
-            continue;
-          }
+        const completedJobsParams: Array<{ name: string; value: string }> = [
+          { name: "DateType", value: "1" },
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
 
-          const name = technicianName(technician, id);
-
-          const jobs = await fetchWithWarning(
-            warnings,
-            `Jobs for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/jobs", {
-                technicianId: id,
-                completedOnOrAfter: startIso,
-                completedBefore: endIso,
-                businessUnitId: input.businessUnitId,
-              }),
-            [],
-          );
-
-          // ST's invoices endpoint doesn't support technicianId filter,
-          // so we derive revenue from the job's `total` field instead.
-          // This avoids extra API calls and gives accurate per-tech revenue.
-
-          const estimates = await fetchWithWarning(
-            warnings,
-            `Estimates for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/estimates", {
-                soldById: id,
-                createdOnOrAfter: startIso,
-                createdBefore: endIso,
-                businessUnitId: input.businessUnitId,
-              }),
-            [],
-          );
-
-          const completedJobs = jobs.filter(jobIsCompleted);
-          const jobsCompleted = completedJobs.length;
-          const revenue = round(sumBy(completedJobs, jobRevenue), 2);
-          const averageTicket = round(safeDivide(revenue, jobsCompleted), 2);
-          const estimatesPresented = estimates.length;
-          const estimatesSold = estimates.filter(estimateIsSold).length;
-          const closeRate = round(safeDivide(estimatesSold, estimatesPresented), 3);
-          const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
-
-          scorecards.push({
-            id,
-            name,
-            jobsCompleted,
-            revenue,
-            averageTicket,
-            estimatesPresented,
-            estimatesSold,
-            closeRate,
-            jobsPerDay,
+        if (input.businessUnitId !== undefined) {
+          completedJobsParams.push({
+            name: "BusinessUnitId",
+            value: String(input.businessUnitId),
           });
         }
 
+        const revenueReport = await fetchWithWarning(
+          warnings,
+          "Technician revenue report (Report 168)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
+              { parameters: revenueParams },
+            ),
+          null,
+        );
+
+        const productivityReport = await fetchWithWarning(
+          warnings,
+          "Technician productivity report (Report 170)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
+              { parameters: productivityParams },
+            ),
+          null,
+        );
+
+        const completedJobsReport = await fetchWithWarning(
+          warnings,
+          "Completed jobs detail report (Report 165)",
+          () =>
+            client.post("/tenant/{tenant}/report-category/operations/reports/165/data", {
+              parameters: completedJobsParams,
+            }),
+          null,
+        );
+
+        let revenueRows = parseRevenueReport(revenueReport);
+        let productivityRows = parseProductivityReport(productivityReport);
+
+        if (input.technicianId !== undefined) {
+          revenueRows = revenueRows.filter((tech) => tech.id === input.technicianId);
+          productivityRows = productivityRows.filter((tech) => tech.id === input.technicianId);
+        }
+
+        const revenueById = new Map(revenueRows.map((tech) => [tech.id, tech]));
+        const productivityById = new Map(productivityRows.map((tech) => [tech.id, tech]));
+        const nameToTechIds = buildNameToTechIds(revenueRows, productivityRows);
+        const completedJobsByTechId = countCompletedJobsByTech(completedJobsReport, nameToTechIds);
+
+        const scorecards: TechnicianScorecard[] = [];
+        const technicianIds = new Set<number>([
+          ...revenueById.keys(),
+          ...productivityById.keys(),
+        ]);
+
+        for (const id of technicianIds) {
+          const revenue = revenueById.get(id);
+          const productivity = productivityById.get(id);
+          const jobsCompleted = completedJobsByTechId.get(id) ?? 0;
+          const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
+
+          const scorecard: TechnicianScorecard = {
+            id,
+            name: revenue?.name ?? productivity?.name ?? `Technician ${id}`,
+            jobsCompleted,
+            revenue: revenue?.revenue ?? 0,
+            averageTicket: revenue?.averageTicket ?? 0,
+            opportunities: revenue?.opportunities ?? 0,
+            convertedJobs: revenue?.convertedJobs ?? 0,
+            conversionRate: revenue?.conversionRate ?? 0,
+            customerSatisfaction: revenue?.customerSatisfaction ?? 0,
+            revenuePerHour: productivity?.revenuePerHour ?? 0,
+            billableEfficiency: productivity?.billableEfficiency ?? 0,
+            recallsCaused: productivity?.recallsCaused ?? 0,
+            upsold: productivity?.upsold ?? 0,
+            jobsPerDay,
+          };
+
+          if (hasAnyActivity(scorecard)) {
+            scorecards.push(scorecard);
+          }
+        }
+
+        const totalAvailable = scorecards.length;
+        const limitedScorecards =
+          scorecards.length > maxTechnicians ? scorecards.slice(0, maxTechnicians) : scorecards;
+        if (scorecards.length > maxTechnicians) {
+          warnings.push(
+            `Limited to ${maxTechnicians} of ${totalAvailable} technicians. Use 'limit' param to increase (max 50) or 'technicianId' for a specific tech.`,
+          );
+        }
+
         const teamAverages = {
-          averageTicket: round(
-            safeDivide(
-              scorecards.reduce((total, tech) => total + tech.averageTicket, 0),
-              scorecards.length,
-            ),
-            2,
-          ),
-          closeRate: round(
-            safeDivide(
-              scorecards.reduce((total, tech) => total + tech.closeRate, 0),
-              scorecards.length,
-            ),
-            3,
-          ),
-          jobsPerDay: round(
-            safeDivide(
-              scorecards.reduce((total, tech) => total + tech.jobsPerDay, 0),
-              scorecards.length,
-            ),
-            2,
-          ),
+          jobsCompleted: averageBy(limitedScorecards, (tech) => tech.jobsCompleted, 2),
+          revenue: averageBy(limitedScorecards, (tech) => tech.revenue, 2),
+          averageTicket: averageBy(limitedScorecards, (tech) => tech.averageTicket, 2),
+          opportunities: averageBy(limitedScorecards, (tech) => tech.opportunities, 2),
+          convertedJobs: averageBy(limitedScorecards, (tech) => tech.convertedJobs, 2),
+          conversionRate: averageBy(limitedScorecards, (tech) => tech.conversionRate, 1),
+          customerSatisfaction: averageBy(limitedScorecards, (tech) => tech.customerSatisfaction, 2),
+          revenuePerHour: averageBy(limitedScorecards, (tech) => tech.revenuePerHour, 2),
+          billableEfficiency: averageBy(limitedScorecards, (tech) => tech.billableEfficiency, 3),
+          recallsCaused: averageBy(limitedScorecards, (tech) => tech.recallsCaused, 2),
+          upsold: averageBy(limitedScorecards, (tech) => tech.upsold, 2),
+          jobsPerDay: averageBy(limitedScorecards, (tech) => tech.jobsPerDay, 2),
         };
 
         const result: Record<string, unknown> = {
@@ -216,7 +410,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
             start: input.startDate,
             end: input.endDate,
           },
-          technicians: scorecards,
+          technicians: limitedScorecards,
           teamAverages,
         };
 
