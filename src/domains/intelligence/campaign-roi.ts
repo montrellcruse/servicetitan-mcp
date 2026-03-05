@@ -20,6 +20,13 @@ const campaignPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   campaignId: z.number().int().optional().describe("Single campaign (omit for all)"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .describe("Max campaigns to analyze (default 20, max 50). Only active campaigns are included."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -53,23 +60,33 @@ export function registerIntelligenceCampaignPerformanceTool(
         const { startIso, endIso } = toDateRange(input.startDate, input.endDate);
         const warnings: string[] = [];
 
+        const maxCampaigns = input.limit ?? 20;
+
         const fetchedCampaigns = await fetchWithWarning(
           warnings,
           "Campaign data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/campaigns", {
               ids: input.campaignId === undefined ? undefined : String(input.campaignId),
-              active: "Any",
+              active: input.campaignId === undefined ? "True" : "Any",
             }),
           [],
         );
 
-        const campaigns =
+        let campaigns =
           fetchedCampaigns.length > 0
             ? fetchedCampaigns
             : input.campaignId === undefined
               ? []
               : [{ id: input.campaignId, name: `Campaign ${input.campaignId}` }];
+
+        const totalAvailable = campaigns.length;
+        if (campaigns.length > maxCampaigns) {
+          campaigns = campaigns.slice(0, maxCampaigns);
+          warnings.push(
+            `Limited to ${maxCampaigns} of ${totalAvailable} active campaigns. Use 'limit' param to increase (max 50) or 'campaignId' for a specific campaign.`,
+          );
+        }
 
         const campaignRows: Array<{
           id: number;

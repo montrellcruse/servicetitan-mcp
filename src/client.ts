@@ -32,7 +32,7 @@ const ROUTE_TABLE: Record<string, string> = {
   "/job-types": "jpm",
   "/projects": "jpm",
   "/project-types": "jpm",
-  "/technicians": "jpm",
+  "/technicians": "settings",
   "/images": "jpm",
   "/installed-equipment": "jpm",
 
@@ -158,7 +158,7 @@ const EXPORT_ROUTE_TABLE: Record<string, string> = {
   "/employees": "settings",
   "/business-units": "settings",
   "/tag-types": "settings",
-  "/technicians": "jpm",
+  "/technicians": "settings",
   "/activities": "settings",
   "/activity-codes": "settings",
   "/adjustments": "inventory",
@@ -298,12 +298,22 @@ export class ServiceTitanClient {
    * Paths that already include a prefix (e.g. `/v3/...`, `/crm/v2/...`) are left untouched.
    */
   private addApiPrefix(path: string): string {
-    // Skip paths that already have an API prefix
-    if (/^\/(?:crm|accounting|jpm|dispatch|settings|pricebook|payroll|memberships|marketing|telecom|inventory|reporting|sales|equipment-systems|task-management|export)\//i.test(path)) {
+    // Skip paths that already have a full module+version prefix (e.g. /crm/v2/tenant/...)
+    if (/^\/(?:crm|accounting|jpm|dispatch|settings|pricebook|payroll|memberships|marketing|telecom|inventory|reporting|sales|equipment-systems|task-management|forms)\/v\d+\//i.test(path)) {
       return path;
     }
-    // Skip versioned paths (e.g. /v3/tenant/...)
-    if (/^\/v\d+\//.test(path)) {
+
+    // Handle bare versioned paths like /v2/tenant/{id}/calls or /v3/tenant/{id}/calls
+    // These need the module prefix prepended: /v2/tenant/.../calls → /telecom/v2/tenant/.../calls
+    const versionedMatch = path.match(/^\/(v\d+)\/tenant\/[^/]+(\/export)?(\/[^/?]+)/);
+    if (versionedMatch) {
+      const isExport = versionedMatch[2] === "/export";
+      const resource = versionedMatch[3];
+      const table = isExport ? EXPORT_ROUTE_TABLE : ROUTE_TABLE;
+      const prefix = table[resource];
+      if (prefix) {
+        return `/${prefix}${path}`;
+      }
       return path;
     }
 
