@@ -39,7 +39,16 @@ function statusIn(status: string, values: string[]): boolean {
   return values.some((value) => status.includes(value));
 }
 
+function normalizedLeadCallType(call: GenericRecord): string {
+  const callType = firstValue(call, ["leadCall.callType"]);
+  return typeof callType === "string" ? callType.trim().toLowerCase() : "";
+}
+
 function isBookedCall(call: GenericRecord): boolean {
+  if (normalizedLeadCallType(call) === "booked") {
+    return true;
+  }
+
   if (firstValue(call, ["booked", "isBooked", "bookingCreated"]) === true) {
     return true;
   }
@@ -48,6 +57,11 @@ function isBookedCall(call: GenericRecord): boolean {
 }
 
 function isMissedCall(call: GenericRecord): boolean {
+  const callType = normalizedLeadCallType(call);
+  if (callType === "missed" || callType === "abandoned") {
+    return true;
+  }
+
   if (firstValue(call, ["missed", "isMissed", "unanswered"]) === true) {
     return true;
   }
