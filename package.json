@@ -10,7 +10,9 @@
     "lint": "eslint src/",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "docker:build": "docker build -t servicetitan-mcp .",
+    "docs:tools": "bash scripts/generate-tool-catalog.sh"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.8.0",
