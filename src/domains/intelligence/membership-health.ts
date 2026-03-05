@@ -8,7 +8,7 @@ import {
   fetchWithWarning,
   firstValue,
   getErrorMessage,
-  normalizeStatus,
+  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -22,68 +22,108 @@ const membershipHealthSchema = z.object({
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
 });
 
+const MEMBERSHIP_SUMMARY_FIELD = {
+  Name: 0,
+  Suspended: 1,
+  Canceled: 2,
+  Expired: 3,
+  Deleted: 4,
+  Renewed: 5,
+  Reactivated: 6,
+  NewSales: 7,
+  ActiveAtEnd: 8,
+} as const;
+
 type GenericRecord = Record<string, unknown>;
 
+interface MembershipTypeSummary {
+  name: string;
+  activeAtEnd: number;
+  newSales: number;
+  canceled: number;
+  expired: number;
+  renewed: number;
+  suspended: number;
+  reactivated: number;
+  deleted: number;
+  revenue: number;
+}
+
+function extractReportRows(response: unknown): unknown[][] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
+  }
+
+  return response.data.filter(Array.isArray);
+}
+
+function parseCount(value: unknown): number {
+  return Math.round(toNumber(value));
+}
+
+function hasAnyReportActivity(type: MembershipTypeSummary): boolean {
+  return (
+    type.activeAtEnd !== 0 ||
+    type.newSales !== 0 ||
+    type.canceled !== 0 ||
+    type.expired !== 0 ||
+    type.renewed !== 0 ||
+    type.suspended !== 0 ||
+    type.reactivated !== 0 ||
+    type.deleted !== 0
+  );
+}
+
+function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[] {
+  const rows = extractReportRows(response);
+  const summaries: MembershipTypeSummary[] = [];
+
+  for (const row of rows) {
+    const summary: MembershipTypeSummary = {
+      name: toText(row[MEMBERSHIP_SUMMARY_FIELD.Name]) ?? "Unknown",
+      suspended: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Suspended]),
+      canceled: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Canceled]),
+      expired: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Expired]),
+      deleted: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Deleted]),
+      renewed: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Renewed]),
+      reactivated: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Reactivated]),
+      newSales: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.NewSales]),
+      activeAtEnd: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.ActiveAtEnd]),
+      revenue: 0,
+    };
+
+    if (!hasAnyReportActivity(summary)) {
+      continue;
+    }
+
+    summaries.push(summary);
+  }
+
+  return summaries;
+}
+
+function normalizeTypeName(name: string): string {
+  return name.trim().toLowerCase();
+}
+
 function membershipTypeId(source: GenericRecord): number {
-  return toNumber(firstValue(source, ["membershipTypeId", "membershipType.id", "typeId"]));
+  return Math.round(toNumber(firstValue(source, ["membershipTypeId", "membershipType.id", "typeId"])));
 }
 
-function membershipTypeName(source: GenericRecord, fallbackId: number): string {
-  return toText(firstValue(source, ["name", "membershipTypeName"])) ?? `Type ${fallbackId}`;
-}
-
-function customerId(source: GenericRecord): number {
-  return toNumber(firstValue(source, ["customerId", "customer.id", "id"]));
+function invoiceMembershipTypeName(source: GenericRecord): string | null {
+  return toText(
+    firstValue(source, [
+      "membershipType.name",
+      "membershipTypeName",
+      "membership.name",
+      "type.name",
+      "typeName",
+    ]),
+  );
 }
 
 function invoiceTotal(invoice: GenericRecord): number {
   return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
-}
-
-function isCustomerLikelyMember(customer: GenericRecord): boolean {
-  const membershipStatus = normalizeStatus(customer, ["membershipStatus", "membership.status"]);
-  if (membershipStatus.includes("active") || membershipStatus.includes("suspended")) {
-    return true;
-  }
-
-  if (firstValue(customer, ["membershipId", "membershipTypeId", "customerMembershipId"]) !== undefined) {
-    return true;
-  }
-
-  const memberships = firstValue(customer, ["memberships", "membershipList"]);
-  if (Array.isArray(memberships) && memberships.length > 0) {
-    return true;
-  }
-
-  return firstValue(customer, ["isMember", "hasMembership"]) === true;
-}
-
-function isActiveAgreement(status: string): boolean {
-  return (
-    status.includes("active") ||
-    status.includes("activated") ||
-    status.includes("autorenew") ||
-    status.includes("accepted")
-  );
-}
-
-function ensureTypeEntry(
-  typeStats: Map<number, { name: string; active: number; revenue: number }>,
-  id: number,
-  fallbackName?: string,
-): { name: string; active: number; revenue: number } {
-  const existing = typeStats.get(id);
-  if (existing) {
-    return existing;
-  }
-
-  const created = {
-    name: fallbackName ?? `Type ${id}`,
-    active: 0,
-    revenue: 0,
-  };
-  typeStats.set(id, created);
-  return created;
 }
 
 export function registerIntelligenceMembershipHealthTool(
@@ -103,36 +143,24 @@ export function registerIntelligenceMembershipHealthTool(
         const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
-        const membershipTypes = await fetchWithWarning(
+        const reportParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        const membershipSummaryReport = await fetchWithWarning(
           warnings,
-          "Membership type data",
+          "Membership summary report (Report 182)",
           () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/membership-types", {
-              active: "Any",
+            client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
+              parameters: reportParams,
             }),
-          [],
+          null,
         );
 
-        const customers = await fetchWithWarning(
-          warnings,
-          "Customer data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/customers", {
-              active: "Any",
-            }),
-          [],
-        );
-
-        const agreements = await fetchWithWarning(
-          warnings,
-          "Service agreement data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/service-agreements", {
-              createdOnOrAfter: startIso,
-              createdBefore: endIso,
-            }),
-          [],
-        );
+        const membershipTypeStats = membershipSummaryReport
+          ? parseMembershipSummaryReport(membershipSummaryReport)
+          : [];
 
         const invoices = await fetchWithWarning(
           warnings,
@@ -145,70 +173,26 @@ export function registerIntelligenceMembershipHealthTool(
           [],
         );
 
-        const typeStats = new Map<number, { name: string; active: number; revenue: number }>();
-        for (const type of membershipTypes) {
-          const id = toNumber(firstValue(type, ["id", "membershipTypeId"]));
-          if (id <= 0) {
+        const statsByNormalizedName = new Map<string, MembershipTypeSummary>();
+        for (const type of membershipTypeStats) {
+          statsByNormalizedName.set(normalizeTypeName(type.name), type);
+        }
+
+        const reportTypeNameByInvoiceTypeId = new Map<number, string>();
+        for (const invoice of invoices) {
+          const typeId = membershipTypeId(invoice);
+          if (typeId <= 0 || reportTypeNameByInvoiceTypeId.has(typeId)) {
             continue;
           }
-          typeStats.set(id, {
-            name: membershipTypeName(type, id),
-            active: 0,
-            revenue: 0,
-          });
-        }
 
-        const memberCustomerIds = new Set<number>();
-        const customerToTypeId = new Map<number, number>();
-
-        for (const customer of customers) {
-          const id = customerId(customer);
-          if (id > 0 && isCustomerLikelyMember(customer)) {
-            memberCustomerIds.add(id);
-          }
-        }
-
-        let activeMemberships = 0;
-        let newSignups = 0;
-        let cancellations = 0;
-        let expirations = 0;
-        let renewals = 0;
-
-        for (const agreement of agreements) {
-          const status = normalizeStatus(agreement, ["statusValue"]);
-          const agreementTypeId = membershipTypeId(agreement);
-          const agreementCustomerId = customerId(agreement);
-
-          if (status.includes("activated")) {
-            newSignups += 1;
+          const typeName = invoiceMembershipTypeName(invoice);
+          if (!typeName) {
+            continue;
           }
 
-          if (status.includes("canceled")) {
-            cancellations += 1;
-          }
-
-          if (status.includes("expired")) {
-            expirations += 1;
-          }
-
-          if (status.includes("autorenew")) {
-            renewals += 1;
-          }
-
-          if (isActiveAgreement(status)) {
-            activeMemberships += 1;
-
-            if (agreementCustomerId > 0) {
-              memberCustomerIds.add(agreementCustomerId);
-              if (agreementTypeId > 0) {
-                customerToTypeId.set(agreementCustomerId, agreementTypeId);
-              }
-            }
-
-            if (agreementTypeId > 0) {
-              const bucket = ensureTypeEntry(typeStats, agreementTypeId);
-              bucket.active += 1;
-            }
+          const normalizedName = normalizeTypeName(typeName);
+          if (statsByNormalizedName.has(normalizedName)) {
+            reportTypeNameByInvoiceTypeId.set(typeId, normalizedName);
           }
         }
 
@@ -219,26 +203,26 @@ export function registerIntelligenceMembershipHealthTool(
 
         for (const invoice of invoices) {
           const total = invoiceTotal(invoice);
-          const invoiceCustomerId = customerId(invoice);
-          const invoiceTypeId = membershipTypeId(invoice);
-
-          const isMemberInvoice =
-            invoiceTypeId > 0 ||
-            memberCustomerIds.has(invoiceCustomerId) ||
-            firstValue(invoice, ["isMember", "membershipApplied"]) === true;
+          const typeId = membershipTypeId(invoice);
+          const isMemberInvoice = typeId > 0 || firstValue(invoice, ["isMember"]) === true;
 
           if (isMemberInvoice) {
             memberRevenue += total;
             memberInvoiceCount += 1;
 
-            const resolvedTypeId =
-              invoiceTypeId > 0
-                ? invoiceTypeId
-                : customerToTypeId.get(invoiceCustomerId) ?? 0;
+            if (typeId > 0) {
+              const directName = invoiceMembershipTypeName(invoice);
+              const normalizedTypeName =
+                directName && statsByNormalizedName.has(normalizeTypeName(directName))
+                  ? normalizeTypeName(directName)
+                  : reportTypeNameByInvoiceTypeId.get(typeId);
 
-            if (resolvedTypeId > 0) {
-              const bucket = ensureTypeEntry(typeStats, resolvedTypeId);
-              bucket.revenue += total;
+              if (normalizedTypeName) {
+                const bucket = statsByNormalizedName.get(normalizedTypeName);
+                if (bucket) {
+                  bucket.revenue += total;
+                }
+              }
             }
           } else {
             nonMemberRevenue += total;
@@ -246,18 +230,28 @@ export function registerIntelligenceMembershipHealthTool(
           }
         }
 
-        const membershipTypesResult = Array.from(typeStats.values())
-          .map((item) => ({
-            name: item.name,
-            active: item.active,
-            revenue: round(item.revenue, 2),
+        const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));
+        const newSignups = Math.round(sumBy(membershipTypeStats, (type) => type.newSales));
+        const cancellations = Math.round(sumBy(membershipTypeStats, (type) => type.canceled));
+        const expirations = Math.round(sumBy(membershipTypeStats, (type) => type.expired));
+        const renewals = Math.round(sumBy(membershipTypeStats, (type) => type.renewed));
+        const suspended = Math.round(sumBy(membershipTypeStats, (type) => type.suspended));
+        const reactivated = Math.round(sumBy(membershipTypeStats, (type) => type.reactivated));
+        const deleted = Math.round(sumBy(membershipTypeStats, (type) => type.deleted));
+
+        const membershipTypes = membershipTypeStats
+          .map((type) => ({
+            name: type.name,
+            activeAtEnd: type.activeAtEnd,
+            newSales: type.newSales,
+            canceled: type.canceled,
+            expired: type.expired,
+            renewed: type.renewed,
+            suspended: type.suspended,
+            reactivated: type.reactivated,
+            revenue: round(type.revenue, 2),
           }))
-          .sort((a, b) => {
-            if (b.revenue !== a.revenue) {
-              return b.revenue - a.revenue;
-            }
-            return b.active - a.active;
-          });
+          .sort((a, b) => b.activeAtEnd - a.activeAtEnd);
 
         const result: Record<string, unknown> = {
           period: {
@@ -269,6 +263,9 @@ export function registerIntelligenceMembershipHealthTool(
           cancellations,
           expirations,
           renewals,
+          suspended,
+          reactivated,
+          deleted,
           retentionRate: round(
             safeDivide(activeMemberships - cancellations, activeMemberships),
             3,
@@ -277,7 +274,7 @@ export function registerIntelligenceMembershipHealthTool(
           nonMemberRevenue: round(nonMemberRevenue, 2),
           memberAverageTicket: round(safeDivide(memberRevenue, memberInvoiceCount), 2),
           nonMemberAverageTicket: round(safeDivide(nonMemberRevenue, nonMemberInvoiceCount), 2),
-          membershipTypes: membershipTypesResult,
+          membershipTypes,
         };
 
         if (warnings.length > 0) {

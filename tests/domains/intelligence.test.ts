@@ -476,53 +476,38 @@ describe("intelligence domain", () => {
   });
 
   it("intel_membership_health computes retention and member revenue mix", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
+    postMock.mockResolvedValue({
+      fields: [
+        { name: "Name" },
+        { name: "Suspended" },
+        { name: "Canceled" },
+        { name: "Expired" },
+        { name: "Deleted" },
+        { name: "Renewed" },
+        { name: "Reactivated" },
+        { name: "NewSales" },
+        { name: "ActiveAtEnd" },
+      ],
+      data: [
+        ["Gold Plan", 2, 1, 0, 0, 5, 1, 3, 20],
+        ["Silver Plan", 1, 2, 1, 1, 4, 0, 1, 5],
+        ["Legacy Plan", 0, 0, 0, 0, 0, 0, 0, 0],
+      ],
+      hasMore: false,
+    });
+
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/tenant/{tenant}/membership-types") {
-        return {
-          data: [
-            { id: 1, name: "Gold Plan" },
-            { id: 2, name: "Silver Plan" },
-          ],
-          hasMore: false,
-          page: 1,
-        };
-      }
-
-      if (path === "/tenant/{tenant}/customers") {
-        return {
-          data: [
-            { id: 101, membershipStatus: "Active" },
-            { id: 102, memberships: [{ id: 5 }] },
-            { id: 103 },
-          ],
-          hasMore: false,
-          page: 1,
-        };
-      }
-
-      if (path === "/tenant/{tenant}/service-agreements") {
-        return {
-          data: [
-            { id: 1, status: "Activated", customerId: 101, membershipTypeId: 1 },
-            { id: 2, status: "Activated", customerId: 102, membershipTypeId: 1 },
-            { id: 3, status: "Canceled", customerId: 200, membershipTypeId: 2 },
-            { id: 4, status: "AutoRenew", customerId: 201, membershipTypeId: 2 },
-            { id: 5, status: "Expired", customerId: 202, membershipTypeId: 2 },
-          ],
-          hasMore: false,
-          page: 1,
-        };
-      }
-
       if (path === "/tenant/{tenant}/invoices") {
         return {
           data: [
-            { id: 1, total: 100, customerId: 101, membershipTypeId: 1 },
-            { id: 2, total: 200, customerId: 102, membershipTypeId: 1 },
-            { id: 3, total: 150, customerId: 999 },
+            { id: 1, total: 100, membershipTypeId: 1, membershipTypeName: "Gold Plan" },
+            { id: 2, total: 200, membershipTypeId: 1 },
+            { id: 3, total: 50, membershipTypeId: 2, membershipType: { name: "Silver Plan" } },
+            { id: 4, total: 80, isMember: true },
+            { id: 5, total: 150 },
           ],
           hasMore: false,
           page: 1,
@@ -535,49 +520,79 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.activeMemberships).toBe(3);
-    expect(payload.newSignups).toBe(2);
-    expect(payload.cancellations).toBe(1);
+    expect(payload.activeMemberships).toBe(25);
+    expect(payload.newSignups).toBe(4);
+    expect(payload.cancellations).toBe(3);
     expect(payload.expirations).toBe(1);
-    expect(payload.renewals).toBe(1);
-    expect(payload.retentionRate).toBeCloseTo(0.667, 3);
-    expect(payload.memberRevenue).toBe(300);
+    expect(payload.renewals).toBe(9);
+    expect(payload.suspended).toBe(3);
+    expect(payload.reactivated).toBe(1);
+    expect(payload.deleted).toBe(1);
+    expect(payload.retentionRate).toBeCloseTo(0.88, 3);
+    expect(payload.memberRevenue).toBe(430);
     expect(payload.nonMemberRevenue).toBe(150);
-    expect(payload.memberAverageTicket).toBe(150);
+    expect(payload.memberAverageTicket).toBe(107.5);
     expect(payload.nonMemberAverageTicket).toBe(150);
     expect(payload.membershipTypes).toEqual([
-      { name: "Gold Plan", active: 2, revenue: 300 },
-      { name: "Silver Plan", active: 1, revenue: 0 },
+      {
+        name: "Gold Plan",
+        activeAtEnd: 20,
+        newSales: 3,
+        canceled: 1,
+        expired: 0,
+        renewed: 5,
+        suspended: 2,
+        reactivated: 1,
+        revenue: 300,
+      },
+      {
+        name: "Silver Plan",
+        activeAtEnd: 5,
+        newSales: 1,
+        canceled: 2,
+        expired: 1,
+        renewed: 4,
+        suspended: 1,
+        reactivated: 0,
+        revenue: 50,
+      },
     ]);
 
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/marketing/reports/182/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+        ],
+      },
+    );
+
     expect(getMock).toHaveBeenCalledWith(
-      "/tenant/{tenant}/service-agreements",
+      "/tenant/{tenant}/invoices",
       expect.objectContaining({
-        createdOnOrAfter: "2026-01-01T00:00:00.000Z",
-        createdBefore: "2026-01-31T23:59:59.999Z",
+        invoicedOnOrAfter: "2026-01-01T00:00:00.000Z",
+        invoicedOnBefore: "2026-01-31T23:59:59.999Z",
       }),
     );
   });
 
   it("intel_membership_health supports partial failures with warnings", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
+    postMock.mockRejectedValue(new Error("report outage"));
+
     getMock.mockImplementation(async (path: string) => {
-      if (path === "/tenant/{tenant}/service-agreements") {
-        throw new Error("agreement outage");
-      }
-
-      if (path === "/tenant/{tenant}/membership-types") {
-        return { data: [], hasMore: false, page: 1 };
-      }
-
-      if (path === "/tenant/{tenant}/customers") {
-        return { data: [{ id: 1, membershipStatus: "Active" }], hasMore: false, page: 1 };
-      }
-
       if (path === "/tenant/{tenant}/invoices") {
-        return { data: [{ total: 50, customerId: 1 }], hasMore: false, page: 1 };
+        return {
+          data: [
+            { total: 50, isMember: true },
+            { total: 75, membershipTypeId: 99 },
+          ],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       throw new Error(`Unexpected path: ${path}`);
@@ -586,16 +601,28 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.memberRevenue).toBe(50);
+    expect(payload.activeMemberships).toBe(0);
+    expect(payload.newSignups).toBe(0);
+    expect(payload.cancellations).toBe(0);
+    expect(payload.expirations).toBe(0);
+    expect(payload.renewals).toBe(0);
+    expect(payload.suspended).toBe(0);
+    expect(payload.reactivated).toBe(0);
+    expect(payload.deleted).toBe(0);
+    expect(payload.memberRevenue).toBe(125);
+    expect(payload.nonMemberRevenue).toBe(0);
+    expect(payload.memberAverageTicket).toBe(62.5);
+    expect(payload.membershipTypes).toEqual([]);
     expect(payload._warnings).toEqual([
-      "Service agreement data unavailable: agreement outage",
+      "Membership summary report (Report 182) unavailable: report outage",
     ]);
   });
 
   it("intel_membership_health handles empty datasets", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
+    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
@@ -606,6 +633,9 @@ describe("intelligence domain", () => {
     expect(payload.cancellations).toBe(0);
     expect(payload.expirations).toBe(0);
     expect(payload.renewals).toBe(0);
+    expect(payload.suspended).toBe(0);
+    expect(payload.reactivated).toBe(0);
+    expect(payload.deleted).toBe(0);
     expect(payload.retentionRate).toBe(0);
     expect(payload.memberRevenue).toBe(0);
     expect(payload.nonMemberRevenue).toBe(0);
