@@ -23,6 +23,13 @@ const technicianScorecardSchema = z.object({
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   technicianId: z.number().int().optional().describe("Single technician (omit for all)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit"),
+  limit: z
+    .number()
+    .int()
+    .min(1)
+    .max(50)
+    .optional()
+    .describe("Max technicians to analyze (default 25, max 50). Only active technicians are included."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -58,8 +65,8 @@ function estimateIsSold(estimate: GenericRecord): boolean {
   return firstValue(estimate, ["soldOn", "soldDate"]) !== undefined;
 }
 
-function invoiceRevenue(invoice: GenericRecord): number {
-  return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
+function jobRevenue(job: GenericRecord): number {
+  return toNumber(firstValue(job, ["total", "amount"]));
 }
 
 export function registerIntelligenceTechnicianPerformanceTool(
@@ -80,23 +87,33 @@ export function registerIntelligenceTechnicianPerformanceTool(
         const workingDays = countWeekdaysInclusive(start, end);
         const warnings: string[] = [];
 
+        const maxTechnicians = input.limit ?? 25;
+
         const fetchedTechnicians = await fetchWithWarning(
           warnings,
           "Technician data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/technicians", {
               ids: input.technicianId === undefined ? undefined : String(input.technicianId),
-              active: "Any",
+              active: input.technicianId === undefined ? "True" : "Any",
             }),
           [],
         );
 
-        const technicians =
+        let technicians =
           fetchedTechnicians.length > 0
             ? fetchedTechnicians
             : input.technicianId === undefined
               ? []
               : [{ id: input.technicianId, name: `Technician ${input.technicianId}` }];
+
+        const totalAvailable = technicians.length;
+        if (technicians.length > maxTechnicians) {
+          technicians = technicians.slice(0, maxTechnicians);
+          warnings.push(
+            `Limited to ${maxTechnicians} of ${totalAvailable} active technicians. Use 'limit' param to increase (max 50) or 'technicianId' for a specific tech.`,
+          );
+        }
 
         const scorecards: Array<{
           id: number;
@@ -131,18 +148,9 @@ export function registerIntelligenceTechnicianPerformanceTool(
             [],
           );
 
-          const invoices = await fetchWithWarning(
-            warnings,
-            `Invoices for ${name}`,
-            () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-                technicianId: id,
-                invoicedOnOrAfter: startIso,
-                invoicedOnBefore: endIso,
-                businessUnitId: input.businessUnitId,
-              }),
-            [],
-          );
+          // ST's invoices endpoint doesn't support technicianId filter,
+          // so we derive revenue from the job's `total` field instead.
+          // This avoids extra API calls and gives accurate per-tech revenue.
 
           const estimates = await fetchWithWarning(
             warnings,
@@ -157,10 +165,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
             [],
           );
 
-          const jobsCompleted = jobs.filter(jobIsCompleted).length;
-          const revenue = round(sumBy(invoices, invoiceRevenue), 2);
-          const invoiceCount = invoices.length;
-          const averageTicket = round(safeDivide(revenue, invoiceCount), 2);
+          const completedJobs = jobs.filter(jobIsCompleted);
+          const jobsCompleted = completedJobs.length;
+          const revenue = round(sumBy(completedJobs, jobRevenue), 2);
+          const averageTicket = round(safeDivide(revenue, jobsCompleted), 2);
           const estimatesPresented = estimates.length;
           const estimatesSold = estimates.filter(estimateIsSold).length;
           const closeRate = round(safeDivide(estimatesSold, estimatesPresented), 3);

@@ -310,18 +310,10 @@ describe("intelligence domain", () => {
       if (path === "/tenant/{tenant}/jobs" && params?.technicianId === 10) {
         return {
           data: [
-            { id: 1, status: "Completed" },
-            { id: 2, status: "Done" },
-            { id: 3, status: "InProgress" },
+            { id: 1, status: "Completed", total: 500 },
+            { id: 2, status: "Done", total: 250 },
+            { id: 3, status: "InProgress", total: 100 },
           ],
-          hasMore: false,
-          page: 1,
-        };
-      }
-
-      if (path === "/tenant/{tenant}/invoices" && params?.technicianId === 10) {
-        return {
-          data: [{ total: 500 }, { total: 250 }],
           hasMore: false,
           page: 1,
         };
@@ -390,18 +382,14 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/tenant/{tenant}/jobs") {
-        return { data: [{ status: "Completed" }], hasMore: false, page: 1 };
-      }
-
-      if (path === "/tenant/{tenant}/invoices") {
-        throw new Error("invoice endpoint down");
+        throw new Error("jobs endpoint down");
       }
 
       if (path === "/tenant/{tenant}/estimates") {
         return { data: [{ status: "Sold" }], hasMore: false, page: 1 };
       }
 
-      throw new Error(`Unexpected path: ${path}`);
+      return { data: [], hasMore: false, page: 1 };
     });
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
@@ -409,7 +397,7 @@ describe("intelligence domain", () => {
 
     expect(payload.technicians[0]).toEqual(
       expect.objectContaining({
-        jobsCompleted: 1,
+        jobsCompleted: 0,
         revenue: 0,
         averageTicket: 0,
         estimatesPresented: 1,
@@ -417,7 +405,7 @@ describe("intelligence domain", () => {
       }),
     );
     expect(payload._warnings).toEqual([
-      "Invoices for Mike Johnson unavailable: invoice endpoint down",
+      "Jobs for Mike Johnson unavailable: jobs endpoint down",
     ]);
   });
 
