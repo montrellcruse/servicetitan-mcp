@@ -685,6 +685,8 @@ describe("intelligence domain", () => {
       data: [
         ["Jamie Tech", 15000, 7500, 0.5, 6, 1.8, 77, 100, 15100],
         ["Pat Tech", 9000, 4500, 0.25, 8, 1.2, 88, 0, 9000],
+        // Zero-activity tech — should be filtered out
+        ["Admin Ghost", 0, 0, 0, 0, 0, 99, 0, 0],
       ],
       hasMore: false,
     });
@@ -713,6 +715,7 @@ describe("intelligence domain", () => {
     expect(payload.staleEstimates).toEqual([
       { id: 4, customer: "D", value: 4000, daysOld: 47 },
     ]);
+    // Zero-activity "Admin Ghost" should be filtered out; soldById=77 filters to Jamie only
     expect(payload.salesFunnel).toEqual({
       totalSales: 15000,
       averageCloseRate: 50,
@@ -927,16 +930,17 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/v3/tenant/{tenant}/calls") {
+        // v3 calls nest campaign inside leadCall (matches real ST API structure)
         return {
           data: [
-            { campaignId: 1 },
-            { campaignId: 1 },
-            { campaignId: 1 },
-            { campaignId: 1 },
-            { campaignId: 1 },
-            { campaignId: 2 },
-            { campaignId: 2 },
-            { campaignId: 2 },
+            { id: 101, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 102, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 103, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 104, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 105, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 106, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
+            { id: 107, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
+            { id: 108, leadCall: { campaign: { id: 2, name: "Direct Mail" } } },
           ],
           hasMore: false,
           page: 1,
@@ -977,6 +981,8 @@ describe("intelligence domain", () => {
       data: [
         ["HVAC", 10, 4, 0.4, 2500, 5, 2, 0.4, 1200, 50, 2750, 25],
         ["Plumbing", 3, 1, 0.333, 1500, 2, 1, 0.5, 300, 0, 1800, 0],
+        // Zero-activity BU — should be filtered out
+        ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
       ],
       hasMore: false,
     });
@@ -1015,6 +1021,8 @@ describe("intelligence domain", () => {
       revenue: 2200,
     });
 
+    // Zero-activity "Admin" BU should be filtered out
+    expect(payload.leadGeneration).toHaveLength(2);
     expect(payload.leadGeneration).toEqual([
       {
         name: "HVAC",
@@ -1080,7 +1088,14 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/v3/tenant/{tenant}/calls") {
-        return { data: [{ campaignId: 1 }, { campaignId: 1 }], hasMore: false, page: 1 };
+        return {
+          data: [
+            { id: 201, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+            { id: 202, leadCall: { campaign: { id: 1, name: "Google Ads" } } },
+          ],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       if (path === "/tenant/{tenant}/bookings") {
@@ -1131,7 +1146,11 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/v3/tenant/{tenant}/calls") {
-        return { data: [{ campaignId: 1 }], hasMore: false, page: 1 };
+        return {
+          data: [{ id: 301, leadCall: { campaign: { id: 1, name: "Google Ads" } } }],
+          hasMore: false,
+          page: 1,
+        };
       }
 
       if (path === "/tenant/{tenant}/bookings") {

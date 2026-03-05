@@ -75,7 +75,7 @@ function invoiceRevenue(invoice: GenericRecord): number {
 }
 
 function recordCampaignId(source: GenericRecord): number {
-  return Math.round(toNumber(firstValue(source, ["campaignId", "campaign.id"])));
+  return Math.round(toNumber(firstValue(source, ["campaignId", "campaign.id", "leadCall.campaign.id"])));
 }
 
 function countByCampaign(records: GenericRecord[]): Map<number, number> {
@@ -101,12 +101,23 @@ function extractReportRows(response: unknown): unknown[][] {
   return response.data.filter(Array.isArray);
 }
 
+function hasAnyLeadActivity(bu: LeadGenerationByBusinessUnit): boolean {
+  return (
+    bu.leadGenerationOpportunity !== 0 ||
+    bu.leadsSet !== 0 ||
+    bu.replacementOpportunity !== 0 ||
+    bu.replacementLeadsSet !== 0 ||
+    bu.membershipSales !== 0 ||
+    bu.totalRevenue !== 0
+  );
+}
+
 function parseLeadGenerationReport(response: unknown): LeadGenerationByBusinessUnit[] {
   const rows = extractReportRows(response);
   const result: LeadGenerationByBusinessUnit[] = [];
 
   for (const row of rows) {
-    result.push({
+    const bu: LeadGenerationByBusinessUnit = {
       name: toText(row[LEAD_GENERATION_FIELD.Name]) ?? "Unknown",
       leadGenerationOpportunity: Math.round(
         toNumber(row[LEAD_GENERATION_FIELD.LeadGenerationOpportunity]),
@@ -128,7 +139,11 @@ function parseLeadGenerationReport(response: unknown): LeadGenerationByBusinessU
       adjustmentRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.AdjustmentRevenue]), 2),
       totalRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.TotalRevenue]), 2),
       nonJobRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.NonJobRevenue]), 2),
-    });
+    };
+
+    if (hasAnyLeadActivity(bu)) {
+      result.push(bu);
+    }
   }
 
   return result;

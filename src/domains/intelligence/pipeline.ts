@@ -59,6 +59,14 @@ function extractReportRows(response: unknown): unknown[][] {
   return response.data.filter(Array.isArray);
 }
 
+function hasAnySalesActivity(tech: SalesByTechnician): boolean {
+  return (
+    tech.totalSales !== 0 ||
+    tech.salesOpportunity !== 0 ||
+    tech.closeRate !== 0
+  );
+}
+
 function parseSalesReport(response: unknown): SalesByTechnician[] {
   const rows = extractReportRows(response);
   const result: SalesByTechnician[] = [];
@@ -69,7 +77,7 @@ function parseSalesReport(response: unknown): SalesByTechnician[] {
       continue;
     }
 
-    result.push({
+    const tech: SalesByTechnician = {
       id,
       name: toText(row[SALES_FIELD.Name]) ?? `Technician ${id}`,
       totalSales: round(toNumber(row[SALES_FIELD.TotalSales]), 2),
@@ -77,7 +85,11 @@ function parseSalesReport(response: unknown): SalesByTechnician[] {
       closeRate: round(toNumber(row[SALES_FIELD.CloseRate]) * 100, 1),
       salesOpportunity: Math.round(toNumber(row[SALES_FIELD.SalesOpportunity])),
       optionsPerOpportunity: round(toNumber(row[SALES_FIELD.OptionsPerOpportunity]), 2),
-    });
+    };
+
+    if (hasAnySalesActivity(tech)) {
+      result.push(tech);
+    }
   }
 
   return result;
