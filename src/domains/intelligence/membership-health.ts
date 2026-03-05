@@ -100,7 +100,7 @@ export function registerIntelligenceMembershipHealthTool(
     handler: async (params) => {
       try {
         const input = membershipHealthSchema.parse(params);
-        const { startIso, endIso } = toDateRange(input.startDate, input.endDate);
+        const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
         const membershipTypes = await fetchWithWarning(

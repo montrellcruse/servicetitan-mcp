@@ -45,6 +45,14 @@ export class ToolRegistry {
     this.client = client;
   }
 
+  /**
+   * Returns the configured tenant timezone (IANA string, defaults to "UTC").
+   * Intelligence tools use this to convert YYYY-MM-DD date inputs to correct UTC boundaries.
+   */
+  get timezone(): string {
+    return this.config.timezone;
+  }
+
   register(tool: ToolDefinition): void {
     const domain = tool.domain.toLowerCase();
 

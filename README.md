@@ -50,10 +50,12 @@ npm run build
 | `ST_MAX_RESPONSE_CHARS` | No | `100000` | Positive integer cap used for tool response size limiting. |
 | `ST_DOMAINS` | No | All domains | Comma-separated domain allowlist (example: `crm,dispatch,reporting`). |
 | `ST_LOG_LEVEL` | No | `info` | Logger level: `debug`, `info`, `warn`, `error`. |
+| `ST_TIMEZONE` | No | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`). Intelligence tools use this to align date boundaries with the tenant's local time. |
 
 Notes:
 - Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
 - Empty `ST_DOMAINS` means all domains are enabled.
+- **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight, which can miss or include invoices/jobs near day boundaries. For example, an EST tenant should use `ST_TIMEZONE=America/New_York` so that "Feb 1" means midnight Eastern, not midnight UTC.
 
 ## MCP Client Setup
 
@@ -85,7 +87,8 @@ Add to Claude Desktop MCP config:
         "ST_CONFIRM_WRITES": "false",
         "ST_MAX_RESPONSE_CHARS": "100000",
         "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info"
+        "ST_LOG_LEVEL": "info",
+        "ST_TIMEZONE": ""
       }
     }
   }
@@ -112,7 +115,8 @@ Add to Cursor `settings.json`:
         "ST_CONFIRM_WRITES": "false",
         "ST_MAX_RESPONSE_CHARS": "100000",
         "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info"
+        "ST_LOG_LEVEL": "info",
+        "ST_TIMEZONE": ""
       }
     }
   }
@@ -139,7 +143,8 @@ Add to Windsurf MCP config:
         "ST_CONFIRM_WRITES": "false",
         "ST_MAX_RESPONSE_CHARS": "100000",
         "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info"
+        "ST_LOG_LEVEL": "info",
+        "ST_TIMEZONE": ""
       }
     }
   }
@@ -160,6 +165,7 @@ ST_READONLY=true \
 ST_CONFIRM_WRITES=false \
 ST_MAX_RESPONSE_CHARS=100000 \
 ST_LOG_LEVEL=info \
+ST_TIMEZONE="" \
 node /absolute/path/to/servicetitan-mcp-server/build/index.js
 ```
 
@@ -195,12 +201,24 @@ The intelligence domain includes 6 high-value analytical tools:
 
 | Tool | What It Returns | Example Use Case |
 | --- | --- | --- |
-| `intel_revenue_summary` | Invoiced vs collected totals, outstanding balance, average ticket, top services by revenue. | "Summarize January revenue by business unit and identify top grossing services." |
+| `intel_revenue_summary` | Total revenue (matches ST dashboard), breakdown by BU (completed, non-job, adjustment), collections, outstanding, conversion rates. | "Summarize January revenue by business unit." |
 | `intel_technician_scorecard` | Per-tech jobs completed, revenue, avg ticket, close rate, jobs/day, plus team averages. | "Compare technician productivity and close rates this month." |
 | `intel_membership_health` | Active membership metrics, signups/cancellations/renewals, retention rate, member vs non-member revenue. | "Check churn pressure and membership revenue mix for last quarter." |
 | `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities. | "Find stale open estimates older than 30 days and quantify pipeline risk." |
 | `intel_campaign_performance` | Campaign calls, bookings, conversion, revenue, revenue per call. | "Rank campaigns by revenue efficiency and identify low-conversion spend." |
 | `intel_daily_snapshot` | Same-day appointment/job progress, revenue-to-date, call outcomes, and highlights. | "Get a daily ops briefing before end-of-day dispatch review." |
+
+### Revenue: API vs Dashboard Accuracy
+
+`intel_revenue_summary` uses ServiceTitan's **Reporting API** (Report 175: "Revenue") to calculate totals. This matches the ST dashboard exactly because it includes:
+
+- **Completed Revenue** — revenue from completed jobs
+- **Non-Job Revenue** — membership fees, add-ons, and other income not tied to a specific job
+- **Adjustment Revenue** — credits, adjustments, and corrections
+
+Raw invoice or job endpoint sums will **not** match the dashboard. The invoices API returns invoice-level totals (which include tax and exclude non-job revenue), while the jobs API only captures job-level totals. Both miss the non-job revenue component that ST's internal reporting engine includes.
+
+If you need invoice-level detail (line items, individual invoice totals), use `accounting_invoices_list`. For dashboard-matching revenue figures, use `intel_revenue_summary`.
 
 ## Safety Features
 

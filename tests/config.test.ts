@@ -24,6 +24,7 @@ describe("loadConfig", () => {
       maxResponseChars: 100000,
       enabledDomains: null,
       logLevel: "info",
+      timezone: "UTC",
     });
   });
 
@@ -159,4 +160,25 @@ describe("loadConfig", () => {
       );
     },
   );
+
+  it("defaults timezone to UTC when ST_TIMEZONE is not set", () => {
+    const config = loadConfig(validEnv);
+    expect(config.timezone).toBe("UTC");
+  });
+
+  it("accepts a valid IANA timezone", () => {
+    const config = loadConfig({ ...validEnv, ST_TIMEZONE: "America/New_York" });
+    expect(config.timezone).toBe("America/New_York");
+  });
+
+  it("accepts US/Eastern shorthand", () => {
+    const config = loadConfig({ ...validEnv, ST_TIMEZONE: "US/Eastern" });
+    expect(config.timezone).toBe("US/Eastern");
+  });
+
+  it("throws on invalid timezone", () => {
+    expect(() =>
+      loadConfig({ ...validEnv, ST_TIMEZONE: "Not/A/Timezone" }),
+    ).toThrow(/ST_TIMEZONE must be a valid IANA timezone/);
+  });
 });

@@ -27,6 +27,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     maxResponseChars: 100000,
     enabledDomains: null,
     logLevel: "error",
+    timezone: "UTC",
     ...overrides,
   };
 }

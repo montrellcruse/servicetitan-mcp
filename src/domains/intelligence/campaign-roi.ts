@@ -57,7 +57,7 @@ export function registerIntelligenceCampaignPerformanceTool(
     handler: async (params) => {
       try {
         const input = campaignPerformanceSchema.parse(params);
-        const { startIso, endIso } = toDateRange(input.startDate, input.endDate);
+        const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
         const maxCampaigns = input.limit ?? 20;

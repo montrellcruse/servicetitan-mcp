@@ -12,6 +12,7 @@ import {
   normalizeStatus,
   round,
   safeDivide,
+  toBoundaryIso,
   toDate,
   toNumber,
   toText,
@@ -26,21 +27,6 @@ const estimatePipelineSchema = z.object({
 type GenericRecord = Record<string, unknown>;
 
 type PipelineGroup = "open" | "sold" | "dismissed";
-
-const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-function toBoundaryIso(date: string, endOfDay: boolean): string {
-  const normalized = DATE_ONLY_PATTERN.test(date)
-    ? `${date}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`
-    : date;
-
-  const parsed = new Date(normalized);
-  if (Number.isNaN(parsed.getTime())) {
-    throw new Error(`Invalid date: ${date}`);
-  }
-
-  return parsed.toISOString();
-}
 
 function estimateValue(estimate: GenericRecord): number {
   return toNumber(firstValue(estimate, ["total", "amount", "subtotal"]));
@@ -98,10 +84,11 @@ export function registerIntelligenceEstimatePipelineTool(
         const input = estimatePipelineSchema.parse(params);
         const warnings: string[] = [];
 
+        const tz = registry.timezone;
         const createdOnOrAfter =
-          input.startDate === undefined ? undefined : toBoundaryIso(input.startDate, false);
+          input.startDate === undefined ? undefined : toBoundaryIso(input.startDate, false, tz);
         const createdBefore =
-          input.endDate === undefined ? undefined : toBoundaryIso(input.endDate, true);
+          input.endDate === undefined ? undefined : toBoundaryIso(input.endDate, true, tz);
 
         const estimates = await fetchWithWarning(
           warnings,
@@ -118,7 +105,7 @@ export function registerIntelligenceEstimatePipelineTool(
         const referenceDate =
           input.endDate === undefined
             ? new Date()
-            : new Date(toBoundaryIso(input.endDate, true));
+            : new Date(toBoundaryIso(input.endDate, true, tz));
 
         const pipeline = {
           open: { count: 0, value: 0 },

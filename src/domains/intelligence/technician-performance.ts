@@ -83,7 +83,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     handler: async (params) => {
       try {
         const input = technicianScorecardSchema.parse(params);
-        const { start, end, startIso, endIso } = toDateRange(input.startDate, input.endDate);
+        const { start, end, startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
         const workingDays = countWeekdaysInclusive(start, end);
         const warnings: string[] = [];
 

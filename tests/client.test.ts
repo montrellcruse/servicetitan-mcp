@@ -138,6 +138,7 @@ function createConfig(
     maxResponseChars: 100000,
     enabledDomains: null,
     logLevel: "info",
+    timezone: "UTC",
   };
 }
 

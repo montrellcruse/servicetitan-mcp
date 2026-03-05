@@ -9,6 +9,7 @@ export interface ServiceTitanConfig {
   maxResponseChars: number;
   enabledDomains: string[] | null;
   logLevel: "debug" | "info" | "warn" | "error";
+  timezone: string;
 }
 
 const REQUIRED_ENV_VARS = [
@@ -103,6 +104,32 @@ function parseLogLevel(value: string | undefined): LogLevel {
   );
 }
 
+/**
+ * Parse and validate an IANA timezone string (e.g. "America/New_York", "US/Eastern").
+ * Defaults to "UTC" if not set.
+ *
+ * ServiceTitan stores timestamps in the tenant's local timezone.
+ * Setting ST_TIMEZONE ensures intelligence tools convert YYYY-MM-DD date inputs
+ * to the correct UTC boundaries for API queries (e.g. Feb 1 midnight EST = Feb 1 05:00 UTC).
+ */
+function parseTimezone(value: string | undefined): string {
+  if (value === undefined || value.trim() === "") {
+    return "UTC";
+  }
+
+  const tz = value.trim();
+
+  // Validate by attempting to use it with Intl.DateTimeFormat
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return tz;
+  } catch {
+    throw new Error(
+      `ST_TIMEZONE must be a valid IANA timezone (e.g. "America/New_York", "US/Eastern"). Received: ${value}`,
+    );
+  }
+}
+
 function requiredValue(
   env: NodeJS.ProcessEnv,
   key: (typeof REQUIRED_ENV_VARS)[number],
@@ -134,5 +161,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     ),
     enabledDomains: parseDomains(env.ST_DOMAINS),
     logLevel: parseLogLevel(env.ST_LOG_LEVEL),
+    timezone: parseTimezone(env.ST_TIMEZONE),
   };
 }

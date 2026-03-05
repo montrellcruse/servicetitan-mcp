@@ -11,6 +11,7 @@ import {
   round,
   safeDivide,
   sumBy,
+  toDateRange,
   toNumber,
 } from "./helpers.js";
 
@@ -145,8 +146,7 @@ export function registerIntelligenceRevenueTool(
         );
 
         // ── Payments for collections data ──
-        const startIso = `${input.startDate}T00:00:00.000Z`;
-        const endIso = `${input.endDate}T23:59:59.999Z`;
+        const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
 
         const payments = await fetchWithWarning(
           warnings,

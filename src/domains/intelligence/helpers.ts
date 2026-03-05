@@ -114,14 +114,56 @@ export function sumBy<T>(items: T[], mapper: (item: T) => number): number {
   return items.reduce((total, item) => total + parseNumberish(mapper(item)), 0);
 }
 
-export function toDateRange(startDate: string, endDate: string): {
+/**
+ * Compute the UTC offset in milliseconds for a given IANA timezone at a specific date.
+ * Uses Intl.DateTimeFormat to determine local time parts, then calculates the difference
+ * between the UTC timestamp and what that timestamp represents in the target timezone.
+ */
+function getTimezoneOffsetMs(timezone: string, refDate: Date): number {
+  if (timezone === "UTC") return 0;
+
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(refDate);
+  const get = (type: string): number => {
+    const part = parts.find((p) => p.type === type);
+    return part ? Number.parseInt(part.value, 10) : 0;
+  };
+
+  // Reconstruct the local time as if it were UTC to find the offset
+  const localAsUtc = Date.UTC(
+    get("year"),
+    get("month") - 1,
+    get("day"),
+    get("hour") === 24 ? 0 : get("hour"),
+    get("minute"),
+    get("second"),
+  );
+
+  return localAsUtc - refDate.getTime();
+}
+
+export function toDateRange(
+  startDate: string,
+  endDate: string,
+  timezone = "UTC",
+): {
   start: Date;
   end: Date;
   startIso: string;
   endIso: string;
 } {
-  const start = parseDateInput(startDate, false);
-  const end = parseDateInput(endDate, true);
+  const start = parseDateInput(startDate, false, timezone);
+  const end = parseDateInput(endDate, true, timezone);
 
   if (end.getTime() < start.getTime()) {
     throw new Error("endDate must be on or after startDate");
@@ -135,15 +177,18 @@ export function toDateRange(startDate: string, endDate: string): {
   };
 }
 
-export function toSingleDayRange(date: string): {
+export function toSingleDayRange(
+  date: string,
+  timezone = "UTC",
+): {
   start: Date;
   end: Date;
   startIso: string;
   endIso: string;
   nextDayStartIso: string;
 } {
-  const start = parseDateInput(date, false);
-  const end = parseDateInput(date, true);
+  const start = parseDateInput(date, false, timezone);
+  const end = parseDateInput(date, true, timezone);
 
   return {
     start,
@@ -154,18 +199,41 @@ export function toSingleDayRange(date: string): {
   };
 }
 
-function parseDateInput(value: string, endOfDay: boolean): Date {
-  const normalized = DATE_ONLY_PATTERN.test(value)
-    ? `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`
-    : value;
+/**
+ * Convert a date string to an ISO boundary timestamp, respecting the tenant timezone.
+ * Exported for tools that build their own date filters (e.g. pipeline).
+ */
+export function toBoundaryIso(value: string, endOfDay: boolean, timezone = "UTC"): string {
+  return parseDateInput(value, endOfDay, timezone).toISOString();
+}
 
-  const parsed = new Date(normalized);
+function parseDateInput(value: string, endOfDay: boolean, timezone = "UTC"): Date {
+  // If the value already has timezone info (ISO with Z or offset), parse directly
+  if (!DATE_ONLY_PATTERN.test(value)) {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      throw new Error(`Invalid date: ${value}`);
+    }
+    return parsed;
+  }
 
-  if (Number.isNaN(parsed.getTime())) {
+  // For date-only values (YYYY-MM-DD), interpret as local midnight in the configured timezone.
+  // First parse as UTC midnight, then shift by the timezone offset.
+  const utcMidnight = new Date(
+    `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`,
+  );
+
+  if (Number.isNaN(utcMidnight.getTime())) {
     throw new Error(`Invalid date: ${value}`);
   }
 
-  return parsed;
+  if (timezone === "UTC") {
+    return utcMidnight;
+  }
+
+  // Shift: "Feb 1 00:00 EST" = "Feb 1 05:00 UTC" (offset = +5h for EST)
+  const offsetMs = getTimezoneOffsetMs(timezone, utcMidnight);
+  return new Date(utcMidnight.getTime() - offsetMs);
 }
 
 export function toNumber(value: unknown): number {

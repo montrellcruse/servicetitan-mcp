@@ -76,7 +76,7 @@ export function registerIntelligenceDailySnapshotTool(
       try {
         const input = dailySnapshotSchema.parse(params);
         const date = input.date ?? new Date().toISOString().slice(0, 10);
-        const { startIso, endIso, nextDayStartIso } = toSingleDayRange(date);
+        const { startIso, endIso, nextDayStartIso } = toSingleDayRange(date, registry.timezone);
         const warnings: string[] = [];
 
         const appointments = await fetchWithWarning(
