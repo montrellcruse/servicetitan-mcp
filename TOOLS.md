@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Total tools: 436
+Total tools: 439
 
 ## accounting
 
@@ -235,11 +235,14 @@ Total tools: 436
 | Name | Domain | Operation | Description |
 | --- | --- | --- | --- |
 | `intel_campaign_performance` | `intelligence` | `read` | Marketing campaign performance summary with calls, bookings, conversion rate, revenue, and revenue per call |
-| `intel_daily_snapshot` | `intelligence` | `read` | Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, and plain-English highlights |
+| `intel_csr_performance` | `intelligence` | `read` | CSR booking performance using Job Detail By CSR with booked jobs, revenue, average ticket, campaign mix, job type mix, and team averages |
+| `intel_daily_snapshot` | `intelligence` | `read` | Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, next-day upcoming jobs, and plain-English highlights |
 | `intel_estimate_pipeline` | `intelligence` | `read` | Estimate pipeline summary with open/sold/dismissed funnel, conversion rate, close speed, age buckets, and stale opportunities |
-| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, and member vs non-member revenue |
-| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary for a date range: invoiced totals, collected totals, outstanding balance, average ticket, and top services by revenue |
-| `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard with jobs completed, revenue, average ticket, estimate close rate, and team averages |
+| `intel_invoice_tracking` | `intelligence` | `read` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician |
+| `intel_labor_cost` | `intelligence` | `read` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown |
+| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, total invoiced revenue, and business-unit membership conversion metrics |
+| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, conversion rates, plus BU-level productivity and sales metrics. |
+| `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages |
 
 ## inventory
 
@@ -448,7 +451,7 @@ Total tools: 436
 | --- | --- | --- | --- |
 | `reporting_dynamic_value_sets_get` | `reporting` | `read` | Get values from a dynamic value set |
 | `reporting_report_categories_list` | `reporting` | `read` | List report categories |
-| `reporting_reports_data_create` | `reporting` | `write` | Fetch report data rows |
+| `reporting_reports_data_create` | `reporting` | `read` | Fetch report data rows. Use the report definition to discover required parameters. Date parameters use YYYY-MM-DD format. |
 | `reporting_reports_get` | `reporting` | `read` | Get a report definition in a category |
 | `reporting_reports_list` | `reporting` | `read` | List reports in a report category |
 

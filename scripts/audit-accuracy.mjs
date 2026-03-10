@@ -20,6 +20,9 @@ const TOOLS = [
   { name: "intel_estimate_pipeline", args: { startDate: "2026-02-01", endDate: "2026-02-28" } },
   { name: "intel_campaign_performance", args: { startDate: "2026-02-01", endDate: "2026-02-28", limit: 5 } },
   { name: "intel_daily_snapshot", args: { date: "2026-03-04" } },
+  { name: "intel_csr_performance", args: { startDate: "2026-02-01", endDate: "2026-02-28" } },
+  { name: "intel_labor_cost", args: { startDate: "2026-02-01", endDate: "2026-02-28" } },
+  { name: "intel_invoice_tracking", args: { startDate: "2026-02-01", endDate: "2026-02-28" } },
 ];
 
 async function main() {

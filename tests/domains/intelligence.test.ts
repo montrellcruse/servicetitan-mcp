@@ -87,6 +87,24 @@ function payloadFrom(result: ToolResponse): Record<string, any> {
 
 const PER_CAMPAIGN_REVENUE_WARNING =
   "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
+const EMPTY_REPORT = { fields: [], data: [], hasMore: false };
+const ZERO_TECHNICIAN_LEAD_GENERATION = {
+  replacementOpps: 0,
+  leadsSet: 0,
+  avgLeadSale: 0,
+  conversionRate: 0,
+  totalLeadSales: 0,
+};
+const ZERO_TECHNICIAN_MEMBERSHIPS = {
+  opportunities: 0,
+  sold: 0,
+  conversionRate: 0,
+};
+const ZERO_TECHNICIAN_LEAD_SALES = {
+  totalSales: 0,
+  avgSale: 0,
+  closeRate: 0,
+};
 
 describe("intelligence domain", () => {
   beforeEach(() => {
@@ -102,10 +120,10 @@ describe("intelligence domain", () => {
     process.env.ST_RESPONSE_SHAPING = ORIGINAL_ST_RESPONSE_SHAPING;
   });
 
-  it("registers all 6 intelligence tools as read operations", () => {
+  it("registers all 9 intelligence tools as read operations", () => {
     const { server, registry } = createContext();
 
-    expect(server.tool).toHaveBeenCalledTimes(6);
+    expect(server.tool).toHaveBeenCalledTimes(9);
 
     const names = new Set(
       server.tool.mock.calls.map((call) => call[0] as string),
@@ -119,6 +137,9 @@ describe("intelligence domain", () => {
         "intel_estimate_pipeline",
         "intel_campaign_performance",
         "intel_daily_snapshot",
+        "intel_csr_performance",
+        "intel_labor_cost",
+        "intel_invoice_tracking",
       ]),
     );
 
@@ -171,28 +192,58 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_revenue_summary");
 
-    // Report 175 returns array-of-arrays with field order:
-    // [Name, CompletedRevenue, OpportunityJobAvg, ConversionRate, Opportunity, ConvertedJobs,
-    //  CustomerSatisfaction, AdjustmentRevenue, TotalRevenue, NonJobRevenue]
-    postMock.mockResolvedValue({
-      fields: [
-        { name: "Name" },
-        { name: "CompletedRevenue" },
-        { name: "OpportunityJobAverage" },
-        { name: "OpportunityConversionRate" },
-        { name: "Opportunity" },
-        { name: "ConvertedJobs" },
-        { name: "CustomerSatisfaction" },
-        { name: "AdjustmentRevenue" },
-        { name: "TotalRevenue" },
-        { name: "NonJobRevenue" },
-      ],
-      data: [
-        ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
-        ["HVAC - Service", 100, 100, 0.5, 10, 5, 0, 0, 150, 50],
-        ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      ],
-      hasMore: false,
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data") {
+        // Report 175 field order:
+        // [Name, CompletedRevenue, OpportunityJobAvg, ConversionRate, Opportunity, ConvertedJobs,
+        //  CustomerSatisfaction, AdjustmentRevenue, TotalRevenue, NonJobRevenue]
+        return {
+          fields: [
+            { name: "Name" },
+            { name: "CompletedRevenue" },
+            { name: "OpportunityJobAverage" },
+            { name: "OpportunityConversionRate" },
+            { name: "Opportunity" },
+            { name: "ConvertedJobs" },
+            { name: "CustomerSatisfaction" },
+            { name: "AdjustmentRevenue" },
+            { name: "TotalRevenue" },
+            { name: "NonJobRevenue" },
+          ],
+          data: [
+            ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
+            ["HVAC - Service", 100, 100, 0.5, 10, 5, 0, 0, 150, 50],
+            ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data") {
+        return {
+          fields: [],
+          data: [
+            ["HVAC - Install", 100, 0.8, 300, 2, 1.5, 1, 0, 450, 50],
+            ["HVAC - Service", 80, 0.7, 100, 1.5, 1, 0, 0, 150, 50],
+            ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data") {
+        return {
+          fields: [],
+          data: [
+            ["HVAC - Install", 1000, 500, 0.5, 4, 1.2, 0, 450, 50],
+            ["HVAC - Service", 300, 300, 1.0, 1, 1, 0, 150, 50],
+            ["Admin", 0, 0, 0, 0, 0, 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
     });
 
     getMock.mockImplementation(async (path: string) => {
@@ -228,15 +279,85 @@ describe("intelligence domain", () => {
     expect(payload.totalConvertedJobs).toBe(10);
     expect(payload.totalOpportunities).toBe(15);
     expect(payload.overallConversionRate).toBe(66.7);
+    expect(payload.productivity).toEqual({
+      averageRevenuePerHour: 90,
+      averageBillableEfficiency: 0.75,
+      totalUpsold: 400,
+      averageTasksPerOpportunity: 1.75,
+      averageOptionsPerOpportunity: 1.25,
+      totalRecallsCaused: 1,
+    });
+    expect(payload.sales).toEqual({
+      totalSales: 1300,
+      averageClosedAvgSale: 400,
+      averageCloseRate: 75,
+      totalSalesOpportunity: 5,
+      averageOptionsPerOpportunity: 1.1,
+    });
 
     // Verify BU breakdown (zero-revenue "Admin" should be filtered out)
-    expect(payload.byBusinessUnit).toHaveLength(2);
-    expect((payload.byBusinessUnit as any[])[0].name).toBe("HVAC - Install");
-    expect((payload.byBusinessUnit as any[])[1].name).toBe("HVAC - Service");
+    expect(payload.byBusinessUnit).toEqual([
+      expect.objectContaining({
+        name: "HVAC - Install",
+        productivity: {
+          revenuePerHour: 100,
+          billableEfficiency: 0.8,
+          upsold: 300,
+          tasksPerOpportunity: 2,
+          optionsPerOpportunity: 1.5,
+          recallsCaused: 1,
+        },
+        sales: {
+          totalSales: 1000,
+          closedAvgSale: 500,
+          closeRate: 50,
+          salesOpportunity: 4,
+          optionsPerOpportunity: 1.2,
+        },
+      }),
+      expect.objectContaining({
+        name: "HVAC - Service",
+        productivity: {
+          revenuePerHour: 80,
+          billableEfficiency: 0.7,
+          upsold: 100,
+          tasksPerOpportunity: 1.5,
+          optionsPerOpportunity: 1,
+          recallsCaused: 0,
+        },
+        sales: {
+          totalSales: 300,
+          closedAvgSale: 300,
+          closeRate: 100,
+          salesOpportunity: 1,
+          optionsPerOpportunity: 1,
+        },
+      }),
+    ]);
 
     // Verify Report 175 was called with correct parameters
     expect(postMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+          { name: "BusinessUnitIds", value: "7" },
+        ],
+      },
+    );
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+          { name: "BusinessUnitIds", value: "7" },
+        ],
+      },
+    );
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
       {
         parameters: [
           { name: "From", value: "2026-01-01" },
@@ -251,7 +372,20 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_revenue_summary");
 
-    postMock.mockRejectedValue(new Error("report outage"));
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data") {
+        throw new Error("report outage");
+      }
+
+      if (
+        path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data" ||
+        path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data"
+      ) {
+        return EMPTY_REPORT;
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
 
     getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/payments") {
@@ -272,6 +406,21 @@ describe("intelligence domain", () => {
 
     expect(payload.totalRevenue).toBe(0);
     expect(payload.totalCollected).toBe(125);
+    expect(payload.productivity).toEqual({
+      averageRevenuePerHour: 0,
+      averageBillableEfficiency: 0,
+      totalUpsold: 0,
+      averageTasksPerOpportunity: 0,
+      averageOptionsPerOpportunity: 0,
+      totalRecallsCaused: 0,
+    });
+    expect(payload.sales).toEqual({
+      totalSales: 0,
+      averageClosedAvgSale: 0,
+      averageCloseRate: 0,
+      totalSalesOpportunity: 0,
+      averageOptionsPerOpportunity: 0,
+    });
     expect(payload._warnings).toEqual([
       "Revenue report (Report 175) unavailable: report outage",
     ]);
@@ -323,6 +472,54 @@ describe("intelligence domain", () => {
         };
       }
 
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data") {
+        return {
+          fields: [],
+          data: [
+            ["Mike Johnson", 3, 2, 750, 0.5, 1, 1500, 750, 10],
+            ["Nina Lopez", 0, 0, 0, 0, 0, 0, 0, 11],
+            ["Install Leader", 0, 0, 0, 0, 0, 0, 0, 12],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data") {
+        return {
+          fields: [],
+          data: [
+            ["Mike Johnson", 4, 1, 0.25, 10, 0, 0],
+            ["Nina Lopez", 0, 0, 0, 11, 0, 0],
+            ["Install Leader", 0, 0, 0, 12, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data") {
+        return {
+          fields: [],
+          data: [
+            ["Mike Johnson", "HVAC Service", 500, 250, 0.4, 1.5, 3, "Service", 8, 0, 0, 10],
+            ["Nina Lopez", "HVAC Service", 0, 0, 0, 0, 3, "Service", 8, 0, 0, 11],
+            ["Install Leader", "Install", 0, 0, 0, 0, 4, "Install", 8, 0, 0, 12],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data") {
+        return {
+          fields: [],
+          data: [
+            ["Mike Johnson", 300, 300, 0.6, 1.2, 10, 0, 0],
+            ["Nina Lopez", 0, 0, 0, 0, 11, 0, 0],
+            ["Install Leader", 0, 0, 0, 0, 12, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
       if (path === "/tenant/{tenant}/report-category/operations/reports/165/data") {
         return {
           fields: [],
@@ -363,6 +560,28 @@ describe("intelligence domain", () => {
         recallsCaused: 1,
         upsold: 300,
         jobsPerDay: 0.29,
+        leadGeneration: {
+          replacementOpps: 3,
+          leadsSet: 2,
+          avgLeadSale: 750,
+          conversionRate: 50,
+          totalLeadSales: 1500,
+        },
+        memberships: {
+          opportunities: 4,
+          sold: 1,
+          conversionRate: 25,
+        },
+        salesFromTechLeads: {
+          totalSales: 500,
+          avgSale: 250,
+          closeRate: 40,
+        },
+        salesFromMarketingLeads: {
+          totalSales: 300,
+          avgSale: 300,
+          closeRate: 60,
+        },
       },
     ]);
 
@@ -379,10 +598,32 @@ describe("intelligence domain", () => {
       recallsCaused: 1,
       upsold: 300,
       jobsPerDay: 0.29,
+      leadGeneration: {
+        replacementOpps: 3,
+        leadsSet: 2,
+        avgLeadSale: 750,
+        conversionRate: 50,
+        totalLeadSales: 1500,
+      },
+      memberships: {
+        opportunities: 4,
+        sold: 1,
+        conversionRate: 25,
+      },
+      salesFromTechLeads: {
+        totalSales: 500,
+        avgSale: 250,
+        closeRate: 40,
+      },
+      salesFromMarketingLeads: {
+        totalSales: 300,
+        avgSale: 300,
+        closeRate: 60,
+      },
     });
 
     expect(payload._warnings).toEqual([
-      "Business unit filtering only applies to completed jobs (Report 165). Revenue/productivity metrics are tenant-wide.",
+      "Business unit filtering only applies to completed jobs (Report 165) and lead generation (Report 169). Revenue, productivity, memberships, and lead-sales metrics are tenant-wide.",
     ]);
 
     expect(postMock).toHaveBeenCalledWith(
@@ -398,6 +639,47 @@ describe("intelligence domain", () => {
 
     expect(postMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitId", value: "3" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-10" },
+        ],
+      },
+    );
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
       {
         parameters: [
           { name: "From", value: "2026-01-01" },
@@ -436,6 +718,38 @@ describe("intelligence domain", () => {
         };
       }
 
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data") {
+        return {
+          fields: [],
+          data: [["Mike Johnson", 2, 1, 200, 0.5, 1, 200, 200, 10]],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data") {
+        return {
+          fields: [],
+          data: [["Mike Johnson", 3, 1, 0.333, 10, 0, 0]],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data") {
+        return {
+          fields: [],
+          data: [["Mike Johnson", "HVAC Service", 400, 200, 0.5, 0, 0, 0, 0, 0, 0, 10]],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data") {
+        return {
+          fields: [],
+          data: [["Mike Johnson", 250, 250, 1, 0, 10, 0, 0]],
+          hasMore: false,
+        };
+      }
+
       if (path === "/tenant/{tenant}/report-category/operations/reports/165/data") {
         return {
           fields: [],
@@ -465,6 +779,28 @@ describe("intelligence domain", () => {
       recallsCaused: 2,
       upsold: 80,
       jobsPerDay: 0.05,
+      leadGeneration: {
+        replacementOpps: 2,
+        leadsSet: 1,
+        avgLeadSale: 200,
+        conversionRate: 50,
+        totalLeadSales: 200,
+      },
+      memberships: {
+        opportunities: 3,
+        sold: 1,
+        conversionRate: 33.3,
+      },
+      salesFromTechLeads: {
+        totalSales: 400,
+        avgSale: 200,
+        closeRate: 50,
+      },
+      salesFromMarketingLeads: {
+        totalSales: 250,
+        avgSale: 250,
+        closeRate: 100,
+      },
     });
     expect(payload._warnings).toEqual([
       "Technician revenue report (Report 168) unavailable: report outage",
@@ -475,7 +811,7 @@ describe("intelligence domain", () => {
     const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
 
-    postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
+    postMock.mockResolvedValue(EMPTY_REPORT);
 
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
@@ -494,6 +830,10 @@ describe("intelligence domain", () => {
       recallsCaused: 0,
       upsold: 0,
       jobsPerDay: 0,
+      leadGeneration: ZERO_TECHNICIAN_LEAD_GENERATION,
+      memberships: ZERO_TECHNICIAN_MEMBERSHIPS,
+      salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
+      salesFromMarketingLeads: ZERO_TECHNICIAN_LEAD_SALES,
     });
   });
 
@@ -501,24 +841,42 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
-    postMock.mockResolvedValue({
-      fields: [
-        { name: "Name" },
-        { name: "Suspended" },
-        { name: "Canceled" },
-        { name: "Expired" },
-        { name: "Deleted" },
-        { name: "Renewed" },
-        { name: "Reactivated" },
-        { name: "NewSales" },
-        { name: "ActiveAtEnd" },
-      ],
-      data: [
-        ["Gold Plan", 2, 1, 0, 0, 5, 1, 3, 20],
-        ["Silver Plan", 1, 2, 1, 1, 4, 0, 1, 5],
-        ["Legacy Plan", 0, 0, 0, 0, 0, 0, 0, 0],
-      ],
-      hasMore: false,
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/marketing/reports/182/data") {
+        return {
+          fields: [
+            { name: "Name" },
+            { name: "Suspended" },
+            { name: "Canceled" },
+            { name: "Expired" },
+            { name: "Deleted" },
+            { name: "Renewed" },
+            { name: "Reactivated" },
+            { name: "NewSales" },
+            { name: "ActiveAtEnd" },
+          ],
+          data: [
+            ["Gold Plan", 2, 1, 0, 0, 5, 1, 3, 20],
+            ["Silver Plan", 1, 2, 1, 1, 4, 0, 1, 5],
+            ["Legacy Plan", 0, 0, 0, 0, 0, 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data") {
+        return {
+          fields: [],
+          data: [
+            ["HVAC", 8, 3, 0.375],
+            ["Plumbing", 2, 1, 0.5],
+            ["Admin", 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
     });
 
     getMock.mockImplementation(async (path: string) => {
@@ -552,6 +910,15 @@ describe("intelligence domain", () => {
     expect(payload.deleted).toBe(1);
     expect(payload.retentionRate).toBeCloseTo(0.88, 3);
     expect(payload.totalRevenue).toBe(580);
+    expect(payload.conversionTotals).toEqual({
+      opportunities: 10,
+      converted: 4,
+      conversionRate: 40,
+    });
+    expect(payload.conversionByBusinessUnit).toEqual([
+      { name: "HVAC", opportunities: 8, converted: 3, conversionRate: 37.5 },
+      { name: "Plumbing", opportunities: 2, converted: 1, conversionRate: 50 },
+    ]);
     expect(payload.membershipTypes).toEqual([
       {
         name: "Gold Plan",
@@ -584,6 +951,15 @@ describe("intelligence domain", () => {
         ],
       },
     );
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+        ],
+      },
+    );
 
     expect(getMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/invoices",
@@ -598,7 +974,21 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_membership_health");
 
-    postMock.mockRejectedValue(new Error("report outage"));
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/marketing/reports/182/data") {
+        throw new Error("report outage");
+      }
+
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data") {
+        return {
+          fields: [],
+          data: [["HVAC", 4, 2, 0.5]],
+          hasMore: false,
+        };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
 
     getMock.mockImplementation(async (path: string) => {
       if (path === "/tenant/{tenant}/invoices") {
@@ -627,6 +1017,14 @@ describe("intelligence domain", () => {
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
     expect(payload.totalRevenue).toBe(125);
+    expect(payload.conversionTotals).toEqual({
+      opportunities: 4,
+      converted: 2,
+      conversionRate: 50,
+    });
+    expect(payload.conversionByBusinessUnit).toEqual([
+      { name: "HVAC", opportunities: 4, converted: 2, conversionRate: 50 },
+    ]);
     expect(payload.membershipTypes).toEqual([]);
     expect(payload._warnings).toEqual([
       "Membership summary report (Report 182) unavailable: report outage",
@@ -1244,8 +1642,8 @@ describe("intelligence domain", () => {
     expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
   });
 
-  it("intel_daily_snapshot computes counts, revenues, highlights, and date params", async () => {
-    const { handlers, getMock } = createContext();
+  it("intel_daily_snapshot computes counts, revenues, upcoming jobs, highlights, and date params", async () => {
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_daily_snapshot");
 
     getMock.mockImplementation(async (path: string) => {
@@ -1316,6 +1714,47 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/operations/reports/163/data") {
+        return {
+          fields: [],
+          data: [
+            [
+              "JOB-1001",
+              "2026-03-05 09:00",
+              "Acme Industries",
+              "",
+              "",
+              "",
+              "",
+              "123 Main St",
+              "",
+              "",
+              "HVAC Service",
+              "Mike Johnson",
+            ],
+            [
+              "JOB-1002",
+              "2026-03-05 11:00",
+              "Beta Homes",
+              "",
+              "",
+              "",
+              "",
+              "456 Oak Ave",
+              "",
+              "",
+              "Maintenance",
+              "Nina Lopez",
+            ],
+          ],
+          hasMore: false,
+        };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
+    });
+
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
 
@@ -1341,9 +1780,35 @@ describe("intelligence domain", () => {
       booked: 3,
       missed: 3,
     });
+    expect(payload.upcomingJobs).toEqual({
+      total: 2,
+      breakdownByJobType: [
+        { jobType: "HVAC Service", count: 1 },
+        { jobType: "Maintenance", count: 1 },
+      ],
+      jobs: [
+        {
+          jobNumber: "JOB-1001",
+          scheduledDate: "2026-03-05 09:00",
+          customerName: "Acme Industries",
+          locationAddress: "123 Main St",
+          jobType: "HVAC Service",
+          assignedTechnicians: "Mike Johnson",
+        },
+        {
+          jobNumber: "JOB-1002",
+          scheduledDate: "2026-03-05 11:00",
+          customerName: "Beta Homes",
+          locationAddress: "456 Oak Ave",
+          jobType: "Maintenance",
+          assignedTechnicians: "Nina Lopez",
+        },
+      ],
+    });
     expect(payload.highlights).toEqual([
       "1 of 4 appointments completed (25%)",
       "3 missed calls today may need follow-up",
+      "2 jobs scheduled for tomorrow",
       "$1,000 in estimates sold",
     ]);
 
@@ -1354,10 +1819,20 @@ describe("intelligence domain", () => {
         startsBefore: "2026-03-05T00:00:00.000Z",
       }),
     );
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/operations/reports/163/data",
+      {
+        parameters: [
+          { name: "DateType", value: "Appointment Date" },
+          { name: "From", value: "2026-03-05" },
+          { name: "To", value: "2026-03-05" },
+        ],
+      },
+    );
   });
 
   it("intel_daily_snapshot returns partial results and warnings when one feed fails", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_daily_snapshot");
 
     getMock.mockImplementation(async (path: string) => {
@@ -1372,20 +1847,24 @@ describe("intelligence domain", () => {
       };
     });
 
+    postMock.mockResolvedValue(EMPTY_REPORT);
+
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
 
     expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
+    expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload._warnings).toEqual([
       "Call data unavailable: calls down",
     ]);
   });
 
   it("intel_daily_snapshot handles empty day without errors", async () => {
-    const { handlers, getMock } = createContext();
+    const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_daily_snapshot");
 
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
+    postMock.mockResolvedValue(EMPTY_REPORT);
 
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
@@ -1394,9 +1873,11 @@ describe("intelligence domain", () => {
     expect(payload.jobs).toEqual({ total: 0, completed: 0, inProgress: 0, canceled: 0 });
     expect(payload.revenue).toEqual({ invoiced: 0, collected: 0, estimatesSold: 0 });
     expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
+    expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload.highlights).toEqual([
       "0 of 0 appointments completed (0%)",
       "No missed calls recorded today",
+      "0 jobs scheduled for tomorrow",
       "$0 in estimates sold",
     ]);
   });
