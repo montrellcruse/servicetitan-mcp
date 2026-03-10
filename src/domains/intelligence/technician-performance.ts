@@ -49,6 +49,54 @@ const PRODUCTIVITY_FIELD = {
   TechnicianId: 7,
 } as const;
 
+const LEAD_GENERATION_FIELD = {
+  Name: 0,
+  ReplacementOpportunity: 1,
+  LeadsSet: 2,
+  AverageLeadSale: 3,
+  ReplacementLeadConversionRate: 4,
+  ReplacementLeadsSold: 5,
+  TotalLeadSales: 6,
+  AverageReplacementLeadSale: 7,
+  TechnicianId: 8,
+} as const;
+
+const MEMBERSHIPS_FIELD = {
+  Name: 0,
+  MembershipOpportunities: 1,
+  MembershipsSold: 2,
+  MembershipConversionRate: 3,
+  TechnicianId: 4,
+  AdjustmentRevenue: 5,
+  CompletedRevenueWithAdjustments: 6,
+} as const;
+
+const SALES_FROM_TECH_LEADS_FIELD = {
+  Name: 0,
+  TechnicianBusinessUnit: 1,
+  TotalSalesFromTgl: 2,
+  ClosedAverageSaleFromTgl: 3,
+  CloseRateFromTgl: 4,
+  OptionsPerOpportunityFromTgl: 5,
+  TechnicianBusinessUnitId: 6,
+  TechnicianDivision: 7,
+  PaidTimeByBusinessUnit: 8,
+  AdjustmentRevenue: 9,
+  CompletedRevenueWithAdjustments: 10,
+  TechnicianId: 11,
+} as const;
+
+const SALES_FROM_MARKETING_LEADS_FIELD = {
+  Name: 0,
+  TotalSalesFromMarketingLeads: 1,
+  ClosedAverageSaleFromMarketingLeads: 2,
+  CloseRateFromMarketingLeads: 3,
+  OptionsPerOpportunityFromMarketingLeads: 4,
+  TechnicianId: 5,
+  AdjustmentRevenue: 6,
+  CompletedRevenueWithAdjustments: 7,
+} as const;
+
 const JOB_DETAIL_FIELD = {
   AssignedTechnicians: 2,
 } as const;
@@ -73,6 +121,37 @@ interface ProductivityByTech {
   upsold: number;
 }
 
+interface TechnicianIdentity {
+  id: number;
+  name: string;
+}
+
+interface LeadGenerationMetrics {
+  replacementOpps: number;
+  leadsSet: number;
+  avgLeadSale: number;
+  conversionRate: number;
+  totalLeadSales: number;
+}
+
+interface MembershipMetrics {
+  opportunities: number;
+  sold: number;
+  conversionRate: number;
+}
+
+interface LeadSalesMetrics {
+  totalSales: number;
+  avgSale: number;
+  closeRate: number;
+}
+
+interface LeadGenerationByTech extends TechnicianIdentity, LeadGenerationMetrics {}
+
+interface MembershipsByTech extends TechnicianIdentity, MembershipMetrics {}
+
+interface LeadSalesByTech extends TechnicianIdentity, LeadSalesMetrics {}
+
 interface TechnicianScorecard {
   id: number;
   name: string;
@@ -88,6 +167,10 @@ interface TechnicianScorecard {
   recallsCaused: number;
   upsold: number;
   jobsPerDay: number;
+  leadGeneration: LeadGenerationMetrics;
+  memberships: MembershipMetrics;
+  salesFromTechLeads: LeadSalesMetrics;
+  salesFromMarketingLeads: LeadSalesMetrics;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -104,6 +187,34 @@ function parseTechnicianId(raw: unknown): number {
 
 function parseTechnicianName(raw: unknown, id: number): string {
   return toText(raw) ?? `Technician ${id}`;
+}
+
+function toLeadGenerationMetrics(
+  metrics?: Partial<LeadGenerationMetrics>,
+): LeadGenerationMetrics {
+  return {
+    replacementOpps: metrics?.replacementOpps ?? 0,
+    leadsSet: metrics?.leadsSet ?? 0,
+    avgLeadSale: metrics?.avgLeadSale ?? 0,
+    conversionRate: metrics?.conversionRate ?? 0,
+    totalLeadSales: metrics?.totalLeadSales ?? 0,
+  };
+}
+
+function toMembershipMetrics(metrics?: Partial<MembershipMetrics>): MembershipMetrics {
+  return {
+    opportunities: metrics?.opportunities ?? 0,
+    sold: metrics?.sold ?? 0,
+    conversionRate: metrics?.conversionRate ?? 0,
+  };
+}
+
+function toLeadSalesMetrics(metrics?: Partial<LeadSalesMetrics>): LeadSalesMetrics {
+  return {
+    totalSales: metrics?.totalSales ?? 0,
+    avgSale: metrics?.avgSale ?? 0,
+    closeRate: metrics?.closeRate ?? 0,
+  };
 }
 
 function parseRevenueReport(response: unknown): RevenueByTech[] {
@@ -154,13 +265,156 @@ function parseProductivityReport(response: unknown): ProductivityByTech[] {
   return result;
 }
 
+function hasAnyLeadGenerationMetrics(metrics: LeadGenerationMetrics): boolean {
+  return (
+    metrics.replacementOpps !== 0 ||
+    metrics.leadsSet !== 0 ||
+    metrics.avgLeadSale !== 0 ||
+    metrics.conversionRate !== 0 ||
+    metrics.totalLeadSales !== 0
+  );
+}
+
+function hasAnyMembershipMetrics(metrics: MembershipMetrics): boolean {
+  return (
+    metrics.opportunities !== 0 ||
+    metrics.sold !== 0 ||
+    metrics.conversionRate !== 0
+  );
+}
+
+function hasAnyLeadSalesMetrics(metrics: LeadSalesMetrics): boolean {
+  return (
+    metrics.totalSales !== 0 ||
+    metrics.avgSale !== 0 ||
+    metrics.closeRate !== 0
+  );
+}
+
+function parseLeadGenerationReport(response: unknown): LeadGenerationByTech[] {
+  const rows = extractReportRows(response);
+  const result: LeadGenerationByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[LEAD_GENERATION_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    const tech: LeadGenerationByTech = {
+      id,
+      name: parseTechnicianName(row[LEAD_GENERATION_FIELD.Name], id),
+      replacementOpps: Math.round(toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity])),
+      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
+      avgLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
+      conversionRate: round(
+        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]) * 100,
+        1,
+      ),
+      totalLeadSales: round(toNumber(row[LEAD_GENERATION_FIELD.TotalLeadSales]), 2),
+    };
+
+    if (hasAnyLeadGenerationMetrics(tech)) {
+      result.push(tech);
+    }
+  }
+
+  return result;
+}
+
+function parseMembershipsReport(response: unknown): MembershipsByTech[] {
+  const rows = extractReportRows(response);
+  const result: MembershipsByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[MEMBERSHIPS_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    const tech: MembershipsByTech = {
+      id,
+      name: parseTechnicianName(row[MEMBERSHIPS_FIELD.Name], id),
+      opportunities: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipOpportunities])),
+      sold: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipsSold])),
+      conversionRate: round(toNumber(row[MEMBERSHIPS_FIELD.MembershipConversionRate]) * 100, 1),
+    };
+
+    if (hasAnyMembershipMetrics(tech)) {
+      result.push(tech);
+    }
+  }
+
+  return result;
+}
+
+function parseSalesFromTechLeadsReport(response: unknown): LeadSalesByTech[] {
+  const rows = extractReportRows(response);
+  const result: LeadSalesByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[SALES_FROM_TECH_LEADS_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    const tech: LeadSalesByTech = {
+      id,
+      name: parseTechnicianName(row[SALES_FROM_TECH_LEADS_FIELD.Name], id),
+      totalSales: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.TotalSalesFromTgl]), 2),
+      avgSale: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.ClosedAverageSaleFromTgl]), 2),
+      closeRate: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.CloseRateFromTgl]) * 100, 1),
+    };
+
+    if (hasAnyLeadSalesMetrics(tech)) {
+      result.push(tech);
+    }
+  }
+
+  return result;
+}
+
+function parseSalesFromMarketingLeadsReport(response: unknown): LeadSalesByTech[] {
+  const rows = extractReportRows(response);
+  const result: LeadSalesByTech[] = [];
+
+  for (const row of rows) {
+    const id = parseTechnicianId(row[SALES_FROM_MARKETING_LEADS_FIELD.TechnicianId]);
+    if (id <= 0) {
+      continue;
+    }
+
+    const tech: LeadSalesByTech = {
+      id,
+      name: parseTechnicianName(row[SALES_FROM_MARKETING_LEADS_FIELD.Name], id),
+      totalSales: round(
+        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.TotalSalesFromMarketingLeads]),
+        2,
+      ),
+      avgSale: round(
+        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.ClosedAverageSaleFromMarketingLeads]),
+        2,
+      ),
+      closeRate: round(
+        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.CloseRateFromMarketingLeads]) * 100,
+        1,
+      ),
+    };
+
+    if (hasAnyLeadSalesMetrics(tech)) {
+      result.push(tech);
+    }
+  }
+
+  return result;
+}
+
 function normalizeTechnicianName(name: string): string {
   return name.trim().toLowerCase();
 }
 
 function buildNameToTechIds(
-  revenueRows: RevenueByTech[],
-  productivityRows: ProductivityByTech[],
+  ...techGroups: ReadonlyArray<ReadonlyArray<TechnicianIdentity>>
 ): Map<string, Set<number>> {
   const byName = new Map<string, Set<number>>();
 
@@ -175,12 +429,10 @@ function buildNameToTechIds(
     byName.set(key, existing);
   };
 
-  for (const tech of revenueRows) {
-    add(tech.name, tech.id);
-  }
-
-  for (const tech of productivityRows) {
-    add(tech.name, tech.id);
+  for (const techGroup of techGroups) {
+    for (const tech of techGroup) {
+      add(tech.name, tech.id);
+    }
   }
 
   return byName;
@@ -229,7 +481,11 @@ function hasAnyActivity(tech: TechnicianScorecard): boolean {
     tech.revenue > 0 ||
     tech.opportunities > 0 ||
     tech.revenuePerHour > 0 ||
-    tech.upsold > 0
+    tech.upsold > 0 ||
+    hasAnyLeadGenerationMetrics(tech.leadGeneration) ||
+    hasAnyMembershipMetrics(tech.memberships) ||
+    hasAnyLeadSalesMetrics(tech.salesFromTechLeads) ||
+    hasAnyLeadSalesMetrics(tech.salesFromMarketingLeads)
   );
 }
 
@@ -251,7 +507,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, and team averages" +
+      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages" +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianId=<Andrew\'s ID>\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
@@ -267,17 +523,27 @@ export function registerIntelligenceTechnicianPerformanceTool(
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
-          revenueParams.push({
-            name: "BusinessUnitIds",
-            value: String(input.businessUnitId),
-          });
-          warnings.push(
-            "Business unit filtering only applies to completed jobs (Report 165). Revenue/productivity metrics are tenant-wide.",
-          );
-        }
-
         const productivityParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        const leadGenerationParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        const membershipsParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        const salesFromTechLeadsParams: Array<{ name: string; value: string }> = [
+          { name: "From", value: input.startDate },
+          { name: "To", value: input.endDate },
+        ];
+
+        const salesFromMarketingLeadsParams: Array<{ name: string; value: string }> = [
           { name: "From", value: input.startDate },
           { name: "To", value: input.endDate },
         ];
@@ -289,10 +555,21 @@ export function registerIntelligenceTechnicianPerformanceTool(
         ];
 
         if (input.businessUnitId !== undefined) {
+          revenueParams.push({
+            name: "BusinessUnitIds",
+            value: String(input.businessUnitId),
+          });
+          leadGenerationParams.push({
+            name: "BusinessUnitId",
+            value: String(input.businessUnitId),
+          });
           completedJobsParams.push({
             name: "BusinessUnitId",
             value: String(input.businessUnitId),
           });
+          warnings.push(
+            "Business unit filtering only applies to completed jobs (Report 165) and lead generation (Report 169). Revenue, productivity, memberships, and lead-sales metrics are tenant-wide.",
+          );
         }
 
         const revenueReport = await fetchWithWarning(
@@ -317,6 +594,50 @@ export function registerIntelligenceTechnicianPerformanceTool(
           null,
         );
 
+        const leadGenerationReport = await fetchWithWarning(
+          warnings,
+          "Technician lead generation report (Report 169)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data",
+              { parameters: leadGenerationParams },
+            ),
+          null,
+        );
+
+        const membershipsReport = await fetchWithWarning(
+          warnings,
+          "Technician memberships report (Report 171)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
+              { parameters: membershipsParams },
+            ),
+          null,
+        );
+
+        const salesFromTechLeadsReport = await fetchWithWarning(
+          warnings,
+          "Technician sales from tech leads report (Report 173)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
+              { parameters: salesFromTechLeadsParams },
+            ),
+          null,
+        );
+
+        const salesFromMarketingLeadsReport = await fetchWithWarning(
+          warnings,
+          "Technician sales from marketing leads report (Report 174)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
+              { parameters: salesFromMarketingLeadsParams },
+            ),
+          null,
+        );
+
         const completedJobsReport = await fetchWithWarning(
           warnings,
           "Completed jobs detail report (Report 165)",
@@ -329,32 +650,74 @@ export function registerIntelligenceTechnicianPerformanceTool(
 
         let revenueRows = parseRevenueReport(revenueReport);
         let productivityRows = parseProductivityReport(productivityReport);
+        let leadGenerationRows = parseLeadGenerationReport(leadGenerationReport);
+        let membershipsRows = parseMembershipsReport(membershipsReport);
+        let salesFromTechLeadRows = parseSalesFromTechLeadsReport(salesFromTechLeadsReport);
+        let salesFromMarketingLeadRows = parseSalesFromMarketingLeadsReport(
+          salesFromMarketingLeadsReport,
+        );
 
         if (input.technicianId !== undefined) {
           revenueRows = revenueRows.filter((tech) => tech.id === input.technicianId);
           productivityRows = productivityRows.filter((tech) => tech.id === input.technicianId);
+          leadGenerationRows = leadGenerationRows.filter((tech) => tech.id === input.technicianId);
+          membershipsRows = membershipsRows.filter((tech) => tech.id === input.technicianId);
+          salesFromTechLeadRows = salesFromTechLeadRows.filter(
+            (tech) => tech.id === input.technicianId,
+          );
+          salesFromMarketingLeadRows = salesFromMarketingLeadRows.filter(
+            (tech) => tech.id === input.technicianId,
+          );
         }
 
         const revenueById = new Map(revenueRows.map((tech) => [tech.id, tech]));
         const productivityById = new Map(productivityRows.map((tech) => [tech.id, tech]));
-        const nameToTechIds = buildNameToTechIds(revenueRows, productivityRows);
+        const leadGenerationById = new Map(leadGenerationRows.map((tech) => [tech.id, tech]));
+        const membershipsById = new Map(membershipsRows.map((tech) => [tech.id, tech]));
+        const salesFromTechLeadById = new Map(salesFromTechLeadRows.map((tech) => [tech.id, tech]));
+        const salesFromMarketingLeadById = new Map(
+          salesFromMarketingLeadRows.map((tech) => [tech.id, tech]),
+        );
+        const nameToTechIds = buildNameToTechIds(
+          revenueRows,
+          productivityRows,
+          leadGenerationRows,
+          membershipsRows,
+          salesFromTechLeadRows,
+          salesFromMarketingLeadRows,
+        );
         const completedJobsByTechId = countCompletedJobsByTech(completedJobsReport, nameToTechIds);
 
         const scorecards: TechnicianScorecard[] = [];
         const technicianIds = new Set<number>([
           ...revenueById.keys(),
           ...productivityById.keys(),
+          ...leadGenerationById.keys(),
+          ...membershipsById.keys(),
+          ...salesFromTechLeadById.keys(),
+          ...salesFromMarketingLeadById.keys(),
         ]);
 
         for (const id of technicianIds) {
           const revenue = revenueById.get(id);
           const productivity = productivityById.get(id);
+          const leadGeneration = leadGenerationById.get(id);
+          const memberships = membershipsById.get(id);
+          const salesFromTechLeads = salesFromTechLeadById.get(id);
+          const salesFromMarketingLeads = salesFromMarketingLeadById.get(id);
           const jobsCompleted = completedJobsByTechId.get(id) ?? 0;
           const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
 
           const scorecard: TechnicianScorecard = {
             id,
-            name: revenue?.name ?? productivity?.name ?? `Technician ${id}`,
+            name:
+              revenue?.name ??
+              productivity?.name ??
+              leadGeneration?.name ??
+              memberships?.name ??
+              salesFromTechLeads?.name ??
+              salesFromMarketingLeads?.name ??
+              `Technician ${id}`,
             jobsCompleted,
             revenue: revenue?.revenue ?? 0,
             averageTicket: revenue?.averageTicket ?? 0,
@@ -367,6 +730,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
             recallsCaused: productivity?.recallsCaused ?? 0,
             upsold: productivity?.upsold ?? 0,
             jobsPerDay,
+            leadGeneration: toLeadGenerationMetrics(leadGeneration),
+            memberships: toMembershipMetrics(memberships),
+            salesFromTechLeads: toLeadSalesMetrics(salesFromTechLeads),
+            salesFromMarketingLeads: toLeadSalesMetrics(salesFromMarketingLeads),
           };
 
           if (hasAnyActivity(scorecard)) {
@@ -390,12 +757,82 @@ export function registerIntelligenceTechnicianPerformanceTool(
           opportunities: averageBy(limitedScorecards, (tech) => tech.opportunities, 2),
           convertedJobs: averageBy(limitedScorecards, (tech) => tech.convertedJobs, 2),
           conversionRate: averageBy(limitedScorecards, (tech) => tech.conversionRate, 1),
-          customerSatisfaction: averageBy(limitedScorecards, (tech) => tech.customerSatisfaction, 2),
+          customerSatisfaction: averageBy(
+            limitedScorecards,
+            (tech) => tech.customerSatisfaction,
+            2,
+          ),
           revenuePerHour: averageBy(limitedScorecards, (tech) => tech.revenuePerHour, 2),
           billableEfficiency: averageBy(limitedScorecards, (tech) => tech.billableEfficiency, 3),
           recallsCaused: averageBy(limitedScorecards, (tech) => tech.recallsCaused, 2),
           upsold: averageBy(limitedScorecards, (tech) => tech.upsold, 2),
           jobsPerDay: averageBy(limitedScorecards, (tech) => tech.jobsPerDay, 2),
+          leadGeneration: {
+            replacementOpps: averageBy(
+              limitedScorecards,
+              (tech) => tech.leadGeneration.replacementOpps,
+              2,
+            ),
+            leadsSet: averageBy(limitedScorecards, (tech) => tech.leadGeneration.leadsSet, 2),
+            avgLeadSale: averageBy(
+              limitedScorecards,
+              (tech) => tech.leadGeneration.avgLeadSale,
+              2,
+            ),
+            conversionRate: averageBy(
+              limitedScorecards,
+              (tech) => tech.leadGeneration.conversionRate,
+              1,
+            ),
+            totalLeadSales: averageBy(
+              limitedScorecards,
+              (tech) => tech.leadGeneration.totalLeadSales,
+              2,
+            ),
+          },
+          memberships: {
+            opportunities: averageBy(
+              limitedScorecards,
+              (tech) => tech.memberships.opportunities,
+              2,
+            ),
+            sold: averageBy(limitedScorecards, (tech) => tech.memberships.sold, 2),
+            conversionRate: averageBy(
+              limitedScorecards,
+              (tech) => tech.memberships.conversionRate,
+              1,
+            ),
+          },
+          salesFromTechLeads: {
+            totalSales: averageBy(
+              limitedScorecards,
+              (tech) => tech.salesFromTechLeads.totalSales,
+              2,
+            ),
+            avgSale: averageBy(limitedScorecards, (tech) => tech.salesFromTechLeads.avgSale, 2),
+            closeRate: averageBy(
+              limitedScorecards,
+              (tech) => tech.salesFromTechLeads.closeRate,
+              1,
+            ),
+          },
+          salesFromMarketingLeads: {
+            totalSales: averageBy(
+              limitedScorecards,
+              (tech) => tech.salesFromMarketingLeads.totalSales,
+              2,
+            ),
+            avgSale: averageBy(
+              limitedScorecards,
+              (tech) => tech.salesFromMarketingLeads.avgSale,
+              2,
+            ),
+            closeRate: averageBy(
+              limitedScorecards,
+              (tech) => tech.salesFromMarketingLeads.closeRate,
+              1,
+            ),
+          },
         };
 
         const result: Record<string, unknown> = {
