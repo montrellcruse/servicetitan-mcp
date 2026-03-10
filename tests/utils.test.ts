@@ -10,11 +10,12 @@ import {
 
 beforeEach(() => {
   setMaxResponseChars(100000);
+  delete process.env.ST_RESPONSE_SHAPING;
 });
 
 describe("toolResult", () => {
   it("wraps data correctly", () => {
-    const payload = { id: 123, name: "Customer" };
+    const payload = { name: "Customer" };
     const result = toolResult(payload);
 
     expect(result).toEqual({
@@ -35,6 +36,22 @@ describe("toolResult", () => {
 
     expect(text).toContain("[TRUNCATED - Response was");
     expect(text).toContain("Use pagination (page/pageSize)");
+  });
+
+  it("can disable response shaping via env", () => {
+    process.env.ST_RESPONSE_SHAPING = "false";
+
+    const payload = { id: 123, generatedAt: "2026-03-09T10:20:30Z" };
+    const result = toolResult(payload);
+
+    expect(result).toEqual({
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify(payload, null, 2),
+        },
+      ],
+    });
   });
 });
 

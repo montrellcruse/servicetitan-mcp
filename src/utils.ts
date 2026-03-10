@@ -1,5 +1,6 @@
 import { z } from "zod";
 
+import { shapeResponse } from "./response-shaping.js";
 import type { ToolResponse } from "./types.js";
 export { sanitizeParams } from "./audit.js";
 
@@ -15,7 +16,7 @@ export function setMaxResponseChars(value: number): void {
 }
 
 export function toolResult(data: unknown): ToolResponse {
-  const json = JSON.stringify(data, null, 2);
+  const json = JSON.stringify(shapeResponse(data), null, 2);
 
   if (json.length > maxResponseChars) {
     return {

@@ -1,8 +1,10 @@
 import { z } from "zod";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ServiceTitanConfig } from "../../src/config.js";
 import { ToolRegistry, type ToolDefinition } from "../../src/registry.js";
+
+const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
 
 function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig {
   return {
@@ -52,6 +54,19 @@ function definition(overrides: Partial<ToolDefinition> = {}): ToolDefinition {
 }
 
 describe("safety confirmation wrapper", () => {
+  beforeEach(() => {
+    process.env.ST_RESPONSE_SHAPING = "false";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_ST_RESPONSE_SHAPING === undefined) {
+      delete process.env.ST_RESPONSE_SHAPING;
+      return;
+    }
+
+    process.env.ST_RESPONSE_SHAPING = ORIGINAL_ST_RESPONSE_SHAPING;
+  });
+
   it("delete without confirm=true returns preview and does not execute", async () => {
     const handler = vi.fn().mockResolvedValue({ content: [{ type: "text", text: "deleted" }] });
     const { registry, server, auditLogger } = registryWithConfig();

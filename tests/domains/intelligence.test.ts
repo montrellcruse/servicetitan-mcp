@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { ServiceTitanClient } from "../../src/client.js";
 import type { ServiceTitanConfig } from "../../src/config.js";
@@ -6,6 +6,8 @@ import { loadIntelligenceDomain } from "../../src/domains/intelligence/index.js"
 import { fetchAllPages } from "../../src/domains/intelligence/helpers.js";
 import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
+
+const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
 
 interface TestContext {
   getMock: ReturnType<typeof vi.fn>;
@@ -87,6 +89,19 @@ const PER_CAMPAIGN_REVENUE_WARNING =
   "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
 
 describe("intelligence domain", () => {
+  beforeEach(() => {
+    process.env.ST_RESPONSE_SHAPING = "false";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_ST_RESPONSE_SHAPING === undefined) {
+      delete process.env.ST_RESPONSE_SHAPING;
+      return;
+    }
+
+    process.env.ST_RESPONSE_SHAPING = ORIGINAL_ST_RESPONSE_SHAPING;
+  });
+
   it("registers all 6 intelligence tools as read operations", () => {
     const { server, registry } = createContext();
 
