@@ -1,4 +1,5 @@
 const EXCLUDED_FIELDS = new Set<string>([
+  // Metadata / pagination
   "requestId",
   "paginationToken",
   "nextPageToken",
@@ -7,6 +8,11 @@ const EXCLUDED_FIELDS = new Set<string>([
   "apiVersion",
   "tool",
   "period",
+  "_warnings",
+  "_cache",
+  "search",
+
+  // Redundant / low-signal fields
   "invoices",
   "id",
   "deleted",
@@ -16,7 +22,6 @@ const EXCLUDED_FIELDS = new Set<string>([
   "convertedJobs",
   "opportunities",
   "customerSatisfaction",
-  "_warnings",
   "highlights",
   "bookings",
   "optionsPerOpportunity",
@@ -33,6 +38,34 @@ const EXCLUDED_FIELDS = new Set<string>([
   "tags",
   "category",
   "salesOpportunity",
+  "averageOptionsPerOpportunity",
+  "replacementLeadsSet",
+  "averageDaysToClose",
+  "jobsPerDay",
+
+  // Accounting detail (totalRevenue suffices)
+  "revenueBreakdown",
+  "totalCollected",
+  "outstanding",
+
+  // Blocks stripped for token efficiency (summaries at top level suffice)
+  "productivity",
+  "sales",
+  "byBusinessUnit",
+  "membershipTypes",
+  "conversionTotals",
+  "conversionByBusinessUnit",
+  "leadGeneration",
+  "memberships",
+  "salesFromTechLeads",
+  "salesFromMarketingLeads",
+  "upcomingJobs",
+  "notSentBreakdown",
+
+  // Hour breakdowns (totalHours + overtimePercent suffice)
+  "regularHours",
+  "overtimeHours",
+  "doubleOvertimeHours",
 ]);
 
 const ARRAY_LIMITS = new Map<string, number>([
@@ -40,6 +73,8 @@ const ARRAY_LIMITS = new Map<string, number>([
   ["byTechnician", 4],
   ["campaigns", 3],
   ["leadGeneration", 3],
+  ["activityBreakdown", 5],
+  ["items", 10],
 ]);
 
 const FIELD_ABBREVIATIONS = new Map<string, string>([
