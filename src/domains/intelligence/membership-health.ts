@@ -34,6 +34,13 @@ const MEMBERSHIP_SUMMARY_FIELD = {
   ActiveAtEnd: 8,
 } as const;
 
+const MEMBERSHIP_CONVERSION_FIELD = {
+  Name: 0,
+  Opportunities: 1,
+  Converted: 2,
+  ConversionRate: 3,
+} as const;
+
 type GenericRecord = Record<string, unknown>;
 
 interface MembershipTypeSummary {
@@ -46,6 +53,13 @@ interface MembershipTypeSummary {
   suspended: number;
   reactivated: number;
   deleted: number;
+}
+
+interface BusinessUnitMembershipConversion {
+  name: string;
+  opportunities: number;
+  converted: number;
+  conversionRate: number;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -100,6 +114,32 @@ function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[
   return summaries;
 }
 
+function parseMembershipConversionReport(response: unknown): BusinessUnitMembershipConversion[] {
+  const rows = extractReportRows(response);
+  const conversions: BusinessUnitMembershipConversion[] = [];
+
+  for (const row of rows) {
+    const opportunities = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Opportunities]);
+    const converted = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Converted]);
+
+    if (opportunities === 0 && converted === 0) {
+      continue;
+    }
+
+    conversions.push({
+      name: toText(row[MEMBERSHIP_CONVERSION_FIELD.Name]) ?? "Unknown",
+      opportunities,
+      converted,
+      conversionRate: round(toNumber(row[MEMBERSHIP_CONVERSION_FIELD.ConversionRate]) * 100, 1),
+    });
+  }
+
+  return conversions.sort(
+    (left, right) =>
+      right.opportunities - left.opportunities || right.converted - left.converted,
+  );
+}
+
 function invoiceTotal(invoice: GenericRecord): number {
   return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
 }
@@ -113,7 +153,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and total invoiced revenue" +
+      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, total invoiced revenue, and business-unit membership conversion metrics" +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
@@ -137,8 +177,24 @@ export function registerIntelligenceMembershipHealthTool(
           null,
         );
 
+        const membershipConversionReport = await fetchWithWarning(
+          warnings,
+          "Business unit memberships report (Report 178)",
+          () =>
+            client.post(
+              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
+              {
+                parameters: reportParams,
+              },
+            ),
+          null,
+        );
+
         const membershipTypeStats = membershipSummaryReport
           ? parseMembershipSummaryReport(membershipSummaryReport)
+          : [];
+        const conversionByBusinessUnit = membershipConversionReport
+          ? parseMembershipConversionReport(membershipConversionReport)
           : [];
 
         const invoices = await fetchWithWarning(
@@ -161,6 +217,12 @@ export function registerIntelligenceMembershipHealthTool(
         const suspended = Math.round(sumBy(membershipTypeStats, (type) => type.suspended));
         const reactivated = Math.round(sumBy(membershipTypeStats, (type) => type.reactivated));
         const deleted = Math.round(sumBy(membershipTypeStats, (type) => type.deleted));
+        const conversionOpportunities = Math.round(
+          sumBy(conversionByBusinessUnit, (businessUnit) => businessUnit.opportunities),
+        );
+        const convertedMemberships = Math.round(
+          sumBy(conversionByBusinessUnit, (businessUnit) => businessUnit.converted),
+        );
 
         const membershipTypes = membershipTypeStats
           .map((type) => ({
@@ -193,6 +255,15 @@ export function registerIntelligenceMembershipHealthTool(
             3,
           ),
           totalRevenue,
+          conversionTotals: {
+            opportunities: conversionOpportunities,
+            converted: convertedMemberships,
+            conversionRate: round(
+              safeDivide(convertedMemberships, conversionOpportunities) * 100,
+              1,
+            ),
+          },
+          conversionByBusinessUnit,
           membershipTypes,
         };
 

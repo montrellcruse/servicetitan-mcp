@@ -1,6 +1,9 @@
 import type { DomainLoader } from "../../registry.js";
 
 import { registerIntelligenceCampaignPerformanceTool } from "./campaign-roi.js";
+import { registerIntelligenceCsrPerformanceTool } from "./csr-performance.js";
+import { registerIntelligenceInvoiceTrackingTool } from "./invoice-tracking.js";
+import { registerIntelligenceLaborCostTool } from "./labor-cost.js";
 import { registerIntelligenceMembershipHealthTool } from "./membership-health.js";
 import { registerIntelligenceDailySnapshotTool } from "./operational.js";
 import { registerIntelligenceEstimatePipelineTool } from "./pipeline.js";
@@ -14,6 +17,9 @@ export const loadIntelligenceDomain: DomainLoader = (client, registry) => {
   registerIntelligenceEstimatePipelineTool(client, registry);
   registerIntelligenceCampaignPerformanceTool(client, registry);
   registerIntelligenceDailySnapshotTool(client, registry);
+  registerIntelligenceCsrPerformanceTool(client, registry);
+  registerIntelligenceLaborCostTool(client, registry);
+  registerIntelligenceInvoiceTrackingTool(client, registry);
 };
 
 export default loadIntelligenceDomain;

@@ -9,11 +9,13 @@ import {
   firstValue,
   formatCurrency,
   getErrorMessage,
+  isRecord,
   normalizeStatus,
   round,
   safeDivide,
   sumBy,
   toNumber,
+  toText,
   toSingleDayRange,
 } from "./helpers.js";
 
@@ -21,7 +23,28 @@ const dailySnapshotSchema = z.object({
   date: z.string().optional().describe("Date to snapshot (YYYY-MM-DD, defaults to today)"),
 });
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MAX_UPCOMING_JOBS = 20;
+
+const UPCOMING_JOBS_FIELD = {
+  JobNumber: 0,
+  ScheduledDate: 1,
+  CustomerName: 2,
+  LocationAddress: 7,
+  JobType: 10,
+  AssignedTechnicians: 11,
+} as const;
+
 type GenericRecord = Record<string, unknown>;
+
+interface UpcomingJob {
+  jobNumber: string;
+  scheduledDate: string;
+  customerName: string;
+  locationAddress: string;
+  jobType: string;
+  assignedTechnicians: string;
+}
 
 function revenueFromInvoice(invoice: GenericRecord): number {
   return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
@@ -75,6 +98,61 @@ function isMissedCall(call: GenericRecord): boolean {
   );
 }
 
+function extractReportRows(response: unknown): unknown[][] {
+  if (!isRecord(response) || !Array.isArray(response.data)) {
+    return [];
+  }
+
+  return response.data.filter(Array.isArray);
+}
+
+function formatDateInTimezone(date: Date, timezone: string): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? "00";
+
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+function parseUpcomingJobsReport(response: unknown): UpcomingJob[] {
+  const rows = extractReportRows(response);
+  const jobs: UpcomingJob[] = [];
+
+  for (const row of rows) {
+    jobs.push({
+      jobNumber: toText(row[UPCOMING_JOBS_FIELD.JobNumber]) ?? "Unknown",
+      scheduledDate: toText(row[UPCOMING_JOBS_FIELD.ScheduledDate]) ?? "",
+      customerName: toText(row[UPCOMING_JOBS_FIELD.CustomerName]) ?? "Unknown",
+      locationAddress: toText(row[UPCOMING_JOBS_FIELD.LocationAddress]) ?? "Unknown",
+      jobType: toText(row[UPCOMING_JOBS_FIELD.JobType]) ?? "Unknown",
+      assignedTechnicians:
+        toText(row[UPCOMING_JOBS_FIELD.AssignedTechnicians]) ?? "Unassigned",
+    });
+  }
+
+  return jobs;
+}
+
+function summarizeUpcomingJobsByType(
+  jobs: UpcomingJob[],
+): Array<{ jobType: string; count: number }> {
+  const counts = new Map<string, number>();
+
+  for (const job of jobs) {
+    counts.set(job.jobType, (counts.get(job.jobType) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([jobType, count]) => ({ jobType, count }))
+    .sort((left, right) => right.count - left.count || left.jobType.localeCompare(right.jobType));
+}
+
 export function registerIntelligenceDailySnapshotTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
@@ -84,14 +162,21 @@ export function registerIntelligenceDailySnapshotTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, and plain-English highlights" +
+      "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, next-day upcoming jobs, and plain-English highlights" +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
     schema: dailySnapshotSchema.shape,
     handler: async (params) => {
       try {
         const input = dailySnapshotSchema.parse(params);
         const date = input.date ?? new Date().toISOString().slice(0, 10);
-        const { startIso, endIso, nextDayStartIso } = toSingleDayRange(date, registry.timezone);
+        const { start, startIso, endIso, nextDayStartIso } = toSingleDayRange(
+          date,
+          registry.timezone,
+        );
+        const tomorrowDate = formatDateInTimezone(
+          new Date(start.getTime() + DAY_MS),
+          registry.timezone,
+        );
         const warnings: string[] = [];
 
         const appointments = await fetchWithWarning(
@@ -162,6 +247,20 @@ export function registerIntelligenceDailySnapshotTool(
           [],
         );
 
+        const upcomingJobsReport = await fetchWithWarning(
+          warnings,
+          "Upcoming jobs report (Report 163)",
+          () =>
+            client.post("/tenant/{tenant}/report-category/operations/reports/163/data", {
+              parameters: [
+                { name: "DateType", value: "Appointment Date" },
+                { name: "From", value: tomorrowDate },
+                { name: "To", value: tomorrowDate },
+              ],
+            }),
+          null,
+        );
+
         let appointmentsCompleted = 0;
         let appointmentsInProgress = 0;
 
@@ -202,14 +301,24 @@ export function registerIntelligenceDailySnapshotTool(
         const callsTotal = calls.length;
         const callsBooked = calls.filter(isBookedCall).length;
         const callsMissed = calls.filter(isMissedCall).length;
+        const allUpcomingJobs = upcomingJobsReport ? parseUpcomingJobsReport(upcomingJobsReport) : [];
+        const upcomingJobs = allUpcomingJobs.slice(0, MAX_UPCOMING_JOBS);
+        const upcomingJobsByType = summarizeUpcomingJobsByType(allUpcomingJobs);
 
         const completionRate = Math.round(safeDivide(appointmentsCompleted, appointmentTotal) * 100);
+
+        if (allUpcomingJobs.length > MAX_UPCOMING_JOBS) {
+          warnings.push(
+            `Upcoming jobs list truncated to ${MAX_UPCOMING_JOBS} of ${allUpcomingJobs.length} jobs.`,
+          );
+        }
 
         const highlights = [
           `${appointmentsCompleted} of ${appointmentTotal} appointments completed (${completionRate}%)`,
           callsMissed > 0
             ? `${callsMissed} missed calls today may need follow-up`
             : "No missed calls recorded today",
+          `${allUpcomingJobs.length} ${allUpcomingJobs.length === 1 ? "job" : "jobs"} scheduled for tomorrow`,
           `$${formatCurrency(estimatesSoldValue)} in estimates sold`,
         ];
 
@@ -236,6 +345,11 @@ export function registerIntelligenceDailySnapshotTool(
             total: callsTotal,
             booked: callsBooked,
             missed: callsMissed,
+          },
+          upcomingJobs: {
+            total: allUpcomingJobs.length,
+            breakdownByJobType: upcomingJobsByType,
+            jobs: upcomingJobs,
           },
           highlights,
         };
