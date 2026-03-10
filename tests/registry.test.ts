@@ -1,9 +1,11 @@
 import { z } from "zod";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuditLogger } from "../src/audit.js";
 import type { ServiceTitanConfig } from "../src/config.js";
 import { ToolRegistry, type ToolDefinition } from "../src/registry.js";
+
+const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
 
 function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig {
   return {
@@ -65,6 +67,19 @@ function createRegistry(options: {
 }
 
 describe("ToolRegistry", () => {
+  beforeEach(() => {
+    process.env.ST_RESPONSE_SHAPING = "false";
+  });
+
+  afterEach(() => {
+    if (ORIGINAL_ST_RESPONSE_SHAPING === undefined) {
+      delete process.env.ST_RESPONSE_SHAPING;
+      return;
+    }
+
+    process.env.ST_RESPONSE_SHAPING = ORIGINAL_ST_RESPONSE_SHAPING;
+  });
+
   it("registers a tool when domain matches and mode allows", () => {
     const { registry, server } = createRegistry({
       config: { readonlyMode: false },
