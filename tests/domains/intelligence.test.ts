@@ -123,7 +123,7 @@ describe("intelligence domain", () => {
   it("registers all 9 intelligence tools as read operations", () => {
     const { server, registry } = createContext();
 
-    expect(server.tool).toHaveBeenCalledTimes(9);
+    expect(server.tool).toHaveBeenCalledTimes(10);
 
     const names = new Set(
       server.tool.mock.calls.map((call) => call[0] as string),
@@ -131,6 +131,7 @@ describe("intelligence domain", () => {
 
     expect(names).toEqual(
       new Set([
+        "intel_lookup",
         "intel_revenue_summary",
         "intel_technician_scorecard",
         "intel_membership_health",

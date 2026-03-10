@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Total tools: 439
+Total tools: 440
 
 ## accounting
 
@@ -240,6 +240,7 @@ Total tools: 439
 | `intel_estimate_pipeline` | `intelligence` | `read` | Estimate pipeline summary with open/sold/dismissed funnel, conversion rate, close speed, age buckets, and stale opportunities |
 | `intel_invoice_tracking` | `intelligence` | `read` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician |
 | `intel_labor_cost` | `intelligence` | `read` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown |
+| `intel_lookup` | `intelligence` | `read` | Look up reference data (technicians, business units, payment types, membership types).  |
 | `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, total invoiced revenue, and business-unit membership conversion metrics |
 | `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, conversion rates, plus BU-level productivity and sales metrics. |
 | `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages |
