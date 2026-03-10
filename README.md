@@ -10,7 +10,7 @@ Enterprise-grade MCP server for the ServiceTitan API, built for safe production 
   - Optional confirmation for write tools (`ST_CONFIRM_WRITES=true`).
   - Required confirmation for all delete tools.
   - Audit logging for write/delete operations with sensitive fields sanitized.
-- 6 intelligence tools that combine multiple ServiceTitan endpoints into operational and revenue insights.
+- 9 intelligence tools that combine multiple ServiceTitan endpoints into operational and revenue insights.
 - Dynamic domain loading from `src/domains/*` with centralized tool registration and stats.
 - Built-in `st_health_check` system tool for connectivity and config verification.
 
@@ -67,65 +67,9 @@ npm run build
 
 Use the built entrypoint: `build/index.js`.
 
-### Claude Desktop
+### Claude Desktop, Cursor, Windsurf, and Other MCP-Compatible Hosts
 
-Add to Claude Desktop MCP config:
-
-```json
-{
-  "mcpServers": {
-    "servicetitan": {
-      "command": "node",
-      "args": ["/absolute/path/to/servicetitan-mcp-server/build/index.js"],
-      "env": {
-        "ST_CLIENT_ID": "your-client-id",
-        "ST_CLIENT_SECRET": "your-client-secret",
-        "ST_APP_KEY": "your-app-key",
-        "ST_TENANT_ID": "your-tenant-id",
-        "ST_ENVIRONMENT": "integration",
-        "ST_READONLY": "true",
-        "ST_CONFIRM_WRITES": "false",
-        "ST_MAX_RESPONSE_CHARS": "100000",
-        "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info",
-        "ST_TIMEZONE": ""
-      }
-    }
-  }
-}
-```
-
-### Cursor
-
-Add to Cursor `settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "servicetitan": {
-      "command": "node",
-      "args": ["/absolute/path/to/servicetitan-mcp-server/build/index.js"],
-      "env": {
-        "ST_CLIENT_ID": "your-client-id",
-        "ST_CLIENT_SECRET": "your-client-secret",
-        "ST_APP_KEY": "your-app-key",
-        "ST_TENANT_ID": "your-tenant-id",
-        "ST_ENVIRONMENT": "integration",
-        "ST_READONLY": "true",
-        "ST_CONFIRM_WRITES": "false",
-        "ST_MAX_RESPONSE_CHARS": "100000",
-        "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info",
-        "ST_TIMEZONE": ""
-      }
-    }
-  }
-}
-```
-
-### Windsurf
-
-Add to Windsurf MCP config:
+Claude Desktop, Cursor, Windsurf, and most MCP hosts that accept an `mcpServers` JSON block use the same stdio config. Paste this into the host's MCP settings file, then adjust the env vars for your tenant:
 
 ```json
 {
@@ -209,7 +153,7 @@ grep -rc 'registry.register(' src/domains/
 | `dispatch` | 74 | Jobs, appointments, projects, job types, arrival windows, forms, images, installed equipment. |
 | `estimates` | 14 | Estimate lifecycle and estimate item management. |
 | `export` | 1 | Export tooling for packaged extraction workflows. |
-| `intelligence` | 6 | Composite analytics tools across revenue, pipeline, marketing, memberships, operations, and technician performance. |
+| `intelligence` | 9 | Composite analytics tools across revenue, pipeline, marketing, memberships, operations, technician performance, CSR booking, labor cost, and invoice delivery. |
 | `inventory` | 37 | Purchase orders, returns, receipts, transfers, vendors, warehouses, and PO markups/types. |
 | `marketing` | 38 | Campaigns, categories, costs, calls, attributions, suppressions, and opt-in/out operations. |
 | `memberships` | 21 | Memberships, membership types, recurring services, and service agreements. |
@@ -222,16 +166,19 @@ grep -rc 'registry.register(' src/domains/
 
 ## Intelligence Tools
 
-The intelligence domain includes 6 high-value analytical tools:
+The intelligence domain includes 9 high-value analytical tools:
 
 | Tool | What It Returns | Example Use Case |
 | --- | --- | --- |
-| `intel_revenue_summary` | Total revenue (matches ST dashboard), breakdown by BU (completed, non-job, adjustment), collections, outstanding, conversion rates. | "Summarize January revenue by business unit." |
-| `intel_technician_scorecard` | Per-tech completed jobs, revenue, avg ticket, opportunities/conversion, customer satisfaction, revenue per hour, billable efficiency, upsold amount, recalls caused, jobs/day, plus team averages. Uses ST Reporting API reports 168, 170, and 165 for dashboard-accurate metrics. | "Compare technician productivity and close rates this month." |
-| `intel_membership_health` | Dashboard-accurate membership metrics via ST Reporting API Report 182: active counts, signups, cancellations, renewals, expirations, suspended/reactivated/deleted counts, retention rate, and member vs non-member revenue. | "Check churn pressure and membership revenue mix for last quarter." |
-| `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities. | "Find stale open estimates older than 30 days and quantify pipeline risk." |
-| `intel_campaign_performance` | Campaign calls, bookings, conversion, revenue, revenue per call. | "Rank campaigns by revenue efficiency and identify low-conversion spend." |
-| `intel_daily_snapshot` | Same-day appointment/job progress, revenue-to-date, call outcomes, and highlights. | "Get a daily ops briefing before end-of-day dispatch review." |
+| `intel_revenue_summary` | Dashboard-accurate revenue totals, BU breakdowns, collections, outstanding balance, conversion metrics, plus BU productivity and sales rollups. | "Summarize January revenue by business unit." |
+| `intel_technician_scorecard` | Per-tech completed jobs, revenue, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages. | "Compare technician productivity and close rates this month." |
+| `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, total invoiced revenue, and membership conversion by business unit. | "Check churn pressure and membership conversion for last quarter." |
+| `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities, and technician sales funnel metrics. | "Find stale open estimates older than 30 days and quantify pipeline risk." |
+| `intel_campaign_performance` | Campaign calls, bookings, conversion, total-period revenue context, and BU lead-generation metrics from Report 176. | "Rank campaigns by call volume and identify weak conversion." |
+| `intel_daily_snapshot` | Same-day appointment/job progress, revenue-to-date, call outcomes, next-day upcoming jobs, and plain-English highlights. | "Get a daily ops briefing before end-of-day dispatch review." |
+| `intel_csr_performance` | CSR booking performance with jobs booked, revenue, average ticket, top campaigns, job type mix, conversion metrics, and team averages. | "Which CSR booked the most revenue this month?" |
+| `intel_labor_cost` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business-unit breakdowns. | "What did labor cost us last month?" |
+| `intel_invoice_tracking` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdowns by business unit and technician. | "Which techs are not sending invoices?" |
 
 ### Revenue: API vs Dashboard Accuracy
 
@@ -247,16 +194,30 @@ If you need invoice-level detail (line items, individual invoice totals), use `a
 
 ### Reporting API Integration
 
-Intelligence tools now use a mix of ServiceTitan Reporting API and REST endpoints:
+Intelligence tools now use a mix of ServiceTitan Reporting API and REST endpoints. The reporting side currently uses these report definitions:
 
-| Tool | Data Source | Notes |
+| Report ID(s) | Tool | Purpose |
 | --- | --- | --- |
-| `intel_revenue_summary` | Reporting API + REST | Revenue comes from Report 175 (dashboard-accurate). Payments/collections still use REST. |
-| `intel_technician_scorecard` | Reporting API | Uses Reports 168, 170, and 165. Replaced 51+ REST N+1 calls with 3 report calls. |
-| `intel_membership_health` | Reporting API + REST | Core membership metrics come from Report 182; invoice revenue split uses REST. |
-| `intel_estimate_pipeline` | REST | Funnel + age-bucket logic currently computed from REST estimate data. |
-| `intel_campaign_performance` | REST | Currently REST-based; Reporting API rewire tracked separately. |
-| `intel_daily_snapshot` | REST | Real-time daily operations data; REST is the right fit for low-latency snapshots. |
+| `162` | `intel_csr_performance` | Job Detail By CSR for booked jobs, revenue, campaign mix, job type mix, and CSR conversion metrics. |
+| `163` | `intel_daily_snapshot` | Upcoming jobs scheduled for tomorrow. |
+| `165` | `intel_technician_scorecard` | Completed job detail used to count jobs by technician assignment. |
+| `166` | `intel_labor_cost` | Master Pay File hours, overtime, gross pay, and labor activity mix. |
+| `168` | `intel_technician_scorecard` | Technician revenue, avg ticket, opportunities, conversion, and customer satisfaction. |
+| `169` | `intel_technician_scorecard` | Technician lead generation metrics. |
+| `170` | `intel_technician_scorecard` | Technician productivity metrics such as revenue per hour and billable efficiency. |
+| `171` | `intel_technician_scorecard` | Technician membership opportunities and close rate. |
+| `172` | `intel_estimate_pipeline` | Technician sales funnel and close-rate rollups. |
+| `173` | `intel_technician_scorecard` | Sales generated from technician leads. |
+| `174` | `intel_technician_scorecard` | Sales generated from marketing leads. |
+| `175` | `intel_revenue_summary` | Dashboard-accurate business-unit revenue. |
+| `176` | `intel_campaign_performance` | Business-unit lead-generation metrics that add sales context to campaign activity. |
+| `177` | `intel_revenue_summary` | Business-unit productivity metrics. |
+| `178` | `intel_membership_health` | Business-unit membership conversion metrics. |
+| `179` | `intel_revenue_summary` | Business-unit sales metrics. |
+| `182` | `intel_membership_health` | Membership summary totals by membership type. |
+| `2281 / 2282` | `intel_invoice_tracking` | Sent vs not-sent invoice email tracking. |
+
+Supporting REST endpoints are still used where the reports do not expose record-level detail or where near-real-time operational data is a better fit, including payments, invoices, calls, estimates, appointments, jobs, bookings, and campaigns.
 
 - **Timezone matters:** Set `ST_TIMEZONE` to the tenant's IANA timezone for all reporting/date-bound intelligence tools. This prevents day-boundary drift from UTC interpretation.
 - **Report IDs are universal:** Built-in dashboard report IDs (for example 165, 168, 170, 175, 182) are standardized across ServiceTitan tenants.
