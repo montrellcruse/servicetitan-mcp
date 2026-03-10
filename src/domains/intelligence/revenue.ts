@@ -98,7 +98,8 @@ export function registerIntelligenceRevenueTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, and conversion rates.",
+      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, and conversion rates." +
+      '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitId=<HVAC BU ID>\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: revenueSummarySchema.shape,
     handler: async (params) => {
       try {

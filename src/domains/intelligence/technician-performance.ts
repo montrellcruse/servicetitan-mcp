@@ -251,7 +251,8 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, and team averages",
+      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, and team averages" +
+      '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianId=<Andrew\'s ID>\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
       try {

@@ -113,7 +113,8 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and total invoiced revenue",
+      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and total invoiced revenue" +
+      '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
       try {

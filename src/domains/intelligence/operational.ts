@@ -84,7 +84,8 @@ export function registerIntelligenceDailySnapshotTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, and plain-English highlights",
+      "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, and plain-English highlights" +
+      '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
     schema: dailySnapshotSchema.shape,
     handler: async (params) => {
       try {
