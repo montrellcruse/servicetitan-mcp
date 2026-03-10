@@ -14,11 +14,13 @@ import {
   toDateRange,
   toNumber,
 } from "./helpers.js";
+import { resolveBusinessUnitId } from "./resolvers.js";
 
 const revenueSummarySchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
+  businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -283,12 +285,22 @@ export function registerIntelligenceRevenueTool(
     operation: "read",
     description:
       "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, conversion rates, plus BU-level productivity and sales metrics." +
-      '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitId=<HVAC BU ID>\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
+      '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC"\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: revenueSummarySchema.shape,
     handler: async (params) => {
       try {
         const input = revenueSummarySchema.parse(params);
         const warnings: string[] = [];
+
+        // Resolve businessUnitName → ID via cache if provided
+        const buResolved = await resolveBusinessUnitId(client, input.businessUnitId, input.businessUnitName);
+        const effectiveBuId = buResolved.id;
+        if (input.businessUnitName && !effectiveBuId) {
+          warnings.push(`Business unit "${input.businessUnitName}" not found. Showing all business units.`);
+        }
+        if (buResolved.resolvedName) {
+          warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
+        }
 
         // ── Revenue from ST's native reporting engine (Report 175) ──
         // This uses the same calculation as the ST dashboard.
@@ -298,10 +310,10 @@ export function registerIntelligenceRevenueTool(
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
+        if (effectiveBuId !== undefined) {
           reportParams.push({
             name: "BusinessUnitIds",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
         }
 
@@ -370,9 +382,9 @@ export function registerIntelligenceRevenueTool(
               paidOnAfter: startIso,
               paidOnBefore: endIso,
               businessUnitIds:
-                input.businessUnitId === undefined
+                effectiveBuId === undefined
                   ? undefined
-                  : String(input.businessUnitId),
+                  : String(effectiveBuId),
             }),
           [],
         );

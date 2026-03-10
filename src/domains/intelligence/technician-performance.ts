@@ -14,12 +14,15 @@ import {
   toNumber,
   toText,
 } from "./helpers.js";
+import { resolveBusinessUnitId, resolveTechnicianId } from "./resolvers.js";
 
 const technicianScorecardSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   technicianId: z.number().int().optional().describe("Single technician (omit for all)"),
+  technicianName: z.string().optional().describe("Single technician by name (resolved via cache, e.g. 'John'). Alternative to technicianId."),
   businessUnitId: z.number().int().optional().describe("Filter by business unit"),
+  businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
   limit: z
     .number()
     .int()
@@ -508,7 +511,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     operation: "read",
     description:
       "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages" +
-      '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianId=<Andrew\'s ID>\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
+      '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
       try {
@@ -517,6 +520,25 @@ export function registerIntelligenceTechnicianPerformanceTool(
         const workingDays = countWeekdaysInclusive(start, end);
         const warnings: string[] = [];
         const maxTechnicians = input.limit ?? 25;
+
+        // Resolve name-based filters via cache
+        const techResolved = await resolveTechnicianId(client, input.technicianId, input.technicianName);
+        const effectiveTechId = techResolved.id;
+        if (input.technicianName && !effectiveTechId) {
+          warnings.push(`Technician "${input.technicianName}" not found. Showing all technicians.`);
+        }
+        if (techResolved.resolvedName) {
+          warnings.push(`Resolved "${input.technicianName}" → ${techResolved.resolvedName} (ID: ${effectiveTechId})`);
+        }
+
+        const buResolved = await resolveBusinessUnitId(client, input.businessUnitId, input.businessUnitName);
+        const effectiveBuId = buResolved.id;
+        if (input.businessUnitName && !effectiveBuId) {
+          warnings.push(`Business unit "${input.businessUnitName}" not found. Showing all business units.`);
+        }
+        if (buResolved.resolvedName) {
+          warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
+        }
 
         const revenueParams: Array<{ name: string; value: string }> = [
           { name: "From", value: input.startDate },
@@ -554,18 +576,18 @@ export function registerIntelligenceTechnicianPerformanceTool(
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
+        if (effectiveBuId !== undefined) {
           revenueParams.push({
             name: "BusinessUnitIds",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
           leadGenerationParams.push({
             name: "BusinessUnitId",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
           completedJobsParams.push({
             name: "BusinessUnitId",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
           warnings.push(
             "Business unit filtering only applies to completed jobs (Report 165) and lead generation (Report 169). Revenue, productivity, memberships, and lead-sales metrics are tenant-wide.",
@@ -657,16 +679,16 @@ export function registerIntelligenceTechnicianPerformanceTool(
           salesFromMarketingLeadsReport,
         );
 
-        if (input.technicianId !== undefined) {
-          revenueRows = revenueRows.filter((tech) => tech.id === input.technicianId);
-          productivityRows = productivityRows.filter((tech) => tech.id === input.technicianId);
-          leadGenerationRows = leadGenerationRows.filter((tech) => tech.id === input.technicianId);
-          membershipsRows = membershipsRows.filter((tech) => tech.id === input.technicianId);
+        if (effectiveTechId !== undefined) {
+          revenueRows = revenueRows.filter((tech) => tech.id === effectiveTechId);
+          productivityRows = productivityRows.filter((tech) => tech.id === effectiveTechId);
+          leadGenerationRows = leadGenerationRows.filter((tech) => tech.id === effectiveTechId);
+          membershipsRows = membershipsRows.filter((tech) => tech.id === effectiveTechId);
           salesFromTechLeadRows = salesFromTechLeadRows.filter(
-            (tech) => tech.id === input.technicianId,
+            (tech) => tech.id === effectiveTechId,
           );
           salesFromMarketingLeadRows = salesFromMarketingLeadRows.filter(
-            (tech) => tech.id === input.technicianId,
+            (tech) => tech.id === effectiveTechId,
           );
         }
 

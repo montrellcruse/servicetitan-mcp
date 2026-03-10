@@ -15,11 +15,13 @@ import {
   toNumber,
   toText,
 } from "./helpers.js";
+import { resolveBusinessUnitId } from "./resolvers.js";
 
 const invoiceTrackingSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
+  businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
 });
 
 const SENT_FIELD = {
@@ -175,7 +177,7 @@ export function registerIntelligenceInvoiceTrackingTool(
     operation: "read",
     description:
       "Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician" +
-      '\n\nExamples:\n- "What percent of invoices were sent this week?" -> startDate="2026-03-02", endDate="2026-03-09"\n- "Which techs are not sending invoices?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show invoice send rate for plumbing last month" -> startDate="2026-02-01", endDate="2026-03-01", businessUnitId=<Plumbing BU ID>',
+      '\n\nExamples:\n- "What percent of invoices were sent this week?" -> startDate="2026-03-02", endDate="2026-03-09"\n- "Which techs are not sending invoices?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show invoice send rate for plumbing last month" -> startDate="2026-02-01", endDate="2026-03-01", businessUnitName="Plumbing"',
     schema: invoiceTrackingSchema.shape,
     handler: async (params) => {
       try {
@@ -183,15 +185,24 @@ export function registerIntelligenceInvoiceTrackingTool(
         toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
+        const buResolved = await resolveBusinessUnitId(client, input.businessUnitId, input.businessUnitName);
+        const effectiveBuId = buResolved.id;
+        if (input.businessUnitName && !effectiveBuId) {
+          warnings.push(`Business unit "${input.businessUnitName}" not found. Showing all business units.`);
+        }
+        if (buResolved.resolvedName) {
+          warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
+        }
+
         const baseParams: Array<{ name: string; value: string }> = [
           { name: "From", value: input.startDate },
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
+        if (effectiveBuId !== undefined) {
           baseParams.push({
             name: "BusinessUnitIds",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
         }
 

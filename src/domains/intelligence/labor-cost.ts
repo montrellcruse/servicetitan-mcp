@@ -14,12 +14,15 @@ import {
   toNumber,
   toText,
 } from "./helpers.js";
+import { resolveBusinessUnitId, resolveTechnicianId } from "./resolvers.js";
 
 const laborCostSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
+  businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
   technicianId: z.number().int().optional().describe("Filter by technician ID"),
+  technicianName: z.string().optional().describe("Filter by technician name (resolved via cache, e.g. 'John'). Alternative to technicianId."),
 });
 
 const FIELD = {
@@ -119,7 +122,7 @@ export function registerIntelligenceLaborCostTool(
     operation: "read",
     description:
       "Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown" +
-      '\n\nExamples:\n- "What did labor cost us this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime costs by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"\n- "How much did Andrew cost in labor last week?" -> startDate="2026-03-02", endDate="2026-03-09", technicianId=<Andrew\'s ID>',
+      '\n\nExamples:\n- "What did labor cost us this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime costs by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"\n- "How much did Andrew cost in labor last week?" -> startDate="2026-03-02", endDate="2026-03-09", technicianName="Andrew"',
     schema: laborCostSchema.shape,
     handler: async (params) => {
       try {
@@ -127,22 +130,40 @@ export function registerIntelligenceLaborCostTool(
         toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
+        const buResolved = await resolveBusinessUnitId(client, input.businessUnitId, input.businessUnitName);
+        const effectiveBuId = buResolved.id;
+        if (input.businessUnitName && !effectiveBuId) {
+          warnings.push(`Business unit "${input.businessUnitName}" not found. Showing all business units.`);
+        }
+        if (buResolved.resolvedName) {
+          warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
+        }
+
+        const techResolved = await resolveTechnicianId(client, input.technicianId, input.technicianName);
+        const effectiveTechId = techResolved.id;
+        if (input.technicianName && !effectiveTechId) {
+          warnings.push(`Technician "${input.technicianName}" not found. Showing all technicians.`);
+        }
+        if (techResolved.resolvedName) {
+          warnings.push(`Resolved "${input.technicianName}" → ${techResolved.resolvedName} (ID: ${effectiveTechId})`);
+        }
+
         const reportParams: Array<{ name: string; value: string }> = [
           { name: "From", value: input.startDate },
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
+        if (effectiveBuId !== undefined) {
           reportParams.push({
             name: "BusinessUnitId",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
         }
 
-        if (input.technicianId !== undefined) {
+        if (effectiveTechId !== undefined) {
           reportParams.push({
             name: "TechnicianId",
-            value: String(input.technicianId),
+            value: String(effectiveTechId),
           });
         }
 

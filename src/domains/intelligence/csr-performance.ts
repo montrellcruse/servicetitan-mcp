@@ -13,11 +13,13 @@ import {
   toNumber,
   toText,
 } from "./helpers.js";
+import { resolveBusinessUnitId } from "./resolvers.js";
 
 const csrPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
+  businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
 });
 
 const FIELD = {
@@ -155,7 +157,7 @@ export function registerIntelligenceCsrPerformanceTool(
     operation: "read",
     description:
       "CSR booking performance using Job Detail By CSR with booked jobs, revenue, average ticket, campaign mix, job type mix, and team averages" +
-      '\n\nExamples:\n- "How are our CSRs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show CSR booking revenue for last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "Which CSR is booking the most revenue for plumbing?" -> startDate="2026-01-01", endDate="2026-03-10", businessUnitId=<Plumbing BU ID>',
+      '\n\nExamples:\n- "How are our CSRs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show CSR booking revenue for last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "Which CSR is booking the most revenue for plumbing?" -> startDate="2026-01-01", endDate="2026-03-10", businessUnitName="Plumbing"',
     schema: csrPerformanceSchema.shape,
     handler: async (params) => {
       try {
@@ -163,16 +165,25 @@ export function registerIntelligenceCsrPerformanceTool(
         toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
 
+        const buResolved = await resolveBusinessUnitId(client, input.businessUnitId, input.businessUnitName);
+        const effectiveBuId = buResolved.id;
+        if (input.businessUnitName && !effectiveBuId) {
+          warnings.push(`Business unit "${input.businessUnitName}" not found. Showing all business units.`);
+        }
+        if (buResolved.resolvedName) {
+          warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
+        }
+
         const reportParams: Array<{ name: string; value: string }> = [
           { name: "DateType", value: "Job Completion Date" },
           { name: "From", value: input.startDate },
           { name: "To", value: input.endDate },
         ];
 
-        if (input.businessUnitId !== undefined) {
+        if (effectiveBuId !== undefined) {
           reportParams.push({
             name: "BusinessUnitId",
-            value: String(input.businessUnitId),
+            value: String(effectiveBuId),
           });
         }
 
