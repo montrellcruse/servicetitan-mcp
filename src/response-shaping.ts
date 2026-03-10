@@ -66,6 +66,10 @@ const EXCLUDED_FIELDS = new Set<string>([
   "regularHours",
   "overtimeHours",
   "doubleOvertimeHours",
+
+  // Autoresearch iter2 round 2 (safe — not generic field names)
+  "openByAge",
+  "breakdownByJobType",
 ]);
 
 const ARRAY_LIMITS = new Map<string, number>([
