@@ -10,7 +10,7 @@ Enterprise-grade MCP server for the ServiceTitan API, built for safe production 
   - Optional confirmation for write tools (`ST_CONFIRM_WRITES=true`).
   - Required confirmation for all delete tools.
   - Audit logging for write/delete operations with sensitive fields sanitized.
-- 9 intelligence tools that combine multiple ServiceTitan endpoints into operational and revenue insights.
+- 10 intelligence tools that combine multiple ServiceTitan endpoints into operational and revenue insights, with cached name-based filtering.
 - Dynamic domain loading from `src/domains/*` with centralized tool registration and stats.
 - Built-in `st_health_check` system tool for connectivity and config verification.
 
@@ -153,7 +153,7 @@ grep -rc 'registry.register(' src/domains/
 | `dispatch` | 74 | Jobs, appointments, projects, job types, arrival windows, forms, images, installed equipment. |
 | `estimates` | 14 | Estimate lifecycle and estimate item management. |
 | `export` | 1 | Export tooling for packaged extraction workflows. |
-| `intelligence` | 9 | Composite analytics tools across revenue, pipeline, marketing, memberships, operations, technician performance, CSR booking, labor cost, and invoice delivery. |
+| `intelligence` | 10 | Composite analytics tools across revenue, pipeline, marketing, memberships, operations, technician performance, CSR booking, labor cost, invoice delivery, and reference data lookup. |
 | `inventory` | 37 | Purchase orders, returns, receipts, transfers, vendors, warehouses, and PO markups/types. |
 | `marketing` | 38 | Campaigns, categories, costs, calls, attributions, suppressions, and opt-in/out operations. |
 | `memberships` | 21 | Memberships, membership types, recurring services, and service agreements. |
@@ -166,10 +166,11 @@ grep -rc 'registry.register(' src/domains/
 
 ## Intelligence Tools
 
-The intelligence domain includes 9 high-value analytical tools:
+The intelligence domain includes 10 tools (9 analytical + 1 reference data lookup):
 
 | Tool | What It Returns | Example Use Case |
 | --- | --- | --- |
+| `intel_lookup` | Cached reference data — technicians, business units, payment types, membership types with IDs and names. 30-minute TTL. | "What are our business unit IDs?" or "Find technician named Omar." |
 | `intel_revenue_summary` | Dashboard-accurate revenue totals, BU breakdowns, collections, outstanding balance, conversion metrics, plus BU productivity and sales rollups. | "Summarize January revenue by business unit." |
 | `intel_technician_scorecard` | Per-tech completed jobs, revenue, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages. | "Compare technician productivity and close rates this month." |
 | `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, total invoiced revenue, and membership conversion by business unit. | "Check churn pressure and membership conversion for last quarter." |
@@ -179,6 +180,22 @@ The intelligence domain includes 9 high-value analytical tools:
 | `intel_csr_performance` | CSR booking performance with jobs booked, revenue, average ticket, top campaigns, job type mix, conversion metrics, and team averages. | "Which CSR booked the most revenue this month?" |
 | `intel_labor_cost` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business-unit breakdowns. | "What did labor cost us last month?" |
 | `intel_invoice_tracking` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdowns by business unit and technician. | "Which techs are not sending invoices?" |
+
+### Name-Based Filtering
+
+Most intelligence tools accept `businessUnitName` and/or `technicianName` as alternatives to numeric IDs. Names are resolved via a 30-minute reference data cache with in-flight deduplication.
+
+For example, instead of:
+```
+intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitId=12345)
+```
+
+You can use:
+```
+intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC")
+```
+
+Name matching uses exact → prefix → contains fallback. If no match is found, the tool returns all data with a warning.
 
 ### Revenue: API vs Dashboard Accuracy
 
