@@ -235,6 +235,26 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for the full deep-dive: route table, resp
 
 ---
 
+## CLI Companion
+
+If you prefer working from the terminal directly, [servicetitan-cli](https://github.com/montrellcruse/servicetitan-cli) is a companion `st` binary built from the same auth and intelligence layer:
+
+```bash
+# Install
+npm install -g @rowvyn/servicetitan-cli
+
+# Same intelligence — no MCP required
+st revenue --period ytd --compact
+st snapshot --compact
+
+# Pipe into your agent
+st customers list --all --json | your-agent process
+```
+
+The CLI and this MCP server share the same design philosophy: push the business question into the tool name, minimize schema overhead, and shape responses for AI consumption.
+
+---
+
 ## Comparison
 
 | Feature | This Server | Community MCP Servers |
