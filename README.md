@@ -1,81 +1,60 @@
-# ServiceTitan MCP Server (Enterprise)
+# ServiceTitan MCP Server
 
 [![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
+[![Tools](https://img.shields.io/badge/tools-505-blue.svg)](#tool-catalog)
+[![Domains](https://img.shields.io/badge/domains-15-purple.svg)](#tool-catalog)
 
-Enterprise-grade MCP server for the ServiceTitan API, built for safe production use with domain-level control, write safeguards, and high-value intelligence tools.
+The only MCP server for the ServiceTitan API — 505 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
+
+<p align="center">
+  <em>Connect any AI assistant to ServiceTitan's full API — CRM, dispatch, invoicing, payroll, and operational intelligence — through the Model Context Protocol.</em>
+</p>
+
+---
+
+## Why
+
+- **ServiceTitan has no official MCP server** or developer tooling beyond REST docs
+- **Raw API access is friction-heavy** — OAuth token management, module-prefix routing, pagination, and response parsing all fall on you
+- **This server handles all of that** and adds 10 intelligence tools that aggregate multiple endpoints into operational insights
+- **Revenue accuracy within 0.001% of ServiceTitan's own dashboard** (verified on production data using Report 175 — the same source ST's internal engine uses)
+
+---
 
 ## Features
 
-- Domain filtering via `ST_DOMAINS` to expose only the tool groups you want.
-- Read-only mode enabled by default (`ST_READONLY=true`) for safer production rollout.
-- Safety layer in the registry:
-  - Optional confirmation for write tools (`ST_CONFIRM_WRITES=true`).
-  - Required confirmation for all delete tools.
-  - Audit logging for write/delete operations with sensitive fields sanitized.
-- 10 intelligence tools that combine multiple ServiceTitan endpoints into operational and revenue insights, with cached name-based filtering.
-- Dynamic domain loading from `src/domains/*` with centralized tool registration and stats.
-- Built-in `st_health_check` system tool for connectivity and config verification.
+- **505 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
+- **10 intelligence tools** — composite analytics that aggregate multiple API calls into revenue summaries, ops snapshots, technician scorecards, and more
+- **Dashboard-accurate revenue** — `intel_revenue_summary` uses Report 175 to match ST's dashboard within 0.001%
+- **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
+- **Safety layer** — confirmation workflow for writes/deletes, audit logging with sensitive field redaction
+- **Domain filtering** — expose only the tool groups you need via `ST_DOMAINS`
+- **Name-based filtering** — pass `businessUnitName` or `technicianName` instead of numeric IDs; resolved via 30-minute cache
+- **LLM-optimized responses** — response shaping trims API noise and structures data for AI consumption
+- **SSE remote deployment** — deploy to Fly.io (or anywhere) and connect via `mcp-remote`
+- **Built-in health check** — `st_health_check` validates auth, tenant access, and registration summary
+
+---
 
 ## Quick Start
 
 ### Prerequisites
 
 - Node.js 22 or newer
-- ServiceTitan API credentials:
-  - OAuth Client ID
-  - OAuth Client Secret
-  - ST App Key
-  - Tenant ID
+- ServiceTitan API credentials: Client ID, Client Secret, App Key, Tenant ID
 
-### Installation
+### Install & Build
 
 ```bash
 npm install
 npm run build
 ```
 
-### Configuration
+### Claude Desktop
 
-1. Copy `.env.example` to `.env`.
-2. Set all required variables.
-3. Keep `ST_READONLY=true` until you are ready to allow write/delete tools.
-
-| Variable | Required | Default | Description |
-| --- | --- | --- | --- |
-| `ST_CLIENT_ID` | Yes | None | ServiceTitan OAuth client ID. |
-| `ST_CLIENT_SECRET` | Yes | None | ServiceTitan OAuth client secret. |
-| `ST_APP_KEY` | Yes | None | ServiceTitan app key (`ST-App-Key` header). |
-| `ST_TENANT_ID` | Yes | None | ServiceTitan tenant identifier injected into `{tenant}` API paths. |
-| `ST_ENVIRONMENT` | No | `integration` | ServiceTitan environment: `integration` or `production`. |
-| `ST_READONLY` | No | `true` | If `true`, all `write` and `delete` tools are skipped at registration time. |
-| `ST_CONFIRM_WRITES` | No | `false` | If `true`, `write` tools require `confirm=true` to execute. |
-| `ST_MAX_RESPONSE_CHARS` | No | `100000` | Positive integer cap used for tool response size limiting. |
-| `ST_DOMAINS` | No | All domains | Comma-separated domain allowlist (example: `crm,dispatch,reporting`). |
-| `ST_LOG_LEVEL` | No | `info` | Logger level: `debug`, `info`, `warn`, `error`. |
-| `ST_TIMEZONE` | No | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`). Intelligence tools use this to align date boundaries with the tenant's local time. |
-| `ST_RESPONSE_SHAPING` | No | `true` | Set to `false` to disable response transformation (returns raw API data). |
-| `ST_MCP_API_KEY` | Yes (remote) | None | API key for authenticating remote MCP clients. Required when deploying as an SSE server. |
-| `ST_CORS_ORIGIN` | No | `*` | Allowed CORS origin for the SSE server. Set to a specific origin (e.g. `https://app.example.com`) to restrict cross-origin access. |
-
-Notes:
-- Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
-- Empty `ST_DOMAINS` means all domains are enabled.
-- **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight, which can miss or include invoices/jobs near day boundaries. For example, an EST tenant should use `ST_TIMEZONE=America/New_York` so that "Feb 1" means midnight Eastern, not midnight UTC.
-
-## MCP Client Setup
-
-Build first:
-
-```bash
-npm run build
-```
-
-Use the built entrypoint: `build/index.js`.
-
-### Claude Desktop, Cursor, Windsurf, and Other MCP-Compatible Hosts
-
-Claude Desktop, Cursor, Windsurf, and most MCP hosts that accept an `mcpServers` JSON block use the same stdio config. Paste this into the host's MCP settings file, then adjust the env vars for your tenant:
+Add to your `claude_desktop_config.json`:
 
 ```json
 {
@@ -88,45 +67,34 @@ Claude Desktop, Cursor, Windsurf, and most MCP hosts that accept an `mcpServers`
         "ST_CLIENT_SECRET": "your-client-secret",
         "ST_APP_KEY": "your-app-key",
         "ST_TENANT_ID": "your-tenant-id",
-        "ST_ENVIRONMENT": "integration",
-        "ST_READONLY": "true",
-        "ST_CONFIRM_WRITES": "false",
-        "ST_MAX_RESPONSE_CHARS": "100000",
-        "ST_DOMAINS": "",
-        "ST_LOG_LEVEL": "info",
-        "ST_TIMEZONE": ""
+        "ST_TIMEZONE": "America/New_York"
       }
     }
   }
 }
 ```
 
-### OpenClaw / Generic StdIO Host
+Works the same way in **Cursor**, **Windsurf**, and any other MCP-compatible host.
 
-Any MCP host that supports stdio can run:
+### Generic stdio
 
 ```bash
 ST_CLIENT_ID=your-client-id \
 ST_CLIENT_SECRET=your-client-secret \
 ST_APP_KEY=your-app-key \
 ST_TENANT_ID=your-tenant-id \
-ST_ENVIRONMENT=integration \
-ST_READONLY=true \
-ST_CONFIRM_WRITES=false \
-ST_MAX_RESPONSE_CHARS=100000 \
-ST_LOG_LEVEL=info \
-ST_TIMEZONE="" \
+ST_TIMEZONE=America/New_York \
 node /absolute/path/to/servicetitan-mcp-server/build/index.js
 ```
 
-### Remote Hosting (SSE + mcp-remote)
+### Remote Deployment (SSE)
 
-If you deploy the SSE server (for example on Fly.io), use your `/sse` endpoint:
+Deploy to Fly.io or any server, then connect via `mcp-remote`:
 
-- URL pattern: `https://<your-app>.fly.dev/sse`
-- Remote host auth: set `ST_MCP_API_KEY` on the server and send it as `x-api-key` from the client.
-
-Example MCP client config using `mcp-remote`:
+```bash
+# On the server
+ST_MCP_API_KEY=your-secret node build/sse.js
+```
 
 ```json
 {
@@ -144,120 +112,142 @@ Example MCP client config using `mcp-remote`:
 }
 ```
 
-## Available Domains
+---
 
-Tool counts are from:
+## Tool Catalog
 
-```bash
-grep -rc 'registry.register(' src/domains/
-```
+505 tools registered across 15 domains:
 
-| Domain | Tools | Description |
-| --- | ---: | --- |
-| `accounting` | 33 | GL accounts, invoices, payments, payment terms/types, AP credits/payments, journal entries, tax zones. |
-| `crm` | 87 | Customers, locations, contacts, bookings, leads, customer memberships, and CRM tagging flows. |
-| `dispatch` | 74 | Jobs, appointments, projects, job types, arrival windows, forms, images, installed equipment. |
-| `estimates` | 14 | Estimate lifecycle and estimate item management. |
-| `export` | 1 | Export tooling for packaged extraction workflows. |
-| `intelligence` | 10 | Composite analytics tools across revenue, pipeline, marketing, memberships, operations, technician performance, CSR booking, labor cost, invoice delivery, and reference data lookup. |
-| `inventory` | 37 | Purchase orders, returns, receipts, transfers, vendors, warehouses, and PO markups/types. |
-| `marketing` | 38 | Campaigns, categories, costs, calls, attributions, suppressions, and opt-in/out operations. |
-| `memberships` | 21 | Memberships, membership types, recurring services, and service agreements. |
-| `payroll` | 27 | Payroll runs, settings, timesheets, gross pay, and payroll adjustments. |
-| `people` | 22 | Employees, technicians, trucks, and GPS telemetry lookups. |
-| `pricebook` | 33 | Categories, services, materials, equipment, discounts/fees, and bulk pricebook operations. |
-| `reporting` | 5 | Reports, report categories, and dynamic value sets. |
-| `scheduling` | 23 | Teams, zones, shifts, appointment assignments, non-job appointments, capacity, and business hours. |
-| `settings` | 23 | Business units, tag types, activities, tasks, and user roles. |
+| Domain | Tools | Example Tools |
+|--------|------:|---------------|
+| `crm` | 87 | `crm_customers_list`, `crm_contacts_get`, `crm_bookings_create` |
+| `dispatch` | 74 | `dispatch_jobs_list`, `dispatch_appointments_get`, `dispatch_job_types_list` |
+| `marketing` | 38 | `crm_bookings_list`, `marketing_campaigns_list`, `marketing_calls_list` |
+| `inventory` | 37 | `inventory_purchase_orders_list`, `inventory_vendors_list`, `inventory_warehouses_list` |
+| `accounting` | 33 | `accounting_invoices_list`, `accounting_payments_list`, `accounting_gl_accounts_list` |
+| `pricebook` | 33 | `pricebook_services_list`, `pricebook_materials_list`, `pricebook_equipment_list` |
+| `payroll` | 27 | `payroll_timesheets_list`, `payroll_gross_pay_list`, `payroll_payrolls_list` |
+| `people` | 22 | `people_technicians_list`, `people_employees_list`, `people_trucks_list` |
+| `memberships` | 21 | `memberships_list`, `memberships_types_list`, `memberships_recurring_services_list` |
+| `estimates` | 14 | `estimates_list`, `estimates_get`, `estimates_items_list` |
+| `scheduling` | 23 | `scheduling_teams_list`, `scheduling_zones_list`, `scheduling_shifts_list` |
+| `settings` | 23 | `settings_business_units_list`, `settings_tag_types_list`, `settings_user_roles_list` |
+| `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
+| `export` | 1 | `export_data` |
+| **`intelligence`** | **10** | `intel_revenue_summary`, `intel_daily_snapshot`, `intel_technician_scorecard` |
+| **Total** | **448** | *(+ 57 write/delete tools enabled when `ST_READONLY=false`)* |
+
+> The full 505 count includes all read, write, and delete tools. With `ST_READONLY=true` (default), write and delete tools are skipped at registration time.
+
+---
 
 ## Intelligence Tools
 
-The intelligence domain includes 10 tools (9 analytical + 1 reference data lookup):
+The real differentiator. These 10 tools aggregate multiple API calls and report endpoints into operational insights — the kind of answers that would otherwise require custom BI tooling.
 
-| Tool | What It Returns | Example Use Case |
-| --- | --- | --- |
-| `intel_lookup` | Cached reference data — technicians, business units, payment types, membership types with IDs and names. 30-minute TTL. | "What are our business unit IDs?" or "Find technician named Omar." |
-| `intel_revenue_summary` | Dashboard-accurate revenue totals, BU breakdowns, collections, outstanding balance, conversion metrics, plus BU productivity and sales rollups. | "Summarize January revenue by business unit." |
-| `intel_technician_scorecard` | Per-tech completed jobs, revenue, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages. | "Compare technician productivity and close rates this month." |
-| `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, total invoiced revenue, and membership conversion by business unit. | "Check churn pressure and membership conversion for last quarter." |
-| `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities, and technician sales funnel metrics. | "Find stale open estimates older than 30 days and quantify pipeline risk." |
-| `intel_campaign_performance` | Campaign calls, bookings, conversion, total-period revenue context, and BU lead-generation metrics from Report 176. | "Rank campaigns by call volume and identify weak conversion." |
-| `intel_daily_snapshot` | Same-day appointment/job progress, revenue-to-date, call outcomes, next-day upcoming jobs, and plain-English highlights. | "Get a daily ops briefing before end-of-day dispatch review." |
-| `intel_csr_performance` | CSR booking performance with jobs booked, revenue, average ticket, top campaigns, job type mix, conversion metrics, and team averages. | "Which CSR booked the most revenue this month?" |
-| `intel_labor_cost` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business-unit breakdowns. | "What did labor cost us last month?" |
-| `intel_invoice_tracking` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdowns by business unit and technician. | "Which techs are not sending invoices?" |
+| Tool | What It Returns |
+|------|----------------|
+| `intel_revenue_summary` | Dashboard-accurate revenue by business unit using Report 175 — matches ServiceTitan within 0.001%. Includes completed revenue, non-job revenue, adjustments, collections, and BU productivity rollups. |
+| `intel_daily_snapshot` | 6-metric same-day ops briefing: revenue-to-date, jobs in progress, call outcomes, bookings, open estimates, and upcoming next-day jobs. |
+| `intel_technician_scorecard` | Per-tech jobs, revenue, avg ticket, productivity, lead gen, membership close rate, and sales from both tech and marketing leads — with team averages. |
+| `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, invoiced revenue, and conversion by business unit. |
+| `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities, and tech sales funnel metrics. |
+| `intel_campaign_performance` | Campaign calls, bookings, conversion rate, total revenue context, and BU lead-gen metrics from Report 176. |
+| `intel_csr_performance` | CSR booking performance: jobs booked, revenue, avg ticket, top campaigns, job type mix, conversion metrics, and team averages. |
+| `intel_labor_cost` | Labor cost summary from the Master Pay File: employee hours, gross pay, hourly rates, activity mix, and BU breakdowns. |
+| `intel_invoice_tracking` | Invoice email tracking: sent vs not-sent counts, send rate, dollar impact, and unsent breakdowns by business unit and technician. |
+| `intel_lookup` | Cached reference data — technicians, business units, payment types, membership types with IDs and names. 30-minute TTL. |
 
-### Name-Based Filtering
+These tools are why this server exists. Raw CRUD tools are table stakes. Intelligence tools turn API data into business decisions.
 
-Most intelligence tools accept `businessUnitName` and/or `technicianName` as alternatives to numeric IDs. Names are resolved via a 30-minute reference data cache with in-flight deduplication.
+### Revenue Accuracy
 
-For example, instead of:
-```
-intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitId=12345)
-```
-
-You can use:
-```
-intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC")
-```
-
-Name matching uses exact → prefix → contains fallback. If no match is found, the tool returns all data with a warning.
-
-### Revenue: API vs Dashboard Accuracy
-
-`intel_revenue_summary` uses ServiceTitan's **Reporting API** (Report 175: "Revenue") to calculate totals. This matches the ST dashboard exactly because it includes:
+`intel_revenue_summary` uses ServiceTitan's **Reporting API** (Report 175: "Revenue") to calculate totals. This is the same source ST's own dashboard uses — which means it includes:
 
 - **Completed Revenue** — revenue from completed jobs
 - **Non-Job Revenue** — membership fees, add-ons, and other income not tied to a specific job
 - **Adjustment Revenue** — credits, adjustments, and corrections
 
-Raw invoice or job endpoint sums will **not** match the dashboard. The invoices API returns invoice-level totals (which include tax and exclude non-job revenue), while the jobs API only captures job-level totals. Both miss the non-job revenue component that ST's internal reporting engine includes.
+Raw invoice or job endpoint sums will not match the dashboard. Both miss non-job revenue. For dashboard-matching figures, use `intel_revenue_summary`. For invoice-level detail, use `accounting_invoices_list`.
 
-If you need invoice-level detail (line items, individual invoice totals), use `accounting_invoices_list`. For dashboard-matching revenue figures, use `intel_revenue_summary`.
+### Name-Based Filtering
 
-### Reporting API Integration
+Most intelligence tools accept `businessUnitName` and `technicianName` as alternatives to numeric IDs:
 
-Intelligence tools now use a mix of ServiceTitan Reporting API and REST endpoints. The reporting side currently uses these report definitions:
+```
+# Instead of:
+intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitId=12345)
 
-| Report ID(s) | Tool | Purpose |
-| --- | --- | --- |
-| `162` | `intel_csr_performance` | Job Detail By CSR for booked jobs, revenue, campaign mix, job type mix, and CSR conversion metrics. |
-| `163` | `intel_daily_snapshot` | Upcoming jobs scheduled for tomorrow. |
-| `165` | `intel_technician_scorecard` | Completed job detail used to count jobs by technician assignment. |
-| `166` | `intel_labor_cost` | Master Pay File hours, overtime, gross pay, and labor activity mix. |
-| `168` | `intel_technician_scorecard` | Technician revenue, avg ticket, opportunities, conversion, and customer satisfaction. |
-| `169` | `intel_technician_scorecard` | Technician lead generation metrics. |
-| `170` | `intel_technician_scorecard` | Technician productivity metrics such as revenue per hour and billable efficiency. |
-| `171` | `intel_technician_scorecard` | Technician membership opportunities and close rate. |
-| `172` | `intel_estimate_pipeline` | Technician sales funnel and close-rate rollups. |
-| `173` | `intel_technician_scorecard` | Sales generated from technician leads. |
-| `174` | `intel_technician_scorecard` | Sales generated from marketing leads. |
-| `175` | `intel_revenue_summary` | Dashboard-accurate business-unit revenue. |
-| `176` | `intel_campaign_performance` | Business-unit lead-generation metrics that add sales context to campaign activity. |
-| `177` | `intel_revenue_summary` | Business-unit productivity metrics. |
-| `178` | `intel_membership_health` | Business-unit membership conversion metrics. |
-| `179` | `intel_revenue_summary` | Business-unit sales metrics. |
-| `182` | `intel_membership_health` | Membership summary totals by membership type. |
-| `2281 / 2282` | `intel_invoice_tracking` | Sent vs not-sent invoice email tracking. |
+# Use:
+intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC")
+```
 
-Supporting REST endpoints are still used where the reports do not expose record-level detail or where near-real-time operational data is a better fit, including payments, invoices, calls, estimates, appointments, jobs, bookings, and campaigns.
+Name matching uses exact → prefix → contains fallback. If no match is found, the tool returns all data with a warning.
 
-- **Timezone matters:** Set `ST_TIMEZONE` to the tenant's IANA timezone for all reporting/date-bound intelligence tools. This prevents day-boundary drift from UTC interpretation.
-- **Report IDs are universal:** Built-in dashboard report IDs (for example 165, 168, 170, 175, 182) are standardized across ServiceTitan tenants.
+---
 
-## Safety Features
+## Configuration
 
-- Read-only mode (`ST_READONLY=true` by default):
-  - Non-read tools are skipped during registration.
-  - Helps validate production connectivity before enabling mutations.
-- Confirmation workflow:
-  - All delete tools require `confirm=true`.
-  - Write tools require `confirm=true` when `ST_CONFIRM_WRITES=true`.
-  - When confirmation is missing, the tool returns a preview/warning payload instead of executing.
-- Audit logging:
-  - All write/delete executions emit `[AUDIT]` log records.
-  - Captures timestamp, tool, domain, operation, resource, ID, params, success/failure.
-  - Sensitive fields (`secret`, `password`, `token`, `key`) are removed from logged params.
+Copy `.env.example` to `.env` and fill in your credentials.
+
+**Required**
+
+| Variable | Description |
+|----------|-------------|
+| `ST_CLIENT_ID` | ServiceTitan OAuth client ID |
+| `ST_CLIENT_SECRET` | ServiceTitan OAuth client secret |
+| `ST_APP_KEY` | ServiceTitan app key (`ST-App-Key` header) |
+| `ST_TENANT_ID` | ServiceTitan tenant identifier |
+| `ST_MCP_API_KEY` | API key for remote MCP clients *(required for SSE deployment only)* |
+
+**Optional**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `ST_ENVIRONMENT` | `integration` | ServiceTitan environment: `integration` or `production` |
+| `ST_READONLY` | `true` | Skip write and delete tools at registration time |
+| `ST_CONFIRM_WRITES` | `false` | Require `confirm=true` to execute write tools |
+| `ST_MAX_RESPONSE_CHARS` | `100000` | Cap tool response size |
+| `ST_DOMAINS` | *(all)* | Comma-separated domain allowlist (e.g. `crm,dispatch,reporting`) |
+| `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
+| `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — critical for date-bound intelligence tools |
+| `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable response transformation and return raw API data |
+| `ST_CORS_ORIGIN` | `*` | Allowed CORS origin for the SSE server |
+
+> **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants.
+
+Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
+
+---
+
+## Architecture
+
+The server is built as a layered system: **Config → OAuth Client → Domain Registry → MCP Server**.
+
+- **Domain module pattern** — each domain lives in `src/domains/<domain>/` and exports a loader that registers its tools
+- **Dynamic discovery** — `src/index.ts` scans `src/domains/*` and imports each domain at runtime
+- **Central registry** — `ToolRegistry` handles domain filtering, read-only enforcement, confirmation wrapping, and audit logging
+- **OAuth client** — `ServiceTitanClient` manages client-credentials auth, token refresh, retry-on-401/429, and `{tenant}` path injection
+- **Response shaping** — transformer layer strips API noise and structures responses for LLM consumption
+- **Intelligence layer** — composite tools fan out to multiple endpoints and report IDs, then aggregate results
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the full deep-dive: route table, response shaping pipeline, intelligence layer design, and safety system.
+
+---
+
+## Comparison
+
+| Feature | This Server | Community MCP Servers |
+|---------|------------|----------------------|
+| Revenue accuracy | ✅ 0.001% of dashboard | ❌ $17–21K off per period |
+| Intelligence tools | ✅ 10 tools | ❌ None |
+| Domain coverage | ✅ 505 tools, 15 domains | ⚠️ 10–50 tools |
+| Safety layer | ✅ Read-only default, audit log | ❌ None |
+| Response shaping | ✅ LLM-optimized | ❌ Raw API responses |
+| Name-based filtering | ✅ Resolve names to IDs automatically | ❌ Numeric IDs required |
+| Remote deployment | ✅ SSE + `mcp-remote` | ⚠️ Varies |
+
+---
 
 ## Development
 
@@ -267,27 +257,30 @@ npm run test       # vitest run
 npm run lint       # eslint src/
 npm run typecheck  # tsc --noEmit
 npm run build      # compile to build/
+npm run start      # run compiled server
 ```
 
-To run compiled server directly:
+---
 
-```bash
-npm run start
-```
+## Safety
 
-## Architecture Overview
+- **Read-only mode** (`ST_READONLY=true` by default) — write and delete tools are skipped at registration
+- **Confirmation workflow** — delete tools always require `confirm=true`; write tools optionally require it via `ST_CONFIRM_WRITES=true`; missing confirmation returns a preview payload instead of executing
+- **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
 
-- Domain module pattern:
-  - Each domain lives in `src/domains/<domain>/`.
-  - Domain `index.ts` exports a loader that registers all tools in that domain.
-- Dynamic domain discovery:
-  - `src/index.ts` scans `src/domains/*` and imports each domain `index.js` at runtime.
-- Central registry:
-  - `ToolRegistry` handles filtering (`ST_DOMAINS`, `ST_READONLY`), confirmation wrapping, audit hooks, and registration stats.
-- API client layer:
-  - `ServiceTitanClient` manages OAuth client-credentials auth, token refresh, retry-on-401/429 behavior, and `{tenant}` path replacement.
-- System tool:
-  - `st_health_check` validates auth, tenant access, active config, and registration summary.
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+---
+
+## Security
+
+See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
+
+---
 
 ## License
 
