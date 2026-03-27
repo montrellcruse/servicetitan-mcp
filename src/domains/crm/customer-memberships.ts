@@ -10,6 +10,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const membershipStatusSchema = z.enum(["Active", "Suspended", "Expired", "Canceled", "Deleted"]);
 
@@ -89,9 +90,6 @@ const membershipCustomFieldsListSchema = dateFilterParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerCustomerMembershipTools(
   client: ServiceTitanClient,
@@ -128,7 +126,7 @@ export function registerCustomerMembershipTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -159,7 +157,7 @@ export function registerCustomerMembershipTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -177,7 +175,7 @@ export function registerCustomerMembershipTools(
         const data = await client.get(`/tenant/{tenant}/memberships/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -195,7 +193,7 @@ export function registerCustomerMembershipTools(
         const data = await client.patch(`/tenant/{tenant}/memberships/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -213,7 +211,7 @@ export function registerCustomerMembershipTools(
         const data = await client.post("/tenant/{tenant}/memberships/sale", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -231,7 +229,7 @@ export function registerCustomerMembershipTools(
         const data = await client.get(`/tenant/{tenant}/memberships/${input.id}/status-changes`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

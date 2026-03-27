@@ -3,14 +3,12 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const bulkTagsAddSchema = z.object({
   tags: z.array(z.string()).describe("Tags to add"),
 });
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
@@ -29,7 +27,7 @@ export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolR
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -45,7 +43,7 @@ export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.delete("/tenant/{tenant}/tags");
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

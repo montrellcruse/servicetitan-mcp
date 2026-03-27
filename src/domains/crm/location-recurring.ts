@@ -10,6 +10,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const recurringServiceEventStatusSchema = z.enum([
   "NotAttempted",
@@ -71,9 +72,6 @@ const recurringServiceEventsListSchema = paginationParams(
   }),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerLocationRecurringTools(
   client: ServiceTitanClient,
@@ -92,7 +90,7 @@ export function registerLocationRecurringTools(
         const data = await client.get(`/tenant/{tenant}/recurring-services/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -110,7 +108,7 @@ export function registerLocationRecurringTools(
         const data = await client.patch(`/tenant/{tenant}/recurring-services/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -144,7 +142,7 @@ export function registerLocationRecurringTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -176,7 +174,7 @@ export function registerLocationRecurringTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -196,7 +194,7 @@ export function registerLocationRecurringTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -216,7 +214,7 @@ export function registerLocationRecurringTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

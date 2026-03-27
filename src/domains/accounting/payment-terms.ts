@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const paymentTermGetSchema = z.object({
   paymentTermId: z.number().int().describe("Payment term ID"),
@@ -17,9 +18,6 @@ const paymentTermsListSchema = paginationParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerPaymentTermTools(
   client: ServiceTitanClient,
@@ -38,7 +36,7 @@ export function registerPaymentTermTools(
         const data = await client.get(`/tenant/{tenant}/payment-terms/${input.paymentTermId}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -69,7 +67,7 @@ export function registerPaymentTermTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

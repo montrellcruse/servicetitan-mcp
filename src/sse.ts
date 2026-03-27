@@ -224,10 +224,24 @@ async function main(): Promise<void> {
 
       // Parse the body
       const chunks: Buffer[] = [];
+      let totalSize = 0;
       for await (const chunk of req) {
-        chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+        const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+        totalSize += buf.length;
+        if (totalSize > 1_048_576) { // 1MB limit
+          sendJson(res, 413, { error: "Payload too large" });
+          return;
+        }
+        chunks.push(buf);
       }
-      const body = JSON.parse(Buffer.concat(chunks).toString());
+
+      let body: unknown;
+      try {
+        body = JSON.parse(Buffer.concat(chunks).toString());
+      } catch {
+        sendJson(res, 400, { error: "Invalid JSON body" });
+        return;
+      }
 
       await transport.handlePostMessage(req, res, body);
       return;
@@ -240,6 +254,18 @@ async function main(): Promise<void> {
     logger.info(`SSE server listening on 0.0.0.0:${PORT}`);
     logger.info(`Connect Claude Desktop with: http://localhost:${PORT}/sse`);
   });
+
+  const shutdown = () => {
+    logger.info("Shutdown signal received, closing server...");
+    httpServer.close(() => {
+      logger.info("HTTP server closed");
+      process.exit(0);
+    });
+    // Force exit after 10s if connections don't drain
+    setTimeout(() => process.exit(1), 10_000).unref();
+  };
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
 }
 
 main().catch((error: unknown) => {

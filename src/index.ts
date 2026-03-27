@@ -108,7 +108,7 @@ async function main(): Promise<void> {
   });
 
   // 6. Load domain modules (dynamic imports from ./domains/)
-  // Spec 01 has no domain modules yet, this just keeps the hook in place.
+  // Scans ./domains/*, imports each domain index.js, and registers all tools into the registry.
   await loadDomainModules(registry, logger);
 
   // 7. Log summary

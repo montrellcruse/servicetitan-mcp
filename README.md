@@ -51,6 +51,8 @@ npm run build
 | `ST_DOMAINS` | No | All domains | Comma-separated domain allowlist (example: `crm,dispatch,reporting`). |
 | `ST_LOG_LEVEL` | No | `info` | Logger level: `debug`, `info`, `warn`, `error`. |
 | `ST_TIMEZONE` | No | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`). Intelligence tools use this to align date boundaries with the tenant's local time. |
+| `ST_RESPONSE_SHAPING` | No | `true` | Set to `false` to disable response transformation (returns raw API data). |
+| `ST_MCP_API_KEY` | Yes (remote) | None | API key for authenticating remote MCP clients. Required when deploying as an SSE server. |
 
 Notes:
 - Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).

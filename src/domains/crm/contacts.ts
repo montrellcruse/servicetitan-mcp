@@ -10,6 +10,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const contactIdSchema = z.object({
   id: z.string().uuid().describe("Contact ID"),
@@ -84,9 +85,6 @@ const contactRelationshipListSchema = paginationParams(
   }),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerContactTools(
   client: ServiceTitanClient,
@@ -105,7 +103,7 @@ export function registerContactTools(
         const data = await client.get(`/tenant/{tenant}/contacts/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -126,7 +124,7 @@ export function registerContactTools(
           message: "Contact deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -144,7 +142,7 @@ export function registerContactTools(
         const data = await client.put(`/tenant/{tenant}/contacts/${input.id}`, input.body);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -170,7 +168,7 @@ export function registerContactTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -201,7 +199,7 @@ export function registerContactTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -236,7 +234,7 @@ export function registerContactTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -271,7 +269,7 @@ export function registerContactTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -295,7 +293,7 @@ export function registerContactTools(
           message: "Contact relationship deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -316,7 +314,7 @@ export function registerContactTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -348,7 +346,7 @@ export function registerContactTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

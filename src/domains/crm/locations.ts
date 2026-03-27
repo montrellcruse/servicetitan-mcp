@@ -11,6 +11,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const locationAddressSchema = z.object({
   street: z.string().optional().describe("Street"),
@@ -199,9 +200,6 @@ const locationLaborTypesListSchema = paginationParams(
     .extend(activeFilterParam()),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerLocationTools(
   client: ServiceTitanClient,
@@ -220,7 +218,7 @@ export function registerLocationTools(
         const data = await client.get(`/tenant/{tenant}/locations/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -238,7 +236,7 @@ export function registerLocationTools(
         const data = await client.patch(`/tenant/{tenant}/locations/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -271,7 +269,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -317,7 +315,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -347,7 +345,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -369,7 +367,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -390,7 +388,7 @@ export function registerLocationTools(
           message: "Location note deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -415,7 +413,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -450,7 +448,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -471,7 +469,7 @@ export function registerLocationTools(
           message: "Location contact deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -505,7 +503,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -536,7 +534,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -556,7 +554,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -577,7 +575,7 @@ export function registerLocationTools(
           message: "Location tag deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -607,7 +605,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -638,7 +636,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

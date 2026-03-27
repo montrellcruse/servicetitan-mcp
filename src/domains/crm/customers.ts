@@ -11,6 +11,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const customerAddressSchema = z.object({
   street: z.string().optional().describe("Street"),
@@ -189,9 +190,6 @@ const customerCustomFieldTypesSchema = dateFilterParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerCustomerTools(
   client: ServiceTitanClient,
@@ -210,7 +208,7 @@ export function registerCustomerTools(
         const data = await client.get(`/tenant/{tenant}/customers/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -228,7 +226,7 @@ export function registerCustomerTools(
         const data = await client.patch(`/tenant/{tenant}/customers/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -275,7 +273,7 @@ export function registerCustomerTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -305,7 +303,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -331,7 +329,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -365,7 +363,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -386,7 +384,7 @@ export function registerCustomerTools(
           message: "Customer note deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -407,7 +405,7 @@ export function registerCustomerTools(
           message: "Customer note deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -433,7 +431,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -454,7 +452,7 @@ export function registerCustomerTools(
           message: "Customer contact deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -486,7 +484,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -506,7 +504,7 @@ export function registerCustomerTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -537,7 +535,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -558,7 +556,7 @@ export function registerCustomerTools(
           message: "Customer tag deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -579,7 +577,7 @@ export function registerCustomerTools(
           message: "Customer tag deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -610,7 +608,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
