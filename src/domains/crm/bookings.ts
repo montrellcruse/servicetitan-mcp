@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const bookingIdSchema = z.object({
   id: z.number().int().describe("Booking ID"),
@@ -86,9 +87,6 @@ const bookingProviderListSchema = bookingListFilterSchema.extend({
   bookingProvider: z.number().int().describe("Booking provider ID"),
 });
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerBookingTools(
   client: ServiceTitanClient,
@@ -107,7 +105,7 @@ export function registerBookingTools(
         const data = await client.get(`/tenant/{tenant}/bookings/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -127,7 +125,7 @@ export function registerBookingTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -153,7 +151,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -186,7 +184,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -208,7 +206,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -230,7 +228,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -258,7 +256,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -291,7 +289,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -317,7 +315,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -343,7 +341,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -371,7 +369,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -399,7 +397,7 @@ export function registerBookingTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

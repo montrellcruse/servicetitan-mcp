@@ -10,6 +10,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const leadStatusSchema = z.enum(["Open", "Dismissed", "Converted"]);
 
@@ -109,9 +110,6 @@ const leadFormSubmitSchema = z.object({
   id: z.number().int().optional().describe("Lead form ID"),
 });
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
@@ -127,7 +125,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.get(`/tenant/{tenant}/leads/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -145,7 +143,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.patch(`/tenant/{tenant}/leads/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -163,7 +161,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.post("/tenant/{tenant}/leads", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -186,7 +184,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -208,7 +206,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -238,7 +236,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -281,7 +279,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -299,7 +297,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.post(`/tenant/{tenant}/leads/${input.id}/dismiss`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -322,7 +320,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

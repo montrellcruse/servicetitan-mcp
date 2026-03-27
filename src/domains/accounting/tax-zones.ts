@@ -11,6 +11,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const taxZonesListSchema = paginationParams(
   dateFilterParams(
@@ -22,9 +23,6 @@ const taxZonesListSchema = paginationParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerTaxZoneTools(
   client: ServiceTitanClient,
@@ -57,7 +55,7 @@ export function registerTaxZoneTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

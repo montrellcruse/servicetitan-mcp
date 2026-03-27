@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const apPaymentsListSchema = dateFilterParams(
   paginationParams(
@@ -16,9 +17,6 @@ const apPaymentsListSchema = dateFilterParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerApPaymentTools(
   client: ServiceTitanClient,
@@ -35,7 +33,7 @@ export function registerApPaymentTools(
         const data = await client.post("/tenant/{tenant}/ap-payments/markasexported");
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -67,7 +65,7 @@ export function registerApPaymentTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

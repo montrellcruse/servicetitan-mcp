@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const bookingProviderTagGetSchema = z.object({
   id: z.number().int().describe("Booking provider tag ID"),
@@ -29,9 +30,6 @@ const bookingProviderTagListSchema = dateFilterParams(
   ),
 );
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerBookingProviderTagTools(
   client: ServiceTitanClient,
@@ -50,7 +48,7 @@ export function registerBookingProviderTagTools(
         const data = await client.post("/tenant/{tenant}/booking-provider-tags", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -70,7 +68,7 @@ export function registerBookingProviderTagTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -94,7 +92,7 @@ export function registerBookingProviderTagTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -126,7 +124,7 @@ export function registerBookingProviderTagTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

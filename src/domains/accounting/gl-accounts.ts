@@ -11,6 +11,7 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const glAccountCreateSchema = z.object({
   name: z.string().describe("GL account name"),
@@ -102,9 +103,6 @@ const glAccountUpdateInputSchema = z.object({
     .describe("Fields to patch on the GL account"),
 });
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerGlAccountTools(
   client: ServiceTitanClient,
@@ -123,7 +121,7 @@ export function registerGlAccountTools(
         const data = await client.get(`/tenant/{tenant}/gl-accounts/${input.accountId}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -141,7 +139,7 @@ export function registerGlAccountTools(
         const data = await client.post("/tenant/{tenant}/gl-accounts", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -181,7 +179,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -202,7 +200,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -235,7 +233,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });

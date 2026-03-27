@@ -3,6 +3,7 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { getErrorMessage } from "../intelligence/helpers.js";
 
 const contactMethodPathSchema = z.object({
   contactId: z.string().uuid().describe("Contact ID"),
@@ -69,9 +70,6 @@ const upsertContactMethodSchema = z.object({
     .describe("Contact method replace payload"),
 });
 
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
 
 export function registerContactMethodTools(
   client: ServiceTitanClient,
@@ -92,7 +90,7 @@ export function registerContactMethodTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -117,7 +115,7 @@ export function registerContactMethodTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -151,7 +149,7 @@ export function registerContactMethodTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -172,7 +170,7 @@ export function registerContactMethodTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -193,7 +191,7 @@ export function registerContactMethodTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
@@ -217,7 +215,7 @@ export function registerContactMethodTools(
           message: "Contact method deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(errorMessage(error));
+        return toolError(getErrorMessage(error));
       }
     },
   });
