@@ -3,7 +3,7 @@
 # Secrets: fly secrets set ST_CLIENT_ID=... ST_CLIENT_SECRET=... etc.
 
 app = "servicetitan-mcp"
-primary_region = "iad"  
+primary_region = "iad"
 
 [build]
 
