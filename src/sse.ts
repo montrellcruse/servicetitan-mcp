@@ -14,9 +14,12 @@
  *   POST /messages     → MCP message endpoint (used by SSE transport)
  *   GET  /health       → Health check (no auth required)
  */
+import { timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
@@ -42,6 +45,13 @@ const API_KEY = process.env.ST_MCP_API_KEY ?? "";
 if (!API_KEY) {
   process.stderr.write("Fatal: ST_MCP_API_KEY is required for remote access.\n");
   process.exit(1);
+}
+
+// ── Constant-time string comparison (timing-attack resistant) ──
+
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
 }
 
 // ── Reuse the domain loading logic from index.ts ──
@@ -78,12 +88,12 @@ async function loadDomainModules(
 
 function authenticate(req: IncomingMessage): boolean {
   const key = req.headers["x-api-key"];
-  if (typeof key === "string" && key === API_KEY) {
+  if (typeof key === "string" && safeCompare(key, API_KEY)) {
     return true;
   }
   // Also check Authorization: Bearer <key>
   const auth = req.headers.authorization;
-  if (typeof auth === "string" && auth.startsWith("Bearer ") && auth.slice(7) === API_KEY) {
+  if (typeof auth === "string" && auth.startsWith("Bearer ") && safeCompare(auth.slice(7), API_KEY)) {
     return true;
   }
   return false;
@@ -94,8 +104,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-function sendCorsHeaders(res: ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
+  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization");
 }
@@ -146,13 +156,19 @@ async function main(): Promise<void> {
   registry.logSummary();
 
   const stats = registry.getStats();
-  logger.info("SSE server starting", { port: PORT, tools: stats.registered });
+
+  // ── Startup banner ──
+  // Read version from package.json
+  const _require = createRequire(import.meta.url);
+  const pkg = _require("../package.json") as { version: string };
+  const version = pkg.version;
 
   // Track active SSE transports by session ID
   const transports = new Map<string, SSEServerTransport>();
 
   const httpServer = createServer(async (req, res) => {
-    sendCorsHeaders(res);
+    const requestId = randomUUID();
+    sendCorsHeaders(res, config.corsOrigin);
 
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
@@ -162,6 +178,8 @@ async function main(): Promise<void> {
     }
 
     const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
+
+    logger.info(`[${requestId}] ${req.method} ${req.url}`);
 
     // Health endpoint (no auth)
     if (url.pathname === "/health" && req.method === "GET") {
@@ -176,7 +194,7 @@ async function main(): Promise<void> {
 
     // Auth required for everything else
     if (!authenticate(req)) {
-      sendJson(res, 401, { error: "Unauthorized" });
+      sendJson(res, 401, { error: "Unauthorized", requestId });
       return;
     }
 
@@ -203,7 +221,19 @@ async function main(): Promise<void> {
         logger.info("SSE client disconnected", { sessionId: transport.sessionId });
       };
 
-      logger.info("SSE client connected", { sessionId: transport.sessionId });
+      logger.info("SSE client connected", { sessionId: transport.sessionId, requestId });
+
+      // ── SSE keepalive heartbeat ──
+      // Sends a comment every 30 s to keep the connection alive and detect
+      // silently-disconnected clients (res.write() will fail and trigger "close").
+      const keepAlive = setInterval(() => {
+        res.write(": keepalive\n\n");
+      }, 30_000);
+
+      res.on("close", () => {
+        clearInterval(keepAlive);
+      });
+
       await server.connect(transport);
       return;
     }
@@ -212,13 +242,13 @@ async function main(): Promise<void> {
     if (url.pathname === "/messages" && req.method === "POST") {
       const sessionId = url.searchParams.get("sessionId");
       if (!sessionId) {
-        sendJson(res, 400, { error: "Missing sessionId query parameter" });
+        sendJson(res, 400, { error: "Missing sessionId query parameter", requestId });
         return;
       }
 
       const transport = transports.get(sessionId);
       if (!transport) {
-        sendJson(res, 404, { error: "Unknown session" });
+        sendJson(res, 404, { error: "Unknown session", requestId });
         return;
       }
 
@@ -229,7 +259,7 @@ async function main(): Promise<void> {
         const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
         totalSize += buf.length;
         if (totalSize > 1_048_576) { // 1MB limit
-          sendJson(res, 413, { error: "Payload too large" });
+          sendJson(res, 413, { error: "Payload too large", requestId });
           return;
         }
         chunks.push(buf);
@@ -239,7 +269,7 @@ async function main(): Promise<void> {
       try {
         body = JSON.parse(Buffer.concat(chunks).toString());
       } catch {
-        sendJson(res, 400, { error: "Invalid JSON body" });
+        sendJson(res, 400, { error: "Invalid JSON body", requestId });
         return;
       }
 
@@ -247,11 +277,15 @@ async function main(): Promise<void> {
       return;
     }
 
-    sendJson(res, 404, { error: "Not found" });
+    sendJson(res, 404, { error: "Not found", requestId });
   });
 
   httpServer.listen(PORT, "0.0.0.0", () => {
-    logger.info(`SSE server listening on 0.0.0.0:${PORT}`);
+    logger.info(`ServiceTitan MCP Server v${version}`);
+    logger.info(`Transport: SSE on port ${PORT}`);
+    logger.info(`Read-only: ${config.readonlyMode ? "yes" : "no"}`);
+    logger.info(`CORS origin: ${config.corsOrigin}`);
+    logger.info(`Tools registered: ${stats.registered}`);
     logger.info(`Connect Claude Desktop with: http://localhost:${PORT}/sse`);
   });
 

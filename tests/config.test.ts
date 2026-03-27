@@ -25,6 +25,7 @@ describe("loadConfig", () => {
       enabledDomains: null,
       logLevel: "info",
       timezone: "UTC",
+      corsOrigin: "*",
     });
   });
 
@@ -180,5 +181,15 @@ describe("loadConfig", () => {
     expect(() =>
       loadConfig({ ...validEnv, ST_TIMEZONE: "Not/A/Timezone" }),
     ).toThrow(/ST_TIMEZONE must be a valid IANA timezone/);
+  });
+
+  it("defaults corsOrigin to * when ST_CORS_ORIGIN is not set", () => {
+    const config = loadConfig(validEnv);
+    expect(config.corsOrigin).toBe("*");
+  });
+
+  it("uses ST_CORS_ORIGIN when set", () => {
+    const config = loadConfig({ ...validEnv, ST_CORS_ORIGIN: "https://app.example.com" });
+    expect(config.corsOrigin).toBe("https://app.example.com");
   });
 });

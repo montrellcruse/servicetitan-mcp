@@ -10,6 +10,7 @@ export interface ServiceTitanConfig {
   enabledDomains: string[] | null;
   logLevel: "debug" | "info" | "warn" | "error";
   timezone: string;
+  corsOrigin: string;
 }
 
 const REQUIRED_ENV_VARS = [
@@ -162,5 +163,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     enabledDomains: parseDomains(env.ST_DOMAINS),
     logLevel: parseLogLevel(env.ST_LOG_LEVEL),
     timezone: parseTimezone(env.ST_TIMEZONE),
+    corsOrigin: env.ST_CORS_ORIGIN ?? "*",
   };
 }
