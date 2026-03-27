@@ -23,11 +23,15 @@
  *  - OPTIONS preflight returns 204 with CORS headers
  *  - Auth via x-api-key header
  *  - Auth via Authorization: Bearer header
+ *  - Error responses include requestId field
+ *  - CORS origin is configurable
  */
 
+import { timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
 import { AddressInfo } from "node:net";
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Re-implement the minimal HTTP handler logic from sse.ts so we can test it
@@ -41,8 +45,8 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
   res.end(JSON.stringify(body));
 }
 
-function sendCorsHeaders(res: ServerResponse): void {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
+  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader(
     "Access-Control-Allow-Headers",
@@ -50,16 +54,21 @@ function sendCorsHeaders(res: ServerResponse): void {
   );
 }
 
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+}
+
 function authenticate(req: IncomingMessage, apiKey: string): boolean {
   const key = req.headers["x-api-key"];
-  if (typeof key === "string" && key === apiKey) {
+  if (typeof key === "string" && safeCompare(key, apiKey)) {
     return true;
   }
   const auth = req.headers.authorization;
   if (
     typeof auth === "string" &&
     auth.startsWith("Bearer ") &&
-    auth.slice(7) === apiKey
+    safeCompare(auth.slice(7), apiKey)
   ) {
     return true;
   }
@@ -70,12 +79,13 @@ function authenticate(req: IncomingMessage, apiKey: string): boolean {
 // MCP infrastructure or SSEServerTransport (which would stream indefinitely).
 type FakeHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
 
-function buildHandler(apiKey: string): FakeHandler {
+function buildHandler(apiKey: string, corsOrigin = "*"): FakeHandler {
   // Simulated in-memory session registry (a real SSE connection populates this)
   const knownSessions = new Set<string>(["valid-session-id"]);
 
   return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    sendCorsHeaders(res);
+    const requestId = randomUUID();
+    sendCorsHeaders(res, corsOrigin);
 
     if (req.method === "OPTIONS") {
       res.writeHead(204);
@@ -101,7 +111,7 @@ function buildHandler(apiKey: string): FakeHandler {
 
     // ── Auth gate ──
     if (!authenticate(req, apiKey)) {
-      sendJson(res, 401, { error: "Unauthorized" });
+      sendJson(res, 401, { error: "Unauthorized", requestId });
       return;
     }
 
@@ -125,12 +135,12 @@ function buildHandler(apiKey: string): FakeHandler {
     if (url.pathname === "/messages" && req.method === "POST") {
       const sessionId = url.searchParams.get("sessionId");
       if (!sessionId) {
-        sendJson(res, 400, { error: "Missing sessionId query parameter" });
+        sendJson(res, 400, { error: "Missing sessionId query parameter", requestId });
         return;
       }
 
       if (!knownSessions.has(sessionId)) {
-        sendJson(res, 404, { error: "Unknown session" });
+        sendJson(res, 404, { error: "Unknown session", requestId });
         return;
       }
 
@@ -142,7 +152,7 @@ function buildHandler(apiKey: string): FakeHandler {
           typeof chunk === "string" ? Buffer.from(chunk) : (chunk as Buffer);
         totalSize += buf.length;
         if (totalSize > 1_048_576) {
-          sendJson(res, 413, { error: "Payload too large" });
+          sendJson(res, 413, { error: "Payload too large", requestId });
           return;
         }
         chunks.push(buf);
@@ -152,7 +162,7 @@ function buildHandler(apiKey: string): FakeHandler {
       try {
         _body = JSON.parse(Buffer.concat(chunks).toString());
       } catch {
-        sendJson(res, 400, { error: "Invalid JSON body" });
+        sendJson(res, 400, { error: "Invalid JSON body", requestId });
         return;
       }
 
@@ -161,7 +171,7 @@ function buildHandler(apiKey: string): FakeHandler {
       return;
     }
 
-    sendJson(res, 404, { error: "Not found" });
+    sendJson(res, 404, { error: "Not found", requestId });
   };
 }
 
@@ -291,7 +301,12 @@ describe("SSE transport HTTP handler", () => {
   it("GET /sse returns 401 with no auth headers", async () => {
     const res = await httpRequest(`${baseUrl}/sse`);
     expect(res.status).toBe(401);
-    expect(res.json<{ error: string }>().error).toBe("Unauthorized");
+    const body = res.json<{ error: string; requestId: string }>();
+    expect(body.error).toBe("Unauthorized");
+    expect(typeof body.requestId).toBe("string");
+    expect(body.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
   });
 
   it("GET /sse returns 401 with wrong x-api-key header", async () => {
@@ -410,7 +425,9 @@ describe("SSE transport HTTP handler", () => {
       },
     );
     expect(res.status).toBe(400);
-    expect(res.json<{ error: string }>().error).toBe("Invalid JSON body");
+    const body = res.json<{ error: string; requestId: string }>();
+    expect(body.error).toBe("Invalid JSON body");
+    expect(typeof body.requestId).toBe("string");
   });
 
   it("POST /messages returns 413 when body exceeds 1 MB", async () => {
@@ -428,7 +445,9 @@ describe("SSE transport HTTP handler", () => {
       },
     );
     expect(res.status).toBe(413);
-    expect(res.json<{ error: string }>().error).toBe("Payload too large");
+    const body = res.json<{ error: string; requestId: string }>();
+    expect(body.error).toBe("Payload too large");
+    expect(typeof body.requestId).toBe("string");
   });
 
   it("POST /messages returns 400 when sessionId query param is missing", async () => {
@@ -482,5 +501,75 @@ describe("SSE transport HTTP handler", () => {
       headers: { "x-api-key": TEST_API_KEY },
     });
     expect(res.status).toBe(404);
+  });
+
+  // ── requestId in error responses ──
+
+  it("401 response includes a requestId UUID", async () => {
+    const res = await httpRequest(`${baseUrl}/sse`);
+    expect(res.status).toBe(401);
+    const body = res.json<{ error: string; requestId: string }>();
+    expect(body.requestId).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
+    );
+  });
+
+  it("each request gets a unique requestId", async () => {
+    const [r1, r2] = await Promise.all([
+      httpRequest(`${baseUrl}/sse`),
+      httpRequest(`${baseUrl}/sse`),
+    ]);
+    const id1 = r1.json<{ requestId: string }>().requestId;
+    const id2 = r2.json<{ requestId: string }>().requestId;
+    expect(id1).not.toBe(id2);
+  });
+});
+
+// ── CORS origin configuration ──
+
+describe("SSE transport CORS origin configuration", () => {
+  let baseUrl: string;
+  let server: ReturnType<typeof createServer>;
+
+  beforeAll(
+    () =>
+      new Promise<void>((resolve) => {
+        const handler = buildHandler(TEST_API_KEY, "https://app.example.com");
+        server = createServer((req, res) => {
+          handler(req, res).catch((err: unknown) => {
+            res.writeHead(500);
+            res.end(String(err));
+          });
+        });
+        server.listen(0, "127.0.0.1", () => {
+          const { port } = server.address() as AddressInfo;
+          baseUrl = `http://127.0.0.1:${port}`;
+          resolve();
+        });
+      }),
+  );
+
+  afterAll(
+    () =>
+      new Promise<void>((resolve) => {
+        if (typeof (server as any).closeAllConnections === "function") {
+          (server as any).closeAllConnections();
+        }
+        server.close(() => resolve());
+        setTimeout(resolve, 2_000).unref?.();
+      }),
+    15_000,
+  );
+
+  it("OPTIONS preflight returns configured CORS origin", async () => {
+    const res = await httpRequest(`${baseUrl}/health`, { method: "OPTIONS" });
+    expect(res.status).toBe(204);
+    expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
+  });
+
+  it("non-preflight requests include configured CORS origin header", async () => {
+    const res = await httpRequest(`${baseUrl}/health`);
+    expect(res.status).toBe(200);
+    expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
   });
 });
