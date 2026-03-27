@@ -1,67 +1,103 @@
-# Contributing
+# Contributing to ServiceTitan MCP Server
 
-This project uses domain-based modules and a centralized tool registry. Follow the patterns below when adding or changing tools.
+Thank you for your interest in contributing! This document covers development setup, architecture conventions, and the PR process.
 
-## Add a New Tool
+## Prerequisites
 
-1. Pick the correct domain directory under `src/domains/<domain>/`.
-2. Create or update a resource file (for example: `src/domains/crm/customers.ts`).
-3. Implement a `register...Tools(client, registry)` function in that file.
-4. Register each tool via `registry.register({ ... })` with:
-   - `name`
-   - `domain`
-   - `operation` (`read` | `write` | `delete`)
-   - `schema`
-   - `handler`
-5. Register the tool module from that domain’s `index.ts` loader.
-6. Ensure tool naming follows the convention below.
+- Node.js >= 20
+- npm >= 10
+- A ServiceTitan developer account with API credentials
 
-## Add a New Domain
-
-1. Create directory: `src/domains/<new-domain>/`.
-2. Add tool files and registration functions for that domain.
-3. Create `src/domains/<new-domain>/index.ts` that:
-   - imports each register function
-   - exports a loader function that calls them
-   - exports the loader as default
-4. `src/index.ts` discovers domains dynamically, so no hardcoded root import is required as long as the domain has `index.ts` (compiled to `index.js`).
-
-## Naming Convention
-
-Use:
-
-`{domain}_{resource}_{action}`
-
-Examples:
-- `crm_customer_get`
-- `dispatch_job_update`
-- `inventory_purchase_order_delete`
-
-Keep names explicit and consistent with tool operation.
-
-## Testing Requirements
-
-- Add or update tests for every new tool.
-- Cover:
-  - success path
-  - schema validation failures
-  - safety behavior (read-only skip, confirmation preview where applicable)
-  - error path from ServiceTitan/API client
-- Put tests in the existing structure under `tests/` (domain tests and safety tests as appropriate).
-
-## Pull Request Checklist
-
-Before opening a PR, run:
+## Getting Started
 
 ```bash
-npm run typecheck
-npm run lint
-npm run test
-npm run build
+git clone https://github.com/montrellcruse/servicetitan-mcp.git
+cd servicetitan-mcp
+npm ci
+cp .env.example .env
+# Fill in your ServiceTitan credentials
 ```
 
-PR should include:
+## Development Workflow
 
-- Clear summary of affected domains/tools
-- Test coverage for new behavior
-- Updated docs if env vars, behavior, or tool surfaces changed
+```bash
+# Build
+npm run build
+
+# Run locally (stdio mode)
+npm start
+
+# Run as SSE server
+npm run start:sse
+
+# Run tests
+npm test
+
+# Type-check
+npx tsc --noEmit
+
+# Lint
+npm run lint
+
+# Regenerate tool catalog
+npm run docs:tools
+```
+
+## Adding a New Domain
+
+1. Create a directory: `src/domains/<domain>/`
+2. Create tool files following the existing pattern (one file per resource)
+3. Each tool file exports a function that takes `(client, registry)` and registers tools via `registry.register()`
+4. Use Zod schemas for input validation
+5. Use `toolResult()` and `toolError()` helpers from `src/utils.ts`
+6. Use `getErrorMessage()` from `src/domains/intelligence/helpers.ts` for error formatting
+7. Create an `index.ts` that imports and re-exports all tool registrations
+8. Add tests in `tests/domains/<domain>.test.ts`
+
+## Adding an Intelligence Tool
+
+Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed business answers (revenue summaries, snapshots, leaderboards) rather than raw CRUD access.
+
+1. Create the tool in `src/domains/intelligence/`
+2. Register with `isIntelligence: true` flag
+3. Handle partial failures gracefully (use `Promise.allSettled` or `fetchWithWarning` pattern from existing tools)
+4. Include timezone-aware date handling via the `timezone` field from `registry.timezone`
+5. Add comprehensive tests — intelligence tools are the project's core differentiator
+
+## Naming Conventions
+
+- **Tool names:** `<domain>_<resource>_<action>` (e.g., `crm_customers_list`, `intel_revenue_summary`)
+- **Files:** kebab-case (e.g., `gl-accounts.ts`, `customer-memberships.ts`)
+- **Functions/variables:** camelCase
+- **Types/interfaces:** PascalCase
+
+## Coding Conventions
+
+- TypeScript strict mode — no `any` types
+- Use `getErrorMessage()` for error formatting (do NOT define local copies)
+- Use Zod schemas for all tool input validation
+- Use `toolResult()` / `toolError()` for tool responses
+- Respect read-only mode: the registry skips write/delete tools automatically when `ST_READONLY=true`
+
+## Commit Messages
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
+- `feat:` — new tool or feature
+- `fix:` — bug fix
+- `docs:` — documentation
+- `chore:` — maintenance
+- `test:` — tests
+- `refactor:` — restructuring without behavior change
+
+## Pull Request Process
+
+1. Fork and create a feature branch
+2. Make changes with tests
+3. Ensure `npm run build && npm test && npm run lint` pass
+4. Update CHANGELOG.md under `[Unreleased]`
+5. If adding tools, run `npm run docs:tools` to regenerate TOOLS.md
+6. Submit PR with clear description
+
+## Questions?
+
+Open an issue or start a discussion on GitHub.

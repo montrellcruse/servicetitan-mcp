@@ -1,0 +1,51 @@
+name: Bug Report
+description: Report a bug in the ServiceTitan MCP Server
+labels: ["bug"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Describe the bug
+      description: A clear description of what the bug is.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: How can we reproduce this?
+      placeholder: |
+        1. Connect MCP client to server
+        2. Call tool `...`
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: transport
+    attributes:
+      label: Transport Mode
+      options:
+        - stdio
+        - SSE (remote)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Server Version
+      placeholder: "2.1.1"
+    validations:
+      required: true
+  - type: input
+    id: node
+    attributes:
+      label: Node.js Version
+      placeholder: "v22.0.0"
+    validations:
+      required: true

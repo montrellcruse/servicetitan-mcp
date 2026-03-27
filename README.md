@@ -1,5 +1,8 @@
 # ServiceTitan MCP Server (Enterprise)
 
+[![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Enterprise-grade MCP server for the ServiceTitan API, built for safe production use with domain-level control, write safeguards, and high-value intelligence tools.
 
 ## Features
