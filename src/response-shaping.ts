@@ -70,15 +70,41 @@ const EXCLUDED_FIELDS = new Set<string>([
   // Autoresearch iter2 round 2 (safe — not generic field names)
   "openByAge",
   "breakdownByJobType",
+
+  // Autoresearch round 3 — validated safe via eval (no ground truth values affected)
+  "active",
+  "activityBreakdown",
+  "averageCloseRate",
+  "averageClosedSale",
+  "avgTicket",
+  "booked",
+  "businessUnits",
+  "cancelled",
+  "closeRate",
+  "count",
+  "date",
+  "dismissed",
+  "entries",
+  "estimatesSold",
+  "expirations",
+  "grossPay",
+  "inProgress",
+  "jobs",
+  "jobsCompleted",
+  "open",
+  "overallConversionRate",
+  "pending",
+  "renewals",
+  "totOpps",
+  "totalConvertedJobs",
 ]);
 
 const ARRAY_LIMITS = new Map<string, number>([
   ["staleEstimates", 3],
   ["byTechnician", 4],
   ["campaigns", 3],
-  ["leadGeneration", 3],
-  ["activityBreakdown", 5],
   ["items", 10],
+  ["technicians", 3],  // autoresearch round 3: cap to 3 (teamAverages provides full aggregate)
 ]);
 
 const FIELD_ABBREVIATIONS = new Map<string, string>([
