@@ -31,7 +31,7 @@ export function registerPeopleGpsTools(
     operation: "write",
     description: "Submit GPS pings from an external provider",
     schema: {
-      gpsProvider: z.string().describe("GPS provider identifier"),
+      gpsProvider: z.string().regex(/^[A-Za-z0-9_-]+$/, "GPS provider must be alphanumeric, hyphens, or underscores").describe("GPS provider identifier"),
       pings: z
         .array(gpsPingSchema)
         .min(1)

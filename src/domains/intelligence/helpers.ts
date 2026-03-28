@@ -126,6 +126,7 @@ export async function fetchWithWarning<T>(
 export interface PagedResult<T> {
   data: T[];
   totalCount?: number;
+  _truncated?: boolean;
 }
 
 export async function fetchAllPages<T>(
@@ -133,8 +134,12 @@ export async function fetchAllPages<T>(
   path: string,
   params: Record<string, unknown>,
   maxPages: number = DEFAULT_MAX_PAGES,
+  warnings?: string[],
 ): Promise<T[]> {
   const result = await fetchAllPagesWithTotal<T>(client, path, params, maxPages);
+  if (result._truncated && warnings) {
+    warnings.push(`Pagination truncated: fetched ${result.data.length} items from ${path} (max ${maxPages} pages). Results may be incomplete.`);
+  }
   return result.data;
 }
 
@@ -183,7 +188,7 @@ export async function fetchAllPagesWithTotal<T>(
     page += 1;
   }
 
-  return { data: allData, totalCount, ...(truncated && { _truncated: true }) };
+  return { data: allData, totalCount, _truncated: truncated || undefined };
 }
 
 /**
@@ -196,6 +201,7 @@ export async function fetchAllPagesParallel<T>(
   path: string,
   params: Record<string, unknown>,
   maxPages: number = DEFAULT_MAX_PAGES,
+  warnings?: string[],
 ): Promise<T[]> {
   // Fetch page 1 to get totalCount
   const firstResponse = await client.get(
@@ -224,7 +230,7 @@ export async function fetchAllPagesParallel<T>(
     totalPages = Math.min(Math.ceil(totalCount / DEFAULT_PAGE_SIZE), maxPages);
   } else {
     // Fallback to sequential
-    return fetchAllPages<T>(client, path, params, maxPages);
+    return fetchAllPages<T>(client, path, params, maxPages, warnings);
   }
 
   if (totalPages <= 1) return firstItems;
@@ -249,15 +255,19 @@ export async function fetchAllPagesParallel<T>(
 
   const remainingPages = await Promise.all(pagePromises);
   
-  // Log any page fetch failures
+  // Log and surface page fetch failures
   const failedPages = remainingPages.filter((r) => r.error);
   if (failedPages.length > 0) {
-    console.warn(`Failed to fetch ${failedPages.length}/${remainingPages.length} pages. Results may be incomplete.`);
+    const msg = `Failed to fetch ${failedPages.length}/${remainingPages.length} pages from ${path}. Results may be incomplete.`;
+    console.warn(msg);
+    warnings?.push(msg);
   }
 
   // Warn if pagination was truncated at max page limit
   if (totalCount !== undefined && totalPages === maxPages && totalCount > maxPages * DEFAULT_PAGE_SIZE) {
-    console.warn(`Parallel pagination truncated at ${maxPages} pages (${maxPages * DEFAULT_PAGE_SIZE} of ${totalCount} items). Increase ST_INTEL_MAX_PAGES for full coverage.`);
+    const msg = `Pagination truncated: fetched ${maxPages * DEFAULT_PAGE_SIZE} of ${totalCount} items from ${path}. Increase ST_INTEL_MAX_PAGES for full coverage.`;
+    console.warn(msg);
+    warnings?.push(msg);
   }
 
   return [firstItems, ...remainingPages.map((r) => r.items)].flat();

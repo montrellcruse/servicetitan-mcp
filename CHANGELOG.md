@@ -19,7 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - **Response shaping** — semantic fields (id, type, description, active, count, date, notes, tags, source, category) no longer stripped from tool output. Only true metadata (pagination, HTTP status, internal timestamps) excluded.
 - **Route table** — added 48 missing API route prefixes (18 regular + 17 export + 13 domain routes). Added drift test to prevent regressions.
 - **Session lifecycle** — proper `server.close()` on client disconnect for both SSE and Streamable HTTP transports. Prevents file descriptor leaks.
-- **HTTP timeouts** — 60s request timeout, 15s token fetch timeout, exponential backoff. `parseRetryAfter()` now handles HTTP-date format.
+- **HTTP timeouts** — 60s request timeout, 15s token fetch timeout, single retry with `Retry-After` backoff. `parseRetryAfter()` now handles HTTP-date format.
 - **Report 175 validation** — Zod runtime schema validates response structure before data extraction. Fails fast with clear error on schema drift.
 - **safeDivide()** — all division operations in intelligence layer protected against NaN/Infinity. Zero-denominator edge-case tests for all 10 intel tools.
 - **Empty write schemas** — 6 write tools (capacity calculate, payment create, payment status update, AP credits/payments mark-as-exported, invoice adjustment/mark-as-exported) now require valid input instead of accepting empty `{}`.
@@ -27,7 +27,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Changed
 - **12 duplicate tool registrations removed** — CRM (customer note/tag delete aliases), marketing (campaign category list alias), scheduling (technician shifts moved to canonical domain), pricebook (images alias). Net **-1,300 lines**.
-- **getErrorMessage** consolidated from 59 per-file copies to 1 shared utility in `src/utils.ts`.
+- **getErrorMessage** consolidated from 59 per-file copies to 2 shared utilities: `src/utils.ts` (main) and `src/domains/intelligence/helpers.ts` (intelligence layer).
 - **Domain loader** extracted to `src/domains/loader.ts`, replacing 3 identical `loadDomainModules()` copies across stdio, SSE, and Streamable HTTP transports.
 - **Duplicate tool name detection** — `ToolRegistry.register()` now throws on duplicate tool names at startup.
 - Dead gzip infrastructure removed from Streamable HTTP transport (`createGzip` import, `acceptsGzip`, `supportsGzip()`).

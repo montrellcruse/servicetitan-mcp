@@ -6,12 +6,12 @@ import {
   activeFilterParam,
   buildParams,
   dateFilterParams,
+  getErrorMessage,
   paginationParams,
   sortParam,
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const customerAddressSchema = z.object({
   street: z.string().optional().describe("Street"),

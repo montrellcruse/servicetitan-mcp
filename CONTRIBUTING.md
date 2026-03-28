@@ -53,7 +53,7 @@ npm run docs:tools
 3. Each tool file exports a function that takes `(client, registry)` and registers tools via `registry.register()`
 4. Use Zod schemas for input validation
 5. Use `toolResult()` and `toolError()` helpers from `src/utils.ts`
-6. Use `getErrorMessage()` from `src/utils.ts` for error formatting
+6. Use `getErrorMessage()` from `src/utils.ts` for error formatting (intelligence tools may use the copy in `src/domains/intelligence/helpers.ts`)
 7. Create an `index.ts` that imports and re-exports all tool registrations
 8. Add tests in `tests/domains/<domain>.test.ts`
 
@@ -77,7 +77,7 @@ Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed 
 ## Coding Conventions
 
 - TypeScript strict mode — no `any` types
-- Use `getErrorMessage()` for error formatting (do NOT define local copies)
+- Use `getErrorMessage()` from `src/utils.ts` for error formatting (intelligence helpers have their own copy for internal use)
 - Use Zod schemas for all tool input validation
 - Use `toolResult()` / `toolError()` for tool responses
 - Respect read-only mode: when `ST_READONLY=true`, all tools are registered but write and delete operations are blocked at execution time by the middleware

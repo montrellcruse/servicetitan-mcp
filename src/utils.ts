@@ -25,7 +25,7 @@ export function toolResult(data: unknown, options?: { shape?: boolean }): ToolRe
       _truncated: true,
       _originalSize: json.length,
       _message: `Response was ${json.length.toLocaleString()} characters (limit: ${maxResponseChars.toLocaleString()}). Use pagination (page/pageSize) to get smaller result sets.`,
-      _preview: json.slice(0, Math.min(maxResponseChars - 256, maxResponseChars)),
+      _preview: json.slice(0, Math.max(0, maxResponseChars - 256)),
     };
     return {
       content: [
