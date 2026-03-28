@@ -18,7 +18,7 @@ describe("shapeResponse", () => {
     const shaped = shapeResponse({
       requestId: "req-1",
       nested: {
-        notes: "remove",
+        notes: "kept",
         keep: true,
       },
       items: [
@@ -31,10 +31,12 @@ describe("shapeResponse", () => {
 
     expect(shaped).toEqual({
       nested: {
+        notes: "kept",
         keep: true,
       },
       items: [
         {
+          id: 1,
           name: "kept",
         },
       ],

@@ -4,3 +4,4 @@ build/
 *.tgz
 coverage/
 .DS_Store
+audit/

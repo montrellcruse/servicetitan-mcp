@@ -1,5 +1,13 @@
+/**
+ * EXCLUDED_FIELDS: Metadata and infrastructure fields stripped from all responses.
+ * These are framework/pagination fields that add no semantic value to tool output.
+ * 
+ * CRITICAL: Never add semantic fields (id, type, description, active, count, date, etc).
+ * Those are essential for follow-up mutations. If you need to save tokens, use ARRAY_LIMITS
+ * instead (capping list size is safer than stripping fields).
+ */
 const EXCLUDED_FIELDS = new Set<string>([
-  // Metadata / pagination
+  // Framework / pagination metadata (safe to strip)
   "requestId",
   "paginationToken",
   "nextPageToken",
@@ -7,48 +15,11 @@ const EXCLUDED_FIELDS = new Set<string>([
   "generatedAt",
   "apiVersion",
   "tool",
-  "period",
   "_warnings",
   "_cache",
-  "search",
+  "_meta",
 
-  // Redundant / low-signal fields
-  "invoices",
-  "id",
-  "deleted",
-  "suspended",
-  "reactivated",
-  "month",
-  "convertedJobs",
-  "opportunities",
-  "customerSatisfaction",
-  "highlights",
-  "bookings",
-  "optionsPerOpportunity",
-  "closedAverageSale",
-  "nonJobRevenue",
-  "adjustmentRevenue",
-  "replacementLeadConversionRate",
-  "revenuePerCall",
-  "daysOld",
-  "source",
-  "type",
-  "description",
-  "notes",
-  "tags",
-  "category",
-  "salesOpportunity",
-  "averageOptionsPerOpportunity",
-  "replacementLeadsSet",
-  "averageDaysToClose",
-  "jobsPerDay",
-
-  // Accounting detail (totalRevenue suffices)
-  "revenueBreakdown",
-  "totalCollected",
-  "outstanding",
-
-  // Blocks stripped for token efficiency (summaries at top level suffice)
+  // Detail blocks (summaries at top level suffice)
   "productivity",
   "sales",
   "byBusinessUnit",
@@ -61,42 +32,18 @@ const EXCLUDED_FIELDS = new Set<string>([
   "salesFromMarketingLeads",
   "upcomingJobs",
   "notSentBreakdown",
+  "revenueBreakdown",
+  "activityBreakdown",
 
   // Hour breakdowns (totalHours + overtimePercent suffice)
   "regularHours",
   "overtimeHours",
   "doubleOvertimeHours",
 
-  // Autoresearch iter2 round 2 (safe — not generic field names)
+  // Field detail (aggregate metric suffices)
+  "invoices",
   "openByAge",
   "breakdownByJobType",
-
-  // Autoresearch round 3 — validated safe via eval (no ground truth values affected)
-  "active",
-  "activityBreakdown",
-  "averageCloseRate",
-  "averageClosedSale",
-  "avgTicket",
-  "booked",
-  "businessUnits",
-  "cancelled",
-  "closeRate",
-  "count",
-  "date",
-  "dismissed",
-  "entries",
-  "estimatesSold",
-  "expirations",
-  "grossPay",
-  "inProgress",
-  "jobs",
-  "jobsCompleted",
-  "open",
-  "overallConversionRate",
-  "pending",
-  "renewals",
-  "totOpps",
-  "totalConvertedJobs",
 ]);
 
 const ARRAY_LIMITS = new Map<string, number>([
