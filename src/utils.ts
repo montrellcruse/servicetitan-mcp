@@ -55,7 +55,7 @@ export function toolError(message: string): ToolResponse {
 
 export function paginationParams<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return schema.extend({
-    page: z.number().int().optional().describe("Page number (starts at 1)"),
+    page: z.number().int().min(1).optional().describe("Page number (starts at 1)"),
     pageSize: z
       .number()
       .int()
@@ -93,6 +93,7 @@ export function sortParam(fields: string[]) {
   return {
     sort: z
       .string()
+      .regex(/^[+-]?[A-Za-z][A-Za-z0-9_]*$/, "Sort must use +Field or -Field format")
       .optional()
       .describe(
         `Sort: +Field (asc) or -Field (desc). Fields: ${fields.join(", ")}`,

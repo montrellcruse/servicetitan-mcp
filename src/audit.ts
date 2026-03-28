@@ -12,7 +12,14 @@ export interface AuditEntry {
   error?: string;
 }
 
-const SENSITIVE_FIELDS = new Set(["secret", "password", "token", "key"]);
+const SENSITIVE_SUBSTRINGS = [
+  "secret",
+  "password",
+  "token",
+  "key",
+  "auth",
+  "credential",
+] as const;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -34,7 +41,11 @@ function sanitizeObject(value: Record<string, unknown>): Record<string, unknown>
   const sanitized: Record<string, unknown> = {};
 
   for (const [key, val] of Object.entries(value)) {
-    if (SENSITIVE_FIELDS.has(key.toLowerCase())) {
+    if (
+      SENSITIVE_SUBSTRINGS.some((substring) =>
+        key.toLowerCase().includes(substring),
+      )
+    ) {
       continue;
     }
 

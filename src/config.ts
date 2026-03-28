@@ -11,6 +11,7 @@ export interface ServiceTitanConfig {
   logLevel: "debug" | "info" | "warn" | "error";
   timezone: string;
   corsOrigin: string;
+  allowedCallers: string[] | null;
 }
 
 const REQUIRED_ENV_VARS = [
@@ -93,6 +94,19 @@ function parseDomains(value: string | undefined): string[] | null {
   return domains.length === 0 ? null : domains;
 }
 
+function parseAllowedCallers(value: string | undefined): string[] | null {
+  if (value === undefined || value.trim() === "") {
+    return null;
+  }
+
+  const callers = value
+    .split(",")
+    .map((caller) => caller.trim().toLowerCase())
+    .filter(Boolean);
+
+  return callers.length === 0 ? null : callers;
+}
+
 function parseLogLevel(value: string | undefined): LogLevel {
   const logLevel = (value ?? "info").trim().toLowerCase();
 
@@ -164,5 +178,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     logLevel: parseLogLevel(env.ST_LOG_LEVEL),
     timezone: parseTimezone(env.ST_TIMEZONE),
     corsOrigin: env.ST_CORS_ORIGIN ?? "",
+    allowedCallers: parseAllowedCallers(env.ST_ALLOWED_CALLERS),
   };
 }

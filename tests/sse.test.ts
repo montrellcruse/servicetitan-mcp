@@ -1,186 +1,89 @@
-/**
- * SSE transport tests.
- *
- * The SSE entrypoint (src/sse.ts) is structured as a self-contained script
- * (calls process.exit when missing API key, owns its own main()). We therefore
- * test the HTTP-layer behaviour by extracting the handler logic here and
- * dispatching request/response doubles directly, which keeps the suite
- * hermetic and avoids binding a real socket in restricted environments.
- *
- * Tested behaviour:
- *  - /health returns 200 without auth
- *  - /health response body shape
- *  - /sse GET returns 401 without auth header
- *  - /sse GET returns 401 with wrong api-key header
- *  - /sse GET returns 401 with wrong Bearer token
- *  - /sse GET returns SSE headers (text/event-stream, keep-alive) with correct auth
- *  - /messages POST returns 401 without auth
- *  - /messages POST returns 400 with malformed JSON
- *  - /messages POST returns 413 when body exceeds 1 MB
- *  - /messages POST returns 400 when sessionId is missing
- *  - /messages POST returns 404 for unknown sessionId
- *  - OPTIONS preflight returns 204 with CORS headers
- *  - Auth via x-api-key header
- *  - Auth via Authorization: Bearer header
- *  - Error responses include requestId field
- *  - CORS origin is configurable
- */
-
-import { randomUUID, timingSafeEqual } from "node:crypto";
+import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
-import { beforeAll, describe, expect, it } from "vitest";
-
-// ---------------------------------------------------------------------------
-// Re-implement the minimal HTTP handler logic from sse.ts so we can test it
-// in isolation without touching process.exit or loading all domain modules.
-// ---------------------------------------------------------------------------
+import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const TEST_API_KEY = "test-secret-key-abc123";
+const MOCK_TOOL_COUNT = 505;
 
-function sendJson(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(body));
-}
-
-function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
-  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, x-api-key, Authorization",
-  );
-}
-
-function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-function authenticate(req: IncomingMessage, apiKey: string): boolean {
-  const key = req.headers["x-api-key"];
-  if (typeof key === "string" && safeCompare(key, apiKey)) {
-    return true;
-  }
-  const auth = req.headers.authorization;
-  if (
-    typeof auth === "string" &&
-    auth.startsWith("Bearer ") &&
-    safeCompare(auth.slice(7), apiKey)
-  ) {
-    return true;
-  }
-  return false;
-}
-
-// A simplified handler that mirrors src/sse.ts routing without spinning up
-// MCP infrastructure or SSEServerTransport (which would stream indefinitely).
-type FakeHandler = (req: IncomingMessage, res: ServerResponse) => Promise<void>;
-
-function buildHandler(apiKey: string, corsOrigin = "*"): FakeHandler {
-  // Simulated in-memory session registry (a real SSE connection populates this)
-  const knownSessions = new Set<string>(["valid-session-id"]);
-
-  return async (req: IncomingMessage, res: ServerResponse): Promise<void> => {
-    const requestId = randomUUID();
-    sendCorsHeaders(res, corsOrigin);
-
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    const url = new URL(
-      req.url ?? "/",
-      `http://${req.headers.host ?? "localhost"}`,
-    );
-
-    // ── Health (no auth) ──
-    if (url.pathname === "/health" && req.method === "GET") {
-      sendJson(res, 200, {
-        status: "ok",
-        tools: 430,
-        environment: "integration",
-        readonly: true,
-      });
-      return;
-    }
-
-    // ── Auth gate ──
-    if (!authenticate(req, apiKey)) {
-      sendJson(res, 401, { error: "Unauthorized", requestId });
-      return;
-    }
-
-    // ── SSE endpoint ──
-    if (url.pathname === "/sse" && req.method === "GET") {
-      // In production this upgrades to SSE; here we just verify the headers.
-      res.writeHead(200, {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      });
-      res.write("");
-      return;
-    }
-
-    // ── Message endpoint ──
-    if (url.pathname === "/messages" && req.method === "POST") {
-      const sessionId = url.searchParams.get("sessionId");
-      if (!sessionId) {
-        sendJson(res, 400, { error: "Missing sessionId query parameter", requestId });
-        return;
-      }
-
-      if (!knownSessions.has(sessionId)) {
-        sendJson(res, 404, { error: "Unknown session", requestId });
-        return;
-      }
-
-      // Read body (mirror the 1 MB guard in sse.ts)
-      const chunks: Buffer[] = [];
-      let totalSize = 0;
-      for await (const chunk of req) {
-        const buf =
-          typeof chunk === "string" ? Buffer.from(chunk) : (chunk as Buffer);
-        totalSize += buf.length;
-        if (totalSize > 1_048_576) {
-          sendJson(res, 413, { error: "Payload too large", requestId });
-          return;
-        }
-        chunks.push(buf);
-      }
-
-      let _body: unknown;
-      try {
-        _body = JSON.parse(Buffer.concat(chunks).toString());
-      } catch {
-        sendJson(res, 400, { error: "Invalid JSON body", requestId });
-        return;
-      }
-
-      // In production this calls transport.handlePostMessage; here we just ack.
-      sendJson(res, 200, { ok: true });
-      return;
-    }
-
-    sendJson(res, 404, { error: "Not found", requestId });
+type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
+type MockRequest = IncomingMessage & {
+  socket: {
+    destroyed: boolean;
+    setNoDelay: ReturnType<typeof vi.fn>;
   };
+};
+
+let capturedHandler: Handler | undefined;
+let nextSessionId = 1;
+let connectError: Error | undefined;
+let postMessageError: Error | undefined;
+
+const transportInstances: MockSSEServerTransport[] = [];
+const serverInstances: MockMcpServer[] = [];
+const loggerInstances: MockLogger[] = [];
+
+class MockMcpServer {
+  connect = vi.fn(async () => {
+    if (connectError) {
+      throw connectError;
+    }
+  });
+
+  close = vi.fn(async () => {});
+
+  constructor() {
+    serverInstances.push(this);
+  }
+
+  tool(): void {}
 }
 
-// ---------------------------------------------------------------------------
-// Request/response helper utilities
-// ---------------------------------------------------------------------------
+class MockLogger {
+  debug = vi.fn();
+  info = vi.fn();
+  warn = vi.fn();
+  error = vi.fn();
 
-class MockResponse {
+  constructor() {
+    loggerInstances.push(this);
+  }
+}
+
+class MockSSEServerTransport {
+  sessionId = `session-${nextSessionId++}`;
+  onclose: (() => void) | undefined;
+
+  handlePostMessage = vi.fn(async (_req: IncomingMessage, res: ServerResponse, body: unknown) => {
+    if (postMessageError) {
+      throw postMessageError;
+    }
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true, body }));
+  });
+
+  close = vi.fn(async () => {});
+
+  constructor(_endpoint: string, _res: ServerResponse) {
+    transportInstances.push(this);
+  }
+
+  emitClose(): void {
+    this.onclose?.();
+  }
+}
+
+class MockResponse extends EventEmitter {
   statusCode = 200;
   headers: Record<string, string | string[] | number | undefined> = {};
   body = "";
-
-  get status(): number {
-    return this.statusCode;
-  }
+  headersSent = false;
+  writableEnded = false;
+  socket = {
+    destroyed: false,
+    uncork: vi.fn(),
+  };
 
   setHeader(name: string, value: string | string[] | number): void {
     this.headers[name.toLowerCase()] = value;
@@ -191,6 +94,7 @@ class MockResponse {
     headers?: Record<string, string | string[] | number>,
   ): MockResponse {
     this.statusCode = statusCode;
+    this.headersSent = true;
     for (const [name, value] of Object.entries(headers ?? {})) {
       this.setHeader(name, value);
     }
@@ -198,6 +102,7 @@ class MockResponse {
   }
 
   write(chunk?: string | Buffer): boolean {
+    this.headersSent = true;
     if (chunk !== undefined) {
       this.body += chunk.toString();
     }
@@ -205,6 +110,8 @@ class MockResponse {
   }
 
   end(chunk?: string | Buffer): MockResponse {
+    this.headersSent = true;
+    this.writableEnded = true;
     if (chunk !== undefined) {
       this.body += chunk.toString();
     }
@@ -221,13 +128,8 @@ function createRequest(options: {
   url: string;
   headers?: Record<string, string>;
   body?: string | Buffer;
-}): IncomingMessage {
-  const {
-    method = "GET",
-    url,
-    headers = {},
-    body,
-  } = options;
+}): MockRequest {
+  const { method = "GET", url, headers = {}, body } = options;
 
   const normalizedHeaders = Object.fromEntries(
     Object.entries({
@@ -244,253 +146,346 @@ function createRequest(options: {
     method,
     url,
     headers: normalizedHeaders,
+    socket: {
+      destroyed: false,
+      setNoDelay: vi.fn(),
+    },
     async *[Symbol.asyncIterator](): AsyncIterableIterator<Buffer> {
       for (const chunk of chunks) {
         yield chunk;
       }
     },
-  } as IncomingMessage;
+  } as MockRequest;
 }
 
-async function dispatch(
-  handler: FakeHandler,
-  options: {
-    method?: string;
-    url: string;
-    headers?: Record<string, string>;
-    body?: string | Buffer;
-  },
-): Promise<MockResponse> {
+async function waitForHandler(): Promise<Handler> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if (capturedHandler) {
+      return capturedHandler;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  throw new Error("Failed to capture SSE handler from src/sse.ts");
+}
+
+async function dispatch(options: {
+  method?: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: string | Buffer;
+}): Promise<{ req: MockRequest; res: MockResponse }> {
+  const handler = await waitForHandler();
   const req = createRequest(options);
   const res = new MockResponse();
   await handler(req, res as unknown as ServerResponse);
-  return res;
+  return { req, res };
 }
 
-// ---------------------------------------------------------------------------
-// Test suite
-// ---------------------------------------------------------------------------
+beforeAll(async () => {
+  vi.resetModules();
+  capturedHandler = undefined;
+  nextSessionId = 1;
+  transportInstances.length = 0;
+  serverInstances.length = 0;
+  loggerInstances.length = 0;
 
-describe("SSE transport HTTP handler", () => {
-  let handler: FakeHandler;
+  vi.stubEnv("ST_MCP_API_KEY", TEST_API_KEY);
+  vi.stubEnv("ST_CLIENT_ID", "test-client-id");
+  vi.stubEnv("ST_CLIENT_SECRET", "test-client-secret");
+  vi.stubEnv("ST_APP_KEY", "test-app-key");
+  vi.stubEnv("ST_TENANT_ID", "test-tenant-id");
+  vi.stubEnv("ST_LOG_LEVEL", "error");
 
-  beforeAll(() => {
-    handler = buildHandler(TEST_API_KEY);
+  vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
+    throw new Error(`process.exit(${code ?? 0})`);
+  }) as never);
+
+  vi.doMock("node:http", async () => {
+    const actual = await vi.importActual<typeof import("node:http")>("node:http");
+    return {
+      ...actual,
+      createServer: vi.fn((handler: Handler) => {
+        capturedHandler = handler;
+        return {
+          listen: vi.fn((_port: number, _host: string, cb?: () => void) => {
+            cb?.();
+          }),
+          close: vi.fn((cb?: () => void) => {
+            cb?.();
+          }),
+        };
+      }),
+    };
   });
 
-  // ── Health ──
+  vi.doMock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
+    McpServer: MockMcpServer,
+  }));
 
-  it("GET /health returns 200 without any auth", async () => {
-    const res = await dispatch(handler, { url: "/health" });
-    expect(res.status).toBe(200);
-  });
+  vi.doMock("@modelcontextprotocol/sdk/server/sse.js", () => ({
+    SSEServerTransport: MockSSEServerTransport,
+  }));
 
-  it("GET /health returns expected body shape", async () => {
-    const res = await dispatch(handler, { url: "/health" });
-    const body = res.json<Record<string, unknown>>();
-    expect(body).toMatchObject({ status: "ok" });
-    expect(typeof body.tools).toBe("number");
-    expect(typeof body.environment).toBe("string");
-  });
+  vi.doMock("../src/audit.js", () => ({
+    AuditLogger: class MockAuditLogger {},
+  }));
 
-  // ── CORS ──
+  vi.doMock("../src/client.js", () => ({
+    ServiceTitanClient: class MockServiceTitanClient {},
+  }));
 
-  it("OPTIONS preflight returns 204 with CORS headers", async () => {
-    const res = await dispatch(handler, { method: "OPTIONS", url: "/health" });
-    expect(res.status).toBe(204);
-    expect(res.headers["access-control-allow-origin"]).toBe("*");
-    expect(res.headers["access-control-allow-methods"]).toContain("GET");
-    expect(res.headers["access-control-allow-methods"]).toContain("POST");
-  });
+  vi.doMock("../src/config.js", () => ({
+    loadConfig: () => ({
+      clientId: "test-client-id",
+      clientSecret: "test-client-secret",
+      appKey: "test-app-key",
+      tenantId: "test-tenant-id",
+      environment: "integration",
+      readonlyMode: true,
+      confirmWrites: false,
+      maxResponseChars: 100_000,
+      enabledDomains: null,
+      logLevel: "error",
+      timezone: "UTC",
+      corsOrigin: "*",
+    }),
+  }));
 
-  // ── Auth: 401 cases ──
+  vi.doMock("../src/domains/loader.js", () => ({
+    loadDomainModules: vi.fn(async () => {}),
+  }));
 
-  it("GET /sse returns 401 with no auth headers", async () => {
-    const res = await dispatch(handler, { url: "/sse" });
-    expect(res.status).toBe(401);
-    const body = res.json<{ error: string; requestId: string }>();
-    expect(body.error).toBe("Unauthorized");
-    expect(typeof body.requestId).toBe("string");
-    expect(body.requestId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
-  });
+  vi.doMock("../src/logger.js", () => ({
+    Logger: MockLogger,
+  }));
 
-  it("GET /sse returns 401 with wrong x-api-key header", async () => {
-    const res = await dispatch(handler, {
-      url: "/sse",
-      headers: { "x-api-key": "wrong-key" },
-    });
-    expect(res.status).toBe(401);
-  });
+  vi.doMock("../src/registry.js", () => ({
+    ToolRegistry: class MockToolRegistry {
+      attachClient(): void {}
+      register(): void {}
+      registerDomain(): void {}
+      getStats(): { registered: number } {
+        return { registered: MOCK_TOOL_COUNT };
+      }
+      logSummary(): void {}
+    },
+  }));
 
-  it("GET /sse returns 401 with wrong Bearer token", async () => {
-    const res = await dispatch(handler, {
-      url: "/sse",
-      headers: { authorization: "Bearer wrong-token" },
-    });
-    expect(res.status).toBe(401);
-  });
+  vi.doMock("../src/utils.js", () => ({
+    setMaxResponseChars: vi.fn(),
+    toolResult: (value: unknown) => value,
+  }));
 
-  it("POST /messages returns 401 with no auth", async () => {
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages?sessionId=valid-session-id",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
-    });
-    expect(res.status).toBe(401);
-  });
-
-  // ── Auth: accepted cases ──
-
-  it("GET /sse returns SSE headers with valid x-api-key header", async () => {
-    const res = await dispatch(handler, {
-      url: "/sse",
-      headers: { "x-api-key": TEST_API_KEY },
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.headers["content-type"]).toContain("text/event-stream");
-    expect(res.headers.connection).toContain("keep-alive");
-  });
-
-  it("GET /sse returns SSE headers with valid Bearer token", async () => {
-    const res = await dispatch(handler, {
-      url: "/sse",
-      headers: { authorization: `Bearer ${TEST_API_KEY}` },
-    });
-
-    expect(res.status).toBe(200);
-    expect(res.headers["content-type"]).toContain("text/event-stream");
-  });
-
-  // ── /messages edge cases ──
-
-  it("POST /messages returns 400 for malformed JSON body", async () => {
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages?sessionId=valid-session-id",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": TEST_API_KEY,
-      },
-      body: "this is not json {{{{",
-    });
-    expect(res.status).toBe(400);
-    const body = res.json<{ error: string; requestId: string }>();
-    expect(body.error).toBe("Invalid JSON body");
-    expect(typeof body.requestId).toBe("string");
-  });
-
-  it("POST /messages returns 413 when body exceeds 1 MB", async () => {
-    const bigBody = Buffer.alloc(1_048_577, "x");
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages?sessionId=valid-session-id",
-      headers: {
-        "content-type": "application/octet-stream",
-        "x-api-key": TEST_API_KEY,
-      },
-      body: bigBody,
-    });
-    expect(res.status).toBe(413);
-    const body = res.json<{ error: string; requestId: string }>();
-    expect(body.error).toBe("Payload too large");
-    expect(typeof body.requestId).toBe("string");
-  });
-
-  it("POST /messages returns 400 when sessionId query param is missing", async () => {
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": TEST_API_KEY,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
-    });
-    expect(res.status).toBe(400);
-    expect(res.json<{ error: string }>().error).toMatch(/sessionId/);
-  });
-
-  it("POST /messages returns 404 for unknown sessionId", async () => {
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages?sessionId=no-such-session",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": TEST_API_KEY,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
-    });
-    expect(res.status).toBe(404);
-    expect(res.json<{ error: string }>().error).toBe("Unknown session");
-  });
-
-  it("POST /messages returns 200 for valid request with known sessionId", async () => {
-    const res = await dispatch(handler, {
-      method: "POST",
-      url: "/messages?sessionId=valid-session-id",
-      headers: {
-        "content-type": "application/json",
-        "x-api-key": TEST_API_KEY,
-      },
-      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
-    });
-    expect(res.status).toBe(200);
-  });
-
-  // ── 404 fallthrough ──
-
-  it("unknown paths return 404", async () => {
-    const res = await dispatch(handler, {
-      url: "/unknown-path",
-      headers: { "x-api-key": TEST_API_KEY },
-    });
-    expect(res.status).toBe(404);
-  });
-
-  // ── requestId in error responses ──
-
-  it("401 response includes a requestId UUID", async () => {
-    const res = await dispatch(handler, { url: "/sse" });
-    expect(res.status).toBe(401);
-    const body = res.json<{ error: string; requestId: string }>();
-    expect(body.requestId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/,
-    );
-  });
-
-  it("each request gets a unique requestId", async () => {
-    const [r1, r2] = await Promise.all([
-      dispatch(handler, { url: "/sse" }),
-      dispatch(handler, { url: "/sse" }),
-    ]);
-    const id1 = r1.json<{ requestId: string }>().requestId;
-    const id2 = r2.json<{ requestId: string }>().requestId;
-    expect(id1).not.toBe(id2);
-  });
+  await import("../src/sse.ts");
+  await waitForHandler();
 });
 
-// ── CORS origin configuration ──
+afterEach(() => {
+  connectError = undefined;
+  postMessageError = undefined;
+  vi.useRealTimers();
+  vi.clearAllMocks();
+});
 
-describe("SSE transport CORS origin configuration", () => {
-  let handler: FakeHandler;
+describe("SSE transport HTTP handler", () => {
+  it("GET /sse creates a transport and sets SSE headers", async () => {
+    const { req, res } = await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
 
-  beforeAll(() => {
-    handler = buildHandler(TEST_API_KEY, "https://app.example.com");
+    const transport = transportInstances.at(-1);
+
+    expect(transport).toBeDefined();
+    expect(req.socket.setNoDelay).toHaveBeenCalledWith(true);
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-type"]).toBe("text/event-stream");
+    expect(res.headers["cache-control"]).toBe("no-cache");
+    expect(res.headers["x-accel-buffering"]).toBe("no");
+    expect(serverInstances[0]?.connect).toHaveBeenCalledWith(transport);
   });
 
-  it("OPTIONS preflight returns configured CORS origin", async () => {
-    const res = await dispatch(handler, { method: "OPTIONS", url: "/health" });
-    expect(res.status).toBe(204);
-    expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
+  it("POST /messages routes to transport.handlePostMessage", async () => {
+    await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    const transport = transportInstances.at(-1);
+    expect(transport).toBeDefined();
+
+    const body = {
+      jsonrpc: "2.0",
+      id: 1,
+      method: "ping",
+      params: { value: "ok" },
+    };
+
+    const { res } = await dispatch({
+      method: "POST",
+      url: `/messages?sessionId=${transport!.sessionId}`,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+
+    expect(transport?.handlePostMessage).toHaveBeenCalledTimes(1);
+    expect(transport?.handlePostMessage).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.anything(),
+      body,
+    );
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ ok: boolean; body: unknown }>()).toEqual({ ok: true, body });
   });
 
-  it("non-preflight requests include configured CORS origin header", async () => {
-    const res = await dispatch(handler, { url: "/health" });
-    expect(res.status).toBe(200);
-    expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
+  it("client disconnect removes the transport and stops the heartbeat", async () => {
+    vi.useFakeTimers();
+
+    const { res: sseRes } = await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    const transport = transportInstances.at(-1);
+    expect(transport).toBeDefined();
+
+    vi.advanceTimersByTime(30_000);
+    expect(sseRes.body).toContain(": keepalive\n\n");
+
+    const bodyAtDisconnect = sseRes.body;
+    sseRes.emit("close");
+    await Promise.resolve();
+
+    const { res } = await dispatch({
+      method: "POST",
+      url: `/messages?sessionId=${transport!.sessionId}`,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "ping" }),
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json<{ error: string }>().error).toBe("Unknown session");
+
+    vi.advanceTimersByTime(30_000);
+    expect(sseRes.body).toBe(bodyAtDisconnect);
+  });
+
+  it("heartbeat interval sends keep-alive pings", async () => {
+    vi.useFakeTimers();
+
+    const { res } = await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    expect(res.body).toBe("");
+
+    vi.advanceTimersByTime(60_000);
+    const keepAliveCount = res.body.match(/: keepalive\n\n/g)?.length ?? 0;
+
+    expect(keepAliveCount).toBe(2);
+  });
+
+  it("returns 500 when server.connect fails", async () => {
+    connectError = new Error("connect failed");
+
+    const { res } = await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json<{ error: string }>().error).toBe("Internal server error");
+    expect(loggerInstances[0]?.error).toHaveBeenCalledWith(
+      "Unhandled SSE request error",
+      expect.objectContaining({
+        error: "connect failed",
+      }),
+    );
+  });
+
+  it("returns 500 when transport.handlePostMessage fails", async () => {
+    await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    const transport = transportInstances.at(-1);
+    expect(transport).toBeDefined();
+
+    postMessageError = new Error("post failed");
+
+    const { res } = await dispatch({
+      method: "POST",
+      url: `/messages?sessionId=${transport!.sessionId}`,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 3, method: "ping" }),
+    });
+
+    expect(res.statusCode).toBe(500);
+    expect(res.json<{ error: string }>().error).toBe("Internal server error");
+    expect(loggerInstances[0]?.error).toHaveBeenCalledWith(
+      "Unhandled /messages request error",
+      expect.objectContaining({
+        sessionId: transport!.sessionId,
+        error: "post failed",
+      }),
+    );
+  });
+
+  it("ignores a stale disconnect from the previously active transport", async () => {
+    await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    const firstTransport = transportInstances.at(-1);
+    expect(firstTransport).toBeDefined();
+
+    await dispatch({
+      method: "GET",
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
+    });
+
+    const secondTransport = transportInstances.at(-1);
+    expect(secondTransport).toBeDefined();
+    expect(secondTransport?.sessionId).not.toBe(firstTransport?.sessionId);
+
+    const closeCallsBefore = serverInstances[0]?.close.mock.calls.length ?? 0;
+    firstTransport!.emitClose();
+    await Promise.resolve();
+
+    expect(serverInstances[0]?.close.mock.calls.length).toBe(closeCallsBefore);
+
+    const { res } = await dispatch({
+      method: "POST",
+      url: `/messages?sessionId=${secondTransport!.sessionId}`,
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+      },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 4, method: "ping" }),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json<{ ok: boolean }>().ok).toBe(true);
   });
 });

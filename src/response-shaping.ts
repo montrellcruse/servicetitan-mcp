@@ -109,8 +109,15 @@ const RATIO_TOKENS = new Set<string>([
   "utilization",
 ]);
 
+const DATE_ONLY_FIELDS = new Set<string>([
+  "date",
+  "scheduleddate",
+  "duedate",
+  "expirationdate",
+]);
+
 const ISO_DATE_PATTERN =
-  /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/;
+  /^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})?$/;
 
 interface ShapeContext {
   parentKey?: string;
@@ -171,13 +178,18 @@ function roundNumber(value: number, key: string | undefined): number {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-function compactIsoDate(value: string): string {
+function compactIsoDate(value: string, key: string | undefined): string {
   const match = ISO_DATE_PATTERN.exec(value);
-  return match ? match[1] : value;
-}
+  if (!match) {
+    return value;
+  }
 
-function isSuppressedZero(value: unknown): boolean {
-  return value === 0 || value === "0";
+  const [, date, hours, minutes] = match;
+  if (key && DATE_ONLY_FIELDS.has(key.toLowerCase())) {
+    return date;
+  }
+
+  return `${date}T${hours}:${minutes}`;
 }
 
 function shapeValue(value: unknown, context: ShapeContext = {}): unknown {
@@ -206,12 +218,17 @@ function shapeValue(value: unknown, context: ShapeContext = {}): unknown {
         currentKey: key,
       });
 
-      if (isSuppressedZero(shapedValue)) {
-        continue;
-      }
-
       const outputKey = FIELD_ABBREVIATIONS.get(key) ?? key;
       shapedObject[outputKey] = shapedValue;
+
+      const rawArray = Array.isArray(rawValue) ? rawValue : undefined;
+      if (rawArray) {
+        const limit = ARRAY_LIMITS.get(key);
+        if (limit !== undefined && rawArray.length > limit) {
+          shapedObject._truncated = true;
+          shapedObject._total = rawArray.length;
+        }
+      }
     }
 
     return shapedObject;
@@ -222,7 +239,7 @@ function shapeValue(value: unknown, context: ShapeContext = {}): unknown {
   }
 
   if (typeof value === "string") {
-    return compactIsoDate(value);
+    return compactIsoDate(value, context.currentKey);
   }
 
   return value;

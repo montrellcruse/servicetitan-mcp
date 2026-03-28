@@ -1,7 +1,7 @@
 /**
  * Streamable HTTP transport tests.
  *
- * The built Streamable HTTP entrypoint (`build/streamable-http.js`) is a
+ * The Streamable HTTP entrypoint (`src/streamable-http.ts`) is a
  * self-contained script that starts itself on import. To test its HTTP routing
  * without opening a listening socket, this suite mocks `node:http.createServer`
  * during import, captures the real request handler, and invokes it with
@@ -24,14 +24,71 @@ const TEST_API_KEY = "test-secret-key-abc123";
 const MOCK_TOOL_COUNT = 505;
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
-type MockTransportInstance = {
-  sessionId: string | undefined;
-  onclose: (() => void) | undefined;
-  emitClose: () => void;
-};
 
 let capturedHandler: Handler | undefined;
-const transportInstances: MockTransportInstance[] = [];
+let initializeRequestError: Error | undefined;
+
+class MockStreamableHTTPServerTransport {
+  sessionId: string | undefined;
+  onclose: (() => void) | undefined;
+  close = vi.fn(async () => {});
+
+  constructor(
+    private readonly options: {
+      sessionIdGenerator?: () => string;
+      onsessioninitialized?: (sessionId: string) => void;
+    } = {},
+  ) {
+    transportInstances.push(this);
+  }
+
+  async handleRequest(
+    _req: IncomingMessage,
+    res: ServerResponse,
+    parsedBody?: { id?: number | string; method?: string; params?: { protocolVersion?: string } },
+  ): Promise<void> {
+    if (parsedBody?.method === "initialize") {
+      this.sessionId = this.options.sessionIdGenerator?.();
+      if (this.sessionId) {
+        this.options.onsessioninitialized?.(this.sessionId);
+      }
+
+      if (initializeRequestError) {
+        throw initializeRequestError;
+      }
+
+      if (this.sessionId) {
+        res.setHeader("Mcp-Session-Id", this.sessionId);
+      }
+      res.setHeader(
+        "Mcp-Protocol-Version",
+        parsedBody.params?.protocolVersion ?? LATEST_PROTOCOL_VERSION,
+      );
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: parsedBody.id ?? 1,
+          result: {
+            protocolVersion: parsedBody.params?.protocolVersion ?? LATEST_PROTOCOL_VERSION,
+            capabilities: {},
+            serverInfo: { name: "ServiceTitan", version: "2.2.0" },
+          },
+        }),
+      );
+      return;
+    }
+
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({ ok: true }));
+  }
+
+  emitClose(): void {
+    this.onclose?.();
+  }
+}
+
+const transportInstances: MockStreamableHTTPServerTransport[] = [];
 
 class MockResponse {
   statusCode = 200;
@@ -116,7 +173,7 @@ async function waitForHandler(): Promise<Handler> {
     await new Promise((resolve) => setTimeout(resolve, 0));
   }
 
-  throw new Error("Failed to capture Streamable HTTP handler from build/streamable-http.js");
+  throw new Error("Failed to capture Streamable HTTP handler from src/streamable-http.ts");
 }
 
 async function dispatch(options: {
@@ -136,6 +193,7 @@ beforeAll(async () => {
   vi.resetModules();
   capturedHandler = undefined;
   transportInstances.length = 0;
+  initializeRequestError = undefined;
   vi.stubEnv("ST_MCP_API_KEY", TEST_API_KEY);
   vi.stubEnv("ST_CLIENT_ID", "test-client-id");
   vi.stubEnv("ST_CLIENT_SECRET", "test-client-secret");
@@ -146,10 +204,6 @@ beforeAll(async () => {
   vi.spyOn(process, "exit").mockImplementation(((code?: number) => {
     throw new Error(`process.exit(${code ?? 0})`);
   }) as never);
-
-  vi.doMock("node:fs/promises", () => ({
-    readdir: vi.fn(async () => []),
-  }));
 
   vi.doMock("node:http", async () => {
     const actual = await vi.importActual<typeof import("node:http")>("node:http");
@@ -178,71 +232,18 @@ beforeAll(async () => {
   }));
 
   vi.doMock("@modelcontextprotocol/sdk/server/streamableHttp.js", () => ({
-    StreamableHTTPServerTransport: class MockStreamableHTTPServerTransport
-      implements MockTransportInstance {
-      sessionId: string | undefined;
-      onclose: (() => void) | undefined;
-
-      constructor(
-        private readonly options: {
-          sessionIdGenerator?: () => string;
-          onsessioninitialized?: (sessionId: string) => void;
-        } = {},
-      ) {
-        transportInstances.push(this);
-      }
-
-      async handleRequest(
-        _req: IncomingMessage,
-        res: ServerResponse,
-        parsedBody?: { id?: number | string; method?: string; params?: { protocolVersion?: string } },
-      ): Promise<void> {
-        if (parsedBody?.method === "initialize") {
-          this.sessionId = this.options.sessionIdGenerator?.();
-          if (this.sessionId) {
-            this.options.onsessioninitialized?.(this.sessionId);
-            res.setHeader("Mcp-Session-Id", this.sessionId);
-          }
-          res.setHeader(
-            "Mcp-Protocol-Version",
-            parsedBody.params?.protocolVersion ?? LATEST_PROTOCOL_VERSION,
-          );
-          res.writeHead(200, { "Content-Type": "application/json" });
-          res.end(
-            JSON.stringify({
-              jsonrpc: "2.0",
-              id: parsedBody.id ?? 1,
-              result: {
-                protocolVersion: parsedBody.params?.protocolVersion ?? LATEST_PROTOCOL_VERSION,
-                capabilities: {},
-                serverInfo: { name: "ServiceTitan", version: "2.2.0" },
-              },
-            }),
-          );
-          return;
-        }
-
-        res.writeHead(200, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ ok: true }));
-      }
-
-      emitClose(): void {
-        this.onclose?.();
-      }
-
-      async close(): Promise<void> {}
-    },
+    StreamableHTTPServerTransport: MockStreamableHTTPServerTransport,
   }));
 
-  vi.doMock("../build/audit.js", () => ({
+  vi.doMock("../src/audit.js", () => ({
     AuditLogger: class MockAuditLogger {},
   }));
 
-  vi.doMock("../build/client.js", () => ({
+  vi.doMock("../src/client.js", () => ({
     ServiceTitanClient: class MockServiceTitanClient {},
   }));
 
-  vi.doMock("../build/config.js", () => ({
+  vi.doMock("../src/config.js", () => ({
     loadConfig: () => ({
       clientId: "test-client-id",
       clientSecret: "test-client-secret",
@@ -260,7 +261,11 @@ beforeAll(async () => {
     }),
   }));
 
-  vi.doMock("../build/logger.js", () => ({
+  vi.doMock("../src/domains/loader.js", () => ({
+    loadDomainModules: vi.fn(async () => {}),
+  }));
+
+  vi.doMock("../src/logger.js", () => ({
     Logger: class MockLogger {
       debug(): void {}
       info(): void {}
@@ -269,7 +274,7 @@ beforeAll(async () => {
     },
   }));
 
-  vi.doMock("../build/registry.js", () => ({
+  vi.doMock("../src/registry.js", () => ({
     ToolRegistry: class MockToolRegistry {
       attachClient(): void {}
       register(): void {}
@@ -281,12 +286,12 @@ beforeAll(async () => {
     },
   }));
 
-  vi.doMock("../build/utils.js", () => ({
+  vi.doMock("../src/utils.js", () => ({
     setMaxResponseChars: vi.fn(),
     toolResult: (value: unknown) => value,
   }));
 
-  await import("../build/streamable-http.js");
+  await import("../src/streamable-http.ts");
   await waitForHandler();
 });
 
@@ -436,5 +441,59 @@ describe("Streamable HTTP transport HTTP handler", () => {
 
     expect(res.statusCode).toBe(404);
     expect(res.json<{ error: string }>().error).toContain("Session not found");
+  });
+
+  it("cleans up a session created during a failed initialize request", async () => {
+    initializeRequestError = new Error("initialize failed");
+
+    const res = await dispatch({
+      method: "POST",
+      url: "/mcp",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+        "mcp-protocol-version": LATEST_PROTOCOL_VERSION,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 5,
+        method: "initialize",
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: {
+            name: "vitest",
+            version: "1.0.0",
+          },
+        },
+      }),
+    });
+
+    const transport = transportInstances.at(-1);
+    expect(transport?.sessionId).toBeDefined();
+    expect(res.statusCode).toBe(500);
+    expect(res.json<{ error: string }>().error).toBe("Internal server error");
+    expect(transport?.close).toHaveBeenCalledTimes(1);
+
+    initializeRequestError = undefined;
+
+    const followUp = await dispatch({
+      method: "POST",
+      url: "/mcp",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+        "mcp-session-id": transport!.sessionId!,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 6,
+        method: "notifications/initialized",
+        params: {},
+      }),
+    });
+
+    expect(followUp.statusCode).toBe(404);
+    expect(followUp.json<{ error: string }>().error).toContain("Session not found");
   });
 });

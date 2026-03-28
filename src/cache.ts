@@ -6,6 +6,21 @@ const DEFAULT_TTL_MS = 30 * 60 * 1000;
 const DEFAULT_PAGE_SIZE = 500;
 const DEFAULT_MAX_PAGES = 50;
 
+interface CacheLogger {
+  warn(message: string, context?: Record<string, unknown>): void;
+}
+
+const defaultCacheLogger: CacheLogger = {
+  warn(message, context) {
+    if (context) {
+      console.warn(message, context);
+      return;
+    }
+
+    console.warn(message);
+  },
+};
+
 interface CacheEntry<T> {
   value: T;
   expiresAt: number;
@@ -45,13 +60,18 @@ function toText(value: unknown): string | null {
 }
 
 function toInteger(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return Math.trunc(value);
+  if (typeof value === "number") {
+    return Number.isSafeInteger(value) && value >= 0 ? value : null;
   }
 
   if (typeof value === "string" && value.trim().length > 0) {
-    const parsed = Number.parseInt(value, 10);
-    return Number.isFinite(parsed) ? parsed : null;
+    const trimmed = value.trim();
+    if (!/^\d+$/.test(trimmed)) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : null;
   }
 
   return null;
@@ -158,6 +178,7 @@ async function fetchAllPages(
   path: string,
   params: Record<string, unknown> = {},
   maxPages: number = DEFAULT_MAX_PAGES,
+  logger: CacheLogger = defaultCacheLogger,
 ): Promise<GenericRecord[]> {
   const allItems: GenericRecord[] = [];
 
@@ -172,7 +193,15 @@ async function fetchAllPages(
     const items = extractItems(response);
     allItems.push(...items);
 
-    if (!hasMorePages(response) || items.length === 0) {
+    const hasMore = hasMorePages(response);
+    if (page === maxPages && hasMore && items.length > 0) {
+      logger.warn("Reference data cache truncated at max pages, some records may be missing", {
+        maxPages,
+        endpoint: path,
+      });
+    }
+
+    if (!hasMore || items.length === 0) {
       break;
     }
   }
@@ -238,7 +267,10 @@ export class ReferenceDataCache {
   private readonly cache: TtlCache<GenericRecord[]>;
   private readonly inFlight = new Map<string, Promise<GenericRecord[]>>();
 
-  constructor(ttlMs: number = DEFAULT_TTL_MS) {
+  constructor(
+    ttlMs: number = DEFAULT_TTL_MS,
+    private readonly logger: CacheLogger = defaultCacheLogger,
+  ) {
     this.cache = new TtlCache<GenericRecord[]>(ttlMs);
   }
 
@@ -252,7 +284,13 @@ export class ReferenceDataCache {
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
     return this.getOrLoad("technicians", () =>
-      fetchAllPages(client, "/tenant/{tenant}/technicians", { active: "Any" }),
+      fetchAllPages(
+        client,
+        "/tenant/{tenant}/technicians",
+        { active: "Any" },
+        DEFAULT_MAX_PAGES,
+        this.logger,
+      ),
       ttlMs,
     );
   }
@@ -262,7 +300,13 @@ export class ReferenceDataCache {
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
     return this.getOrLoad("business-units", () =>
-      fetchAllPages(client, "/tenant/{tenant}/business-units", { active: "Any" }),
+      fetchAllPages(
+        client,
+        "/tenant/{tenant}/business-units",
+        { active: "Any" },
+        DEFAULT_MAX_PAGES,
+        this.logger,
+      ),
       ttlMs,
     );
   }
@@ -272,7 +316,13 @@ export class ReferenceDataCache {
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
     return this.getOrLoad("payment-types", () =>
-      fetchAllPages(client, "/tenant/{tenant}/payment-types", { active: "Any" }),
+      fetchAllPages(
+        client,
+        "/tenant/{tenant}/payment-types",
+        { active: "Any" },
+        DEFAULT_MAX_PAGES,
+        this.logger,
+      ),
       ttlMs,
     );
   }
@@ -282,7 +332,13 @@ export class ReferenceDataCache {
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
     return this.getOrLoad("membership-types", () =>
-      fetchAllPages(client, "/tenant/{tenant}/membership-types", { active: "Any" }),
+      fetchAllPages(
+        client,
+        "/tenant/{tenant}/membership-types",
+        { active: "Any" },
+        DEFAULT_MAX_PAGES,
+        this.logger,
+      ),
       ttlMs,
     );
   }

@@ -205,6 +205,21 @@ describe("ReferenceDataCache", () => {
     expect(await cache.getTechnicianName(client, 999)).toBe("Technician 999");
   });
 
+  it("does not match malformed string IDs when resolving cached records", async () => {
+    const loader = vi.fn().mockResolvedValue({
+      data: [
+        { id: "12abc", name: "Malformed" },
+        { id: "12", name: "Valid" },
+      ],
+      hasMore: false,
+      page: 1,
+    });
+    const client = makeClient(loader);
+    const cache = new ReferenceDataCache();
+
+    expect(await cache.getTechnicianName(client, 12)).toBe("Valid");
+  });
+
   it("clear() removes cached data and in-flight state", async () => {
     const loader = vi
       .fn()
@@ -254,5 +269,33 @@ describe("ReferenceDataCache", () => {
 
     expect(await cache.findTechniciansByName(client, "   ")).toEqual([]);
     expect(loader).not.toHaveBeenCalled();
+  });
+
+  it("warns when reference data pagination is truncated at the max page limit", async () => {
+    const warn = vi.fn();
+    const loader = vi.fn().mockImplementation(
+      async (_path: string, params?: Record<string, unknown>) => {
+        const page = Number(params?.page ?? 1);
+        return {
+          data: [{ id: page, name: `Tech ${page}` }],
+          hasMore: true,
+          page,
+        };
+      },
+    );
+    const client = makeClient(loader);
+    const cache = new ReferenceDataCache(60_000, { warn });
+
+    const technicians = await cache.getTechnicians(client);
+
+    expect(technicians).toHaveLength(50);
+    expect(loader).toHaveBeenCalledTimes(50);
+    expect(warn).toHaveBeenCalledWith(
+      "Reference data cache truncated at max pages, some records may be missing",
+      expect.objectContaining({
+        maxPages: 50,
+        endpoint: "/tenant/{tenant}/technicians",
+      }),
+    );
   });
 });

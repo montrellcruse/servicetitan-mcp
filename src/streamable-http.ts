@@ -282,6 +282,8 @@ async function main(): Promise<void> {
 
     // Streamable HTTP MCP endpoint
     if (url.pathname === "/mcp") {
+      let createdSessionId: string | undefined;
+
       try {
         // Parse body for POST requests
         let parsedBody: unknown = undefined;
@@ -347,6 +349,7 @@ async function main(): Promise<void> {
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (newSessionId: string) => {
+            createdSessionId = newSessionId;
             logger.info("Session initialized", { sessionId: newSessionId, requestId });
             sessions.set(newSessionId, {
               transport,
@@ -368,6 +371,13 @@ async function main(): Promise<void> {
         await sessionServer.connect(transport);
         await transport.handleRequest(req, res, parsedBody);
       } catch (error: unknown) {
+        if (createdSessionId) {
+          const createdSession = sessions.get(createdSessionId);
+          if (createdSession) {
+            await closeSession(createdSessionId, createdSession, "initialization-failed");
+          }
+        }
+
         logger.error("Unhandled /mcp request error", {
           requestId,
           error: error instanceof Error ? error.message : String(error),

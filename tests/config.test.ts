@@ -26,6 +26,7 @@ describe("loadConfig", () => {
       logLevel: "info",
       timezone: "UTC",
       corsOrigin: "",
+      allowedCallers: null,
     });
   });
 
@@ -191,5 +192,14 @@ describe("loadConfig", () => {
   it("uses ST_CORS_ORIGIN when set", () => {
     const config = loadConfig({ ...validEnv, ST_CORS_ORIGIN: "https://app.example.com" });
     expect(config.corsOrigin).toBe("https://app.example.com");
+  });
+
+  it("parses ST_ALLOWED_CALLERS as a normalized allowlist", () => {
+    const config = loadConfig({
+      ...validEnv,
+      ST_ALLOWED_CALLERS: " Alice@example.com,svc-user ,  ",
+    });
+
+    expect(config.allowedCallers).toEqual(["alice@example.com", "svc-user"]);
   });
 });

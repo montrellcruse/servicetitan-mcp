@@ -1,9 +1,12 @@
+import { z } from "zod";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {
   buildParams,
+  paginationParams,
   sanitizeParams,
   setMaxResponseChars,
+  sortParam,
   toolError,
   toolResult,
 } from "../src/utils.js";
@@ -96,6 +99,34 @@ describe("buildParams", () => {
       enabled: false,
       query: "",
     });
+  });
+});
+
+describe("paginationParams", () => {
+  const schema = paginationParams(z.object({}));
+
+  it("rejects page numbers below 1", () => {
+    expect(schema.safeParse({ page: 0 }).success).toBe(false);
+    expect(schema.safeParse({ page: -1 }).success).toBe(false);
+  });
+
+  it("rejects page sizes below 1", () => {
+    expect(schema.safeParse({ pageSize: 0 }).success).toBe(false);
+  });
+});
+
+describe("sortParam", () => {
+  const schema = z.object(sortParam(["Id", "CreatedOn"]));
+
+  it("accepts documented sort formats", () => {
+    expect(schema.safeParse({ sort: "+CreatedOn" }).success).toBe(true);
+    expect(schema.safeParse({ sort: "-Id" }).success).toBe(true);
+    expect(schema.safeParse({ sort: "CreatedOn" }).success).toBe(true);
+  });
+
+  it("rejects malformed sort expressions", () => {
+    expect(schema.safeParse({ sort: "0CreatedOn" }).success).toBe(false);
+    expect(schema.safeParse({ sort: "+Created-On" }).success).toBe(false);
   });
 });
 

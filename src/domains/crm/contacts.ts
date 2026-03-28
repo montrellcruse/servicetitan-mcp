@@ -12,6 +12,13 @@ import {
 } from "../../utils.js";
 import { getErrorMessage } from "../intelligence/helpers.js";
 
+const safePathSegmentSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z0-9_-]+$/,
+    "Must contain only alphanumeric characters, hyphens, and underscores",
+  );
+
 const contactIdSchema = z.object({
   id: z.string().uuid().describe("Contact ID"),
 });
@@ -57,14 +64,14 @@ const contactsByRelationshipListSchema = contactListFiltersSchema.extend({
 const contactRelationshipPathSchema = z.object({
   contactId: z.string().uuid().describe("Contact ID"),
   relatedEntityId: z.number().int().describe("Related entity ID"),
-  typeSlug: z.string().describe("Relationship type slug"),
+  typeSlug: safePathSegmentSchema.describe("Relationship type slug"),
 });
 
 const contactRelationshipListSchema = paginationParams(
   z.object({
     contactId: z.string().uuid().describe("Contact ID"),
     relatedEntityId: z.number().int().optional().describe("Related entity ID filter"),
-    typeSlug: z.string().optional().describe("Relationship type slug filter"),
+    typeSlug: safePathSegmentSchema.optional().describe("Relationship type slug filter"),
     typeName: z.string().optional().describe("Relationship type name filter"),
     createdBefore: z
       .string()
@@ -274,8 +281,9 @@ export function registerContactTools(
       const input = params as z.infer<typeof contactRelationshipPathSchema>;
 
       try {
+        const encodedTypeSlug = encodeURIComponent(input.typeSlug);
         await client.delete(
-          `/tenant/{tenant}/contacts/${input.contactId}/relationships/${input.relatedEntityId}/${input.typeSlug}`,
+          `/tenant/{tenant}/contacts/${input.contactId}/relationships/${input.relatedEntityId}/${encodedTypeSlug}`,
         );
 
         return toolResult({
@@ -298,8 +306,9 @@ export function registerContactTools(
       const input = params as z.infer<typeof contactRelationshipPathSchema>;
 
       try {
+        const encodedTypeSlug = encodeURIComponent(input.typeSlug);
         const data = await client.post(
-          `/tenant/{tenant}/contacts/${input.contactId}/relationships/${input.relatedEntityId}/${input.typeSlug}`,
+          `/tenant/{tenant}/contacts/${input.contactId}/relationships/${input.relatedEntityId}/${encodedTypeSlug}`,
         );
 
         return toolResult(data);

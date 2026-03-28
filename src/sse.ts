@@ -131,147 +131,207 @@ async function main(): Promise<void> {
 
   // Track active SSE transports by session ID
   const transports = new Map<string, SSEServerTransport>();
+  let activeTransportId = 0;
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();
     sendCorsHeaders(res, config.corsOrigin);
-
-    // Handle CORS preflight
-    if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
-      return;
-    }
-
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
-
-    logger.info(`[${requestId}] ${req.method} ${req.url}`);
-
-    // Health endpoint (no auth)
-    if (url.pathname === "/health" && req.method === "GET") {
-      sendJson(res, 200, {
-        status: "ok",
-        tools: stats.registered,
-        environment: config.environment,
-        readonly: config.readonlyMode,
-      });
-      return;
-    }
-
-    // Auth required for everything else
-    if (!authenticate(req)) {
-      sendJson(res, 401, { error: "Unauthorized", requestId });
-      return;
-    }
-
-    // SSE connection endpoint
-    if (url.pathname === "/sse" && req.method === "GET") {
-      // Close any existing connection — McpServer only supports one transport at a time
-      try {
-        await server.close();
-      } catch {
-        // No active connection — that's fine
+    try {
+      // Handle CORS preflight
+      if (req.method === "OPTIONS") {
+        res.writeHead(204);
+        res.end();
+        return;
       }
 
-      // Clean up all previous transports
-      for (const [id, t] of transports) {
-        try { await t.close(); } catch { /* already closed */ }
-        transports.delete(id);
-      }
+      const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
-      // Disable Nagle's algorithm and proxy buffering for SSE
-      // This ensures chunked responses are flushed immediately
-      req.socket.setNoDelay(true);
-      res.setHeader("X-Accel-Buffering", "no"); // nginx/Fly proxy hint
+      logger.info(`[${requestId}] ${req.method} ${req.url}`);
 
-      // Wrap res.write to auto-flush after each SSE event
-      const origWrite = res.write.bind(res) as typeof res.write;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (res as any).write = function (chunk: any, encodingOrCb?: any, cb?: any) {
-        const result = origWrite(chunk, encodingOrCb, cb);
-        // Force flush the socket after each write
-        if (res.socket && !res.socket.destroyed) {
-          (res.socket as any).uncork?.();
-        }
-        return result;
-      };
-
-      const transport = new SSEServerTransport("/messages", res);
-      transports.set(transport.sessionId, transport);
-
-      const closeSseServer = (): void => {
-        void server.close().catch((err) => {
-          logger.warn("Failed to close SSE server on disconnect", {
-            sessionId: transport.sessionId,
-            error: err instanceof Error ? err.message : String(err),
-          });
+      // Health endpoint (no auth)
+      if (url.pathname === "/health" && req.method === "GET") {
+        sendJson(res, 200, {
+          status: "ok",
+          tools: stats.registered,
+          environment: config.environment,
+          readonly: config.readonlyMode,
         });
-      };
-
-      transport.onclose = () => {
-        transports.delete(transport.sessionId);
-        logger.info("SSE client disconnected", { sessionId: transport.sessionId });
-        closeSseServer();
-      };
-
-      logger.info("SSE client connected", { sessionId: transport.sessionId, requestId });
-
-      // ── SSE keepalive heartbeat ──
-      // Sends a comment every 30 s to keep the connection alive and detect
-      // silently-disconnected clients (res.write() will fail and trigger "close").
-      const keepAlive = setInterval(() => {
-        res.write(": keepalive\n\n");
-      }, 30_000);
-
-      res.on("close", () => {
-        clearInterval(keepAlive);
-        closeSseServer();
-      });
-
-      await server.connect(transport);
-      return;
-    }
-
-    // Message endpoint (POST from SSE clients)
-    if (url.pathname === "/messages" && req.method === "POST") {
-      const sessionId = url.searchParams.get("sessionId");
-      if (!sessionId) {
-        sendJson(res, 400, { error: "Missing sessionId query parameter", requestId });
         return;
       }
 
-      const transport = transports.get(sessionId);
-      if (!transport) {
-        sendJson(res, 404, { error: "Unknown session", requestId });
+      // Auth required for everything else
+      if (!authenticate(req)) {
+        sendJson(res, 401, { error: "Unauthorized", requestId });
         return;
       }
 
-      // Parse the body
-      const chunks: Buffer[] = [];
-      let totalSize = 0;
-      for await (const chunk of req) {
-        const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-        totalSize += buf.length;
-        if (totalSize > 1_048_576) { // 1MB limit
-          sendJson(res, 413, { error: "Payload too large", requestId });
+      // SSE connection endpoint
+      if (url.pathname === "/sse" && req.method === "GET") {
+        activeTransportId += 1;
+        const transportId = activeTransportId;
+
+        // Close any existing connection — McpServer only supports one transport at a time
+        try {
+          await server.close();
+        } catch {
+          // No active connection — that's fine
+        }
+
+        // Clean up all previous transports
+        for (const [id, transport] of transports) {
+          try {
+            await transport.close();
+          } catch {
+            // already closed
+          }
+          transports.delete(id);
+        }
+
+        // Disable Nagle's algorithm and proxy buffering for SSE
+        // This ensures chunked responses are flushed immediately
+        req.socket.setNoDelay(true);
+        res.setHeader("Content-Type", "text/event-stream");
+        res.setHeader("Cache-Control", "no-cache");
+        res.setHeader("Connection", "keep-alive");
+        res.setHeader("X-Accel-Buffering", "no"); // nginx/Fly proxy hint
+
+        // Wrap res.write to auto-flush after each SSE event
+        const origWrite = res.write.bind(res) as typeof res.write;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (res as any).write = function (chunk: any, encodingOrCb?: any, cb?: any) {
+          const result = origWrite(chunk, encodingOrCb, cb);
+          // Force flush the socket after each write
+          if (res.socket && !res.socket.destroyed) {
+            (res.socket as any).uncork?.();
+          }
+          return result;
+        };
+
+        const transport = new SSEServerTransport("/messages", res);
+        transports.set(transport.sessionId, transport);
+
+        let keepAlive: NodeJS.Timeout | undefined;
+        let disconnected = false;
+
+        const closeSseServer = (): void => {
+          if (transportId !== activeTransportId) {
+            return;
+          }
+
+          void server.close().catch((err) => {
+            logger.warn("Failed to close SSE server on disconnect", {
+              sessionId: transport.sessionId,
+              error: err instanceof Error ? err.message : String(err),
+            });
+          });
+        };
+
+        const cleanupTransport = (reason: "transport-close" | "response-close"): void => {
+          if (disconnected) {
+            return;
+          }
+
+          disconnected = true;
+          if (keepAlive) {
+            clearInterval(keepAlive);
+            keepAlive = undefined;
+          }
+
+          if (transports.get(transport.sessionId) === transport) {
+            transports.delete(transport.sessionId);
+          }
+
+          logger.info("SSE client disconnected", { sessionId: transport.sessionId, reason });
+          closeSseServer();
+        };
+
+        transport.onclose = () => {
+          cleanupTransport("transport-close");
+        };
+
+        logger.info("SSE client connected", { sessionId: transport.sessionId, requestId });
+
+        // ── SSE keepalive heartbeat ──
+        // Sends a comment every 30 s to keep the connection alive and detect
+        // silently-disconnected clients (res.write() will fail and trigger "close").
+        keepAlive = setInterval(() => {
+          res.write(": keepalive\n\n");
+        }, 30_000);
+
+        res.on("close", () => {
+          cleanupTransport("response-close");
+        });
+
+        await server.connect(transport);
+        return;
+      }
+
+      // Message endpoint (POST from SSE clients)
+      if (url.pathname === "/messages" && req.method === "POST") {
+        const sessionId = url.searchParams.get("sessionId");
+        if (!sessionId) {
+          sendJson(res, 400, { error: "Missing sessionId query parameter", requestId });
           return;
         }
-        chunks.push(buf);
-      }
 
-      let body: unknown;
-      try {
-        body = JSON.parse(Buffer.concat(chunks).toString());
-      } catch {
-        sendJson(res, 400, { error: "Invalid JSON body", requestId });
+        const transport = transports.get(sessionId);
+        if (!transport) {
+          sendJson(res, 404, { error: "Unknown session", requestId });
+          return;
+        }
+
+        // Parse the body
+        const chunks: Buffer[] = [];
+        let totalSize = 0;
+        for await (const chunk of req) {
+          const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+          totalSize += buf.length;
+          if (totalSize > 1_048_576) { // 1MB limit
+            sendJson(res, 413, { error: "Payload too large", requestId });
+            return;
+          }
+          chunks.push(buf);
+        }
+
+        let body: unknown;
+        try {
+          body = JSON.parse(Buffer.concat(chunks).toString());
+        } catch {
+          sendJson(res, 400, { error: "Invalid JSON body", requestId });
+          return;
+        }
+
+        try {
+          await transport.handlePostMessage(req, res, body);
+        } catch (error: unknown) {
+          logger.error("Unhandled /messages request error", {
+            requestId,
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+            stack: error instanceof Error ? error.stack : undefined,
+          });
+          if (!res.headersSent) {
+            sendJson(res, 500, { error: "Internal server error", requestId });
+          } else if (!res.writableEnded) {
+            res.end();
+          }
+        }
         return;
       }
 
-      await transport.handlePostMessage(req, res, body);
-      return;
+      sendJson(res, 404, { error: "Not found", requestId });
+    } catch (error: unknown) {
+      logger.error("Unhandled SSE request error", {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      if (!res.headersSent) {
+        sendJson(res, 500, { error: "Internal server error", requestId });
+      } else if (!res.writableEnded) {
+        res.end();
+      }
     }
-
-    sendJson(res, 404, { error: "Not found", requestId });
   });
 
   httpServer.listen(PORT, "0.0.0.0", () => {

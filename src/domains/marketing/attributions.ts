@@ -13,6 +13,13 @@ import {
   getErrorMessage,
 } from "../../utils.js";
 
+const safePathSegmentSchema = z
+  .string()
+  .regex(
+    /^[a-zA-Z0-9_-]+$/,
+    "Must contain only alphanumeric characters, hyphens, and underscores",
+  );
+
 const attributionCreateSchema = z.object({
   payload: z.object({}).passthrough().optional().describe("Attribution payload"),
 });
@@ -83,11 +90,11 @@ const reviewsListSchema = paginationParams(
 );
 
 const schedulerIdSchema = z.object({
-  id: z.string().describe("Scheduler ID"),
+  id: safePathSegmentSchema.describe("Scheduler ID"),
 });
 
 const schedulerPerformanceSchema = z.object({
-  id: z.string().describe("Scheduler ID"),
+  id: safePathSegmentSchema.describe("Scheduler ID"),
   sessionCreatedOnOrAfter: z
     .string()
     .datetime()
@@ -104,7 +111,7 @@ const schedulerListSchema = dateFilterParams(
 const schedulerSessionsListSchema = dateFilterParams(
   paginationParams(
     z.object({
-      id: z.string().describe("Scheduler ID"),
+      id: safePathSegmentSchema.describe("Scheduler ID"),
     }),
   ),
 );
@@ -350,10 +357,14 @@ export function registerMarketingAttributionTools(
       const input = params as z.infer<typeof schedulerPerformanceSchema>;
 
       try {
-        const data = await client.get(`/tenant/{tenant}/schedulers/${input.id}/performance`, {
-          sessionCreatedOnOrAfter: input.sessionCreatedOnOrAfter,
-          sessionCreatedBefore: input.sessionCreatedBefore,
-        });
+        const encodedSchedulerId = encodeURIComponent(input.id);
+        const data = await client.get(
+          `/tenant/{tenant}/schedulers/${encodedSchedulerId}/performance`,
+          {
+            sessionCreatedOnOrAfter: input.sessionCreatedOnOrAfter,
+            sessionCreatedBefore: input.sessionCreatedBefore,
+          },
+        );
 
         return toolResult(data);
       } catch (error: unknown) {
@@ -372,8 +383,9 @@ export function registerMarketingAttributionTools(
       const input = params as z.infer<typeof schedulerSessionsListSchema>;
 
       try {
+        const encodedSchedulerId = encodeURIComponent(input.id);
         const data = await client.get(
-          `/tenant/{tenant}/schedulers/${input.id}/sessions`,
+          `/tenant/{tenant}/schedulers/${encodedSchedulerId}/sessions`,
           buildParams({
             createdBefore: input.createdBefore,
             createdOnOrAfter: input.createdOnOrAfter,

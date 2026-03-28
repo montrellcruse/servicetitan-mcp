@@ -16,6 +16,9 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
     maxResponseChars: 100000,
     enabledDomains: null,
     logLevel: "error",
+    timezone: "UTC",
+    corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -139,10 +142,13 @@ describe("safety audit wrapper", () => {
     const [, , wrapped] = server.tool.mock.calls[0] ?? [];
     await wrapped({
       id: 1,
-      password: "pw",
-      token: "tok",
-      nested: { secret: "value", keep: "safe" },
-      key: "api",
+      clientSecret: "pw",
+      accessToken: "tok",
+      refreshToken: "refresh",
+      apiKey: "api",
+      authorizationCode: "code",
+      authorization: "Bearer secret",
+      nested: { credentialType: "value", keep: "safe" },
       keep: true,
     });
 

@@ -21,6 +21,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     logLevel: "info",
     timezone: "UTC",
     corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -195,7 +196,7 @@ describe("ToolRegistry", () => {
     const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
     await wrappedHandler({ id: 42, confirm: true, token: "secret-token" });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" });
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, undefined);
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
     expect(auditLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -264,7 +265,7 @@ describe("ToolRegistry", () => {
 
     await wrappedHandler({ id: 42 });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 });
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 }, undefined);
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
   });
 
@@ -292,9 +293,107 @@ describe("ToolRegistry", () => {
     const result = await wrappedHandler({ id: 42 });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
     expect(handlerSpy).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
+  });
+
+  it("registers delete tools in readonly mode and blocks execution in middleware", async () => {
+    const handlerSpy = vi.fn().mockResolvedValue({
+      content: [{ type: "text", text: "deleted" }],
+    });
+    const { registry, server, auditLogger } = createRegistry({
+      config: {
+        readonlyMode: true,
+      },
+    });
+
+    registry.register(
+      createTool({
+        name: "crm_customers_delete",
+        operation: "delete",
+        handler: handlerSpy,
+      }),
+    );
+
+    expect(server.tool).toHaveBeenCalledTimes(1);
+
+    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const result = await wrappedHandler({ id: 42, confirm: true });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(handlerSpy).not.toHaveBeenCalled();
+    expect(auditLogger.log).not.toHaveBeenCalled();
+  });
+
+  it("enforces the optional caller allowlist when configured", async () => {
+    const handlerSpy = vi.fn().mockResolvedValue({
+      content: [{ type: "text", text: "ok" }],
+    });
+    const { registry, server } = createRegistry({
+      config: {
+        readonlyMode: false,
+        allowedCallers: ["alice@example.com"],
+      },
+    });
+
+    registry.register(
+      createTool({
+        name: "crm_customers_get",
+        operation: "read",
+        handler: handlerSpy,
+      }),
+    );
+
+    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const unauthorized = await wrappedHandler(
+      { id: 42 },
+      { requestInfo: { headers: { "x-user-email": "mallory@example.com" } } },
+    );
+
+    expect(unauthorized.isError).toBe(true);
+    expect(unauthorized.content[0]?.text).toContain("caller not permitted");
+    expect(handlerSpy).not.toHaveBeenCalled();
+
+    await wrappedHandler(
+      { id: 42 },
+      { requestInfo: { headers: { "x-user-email": "Alice@Example.com" } } },
+    );
+
+    expect(handlerSpy).toHaveBeenCalledWith(
+      { id: 42 },
+      expect.objectContaining({
+        requestInfo: { headers: { "x-user-email": "Alice@Example.com" } },
+      }),
+    );
+  });
+
+  it("rejects allowlisted mode when caller identity is unavailable", async () => {
+    const handlerSpy = vi.fn().mockResolvedValue({
+      content: [{ type: "text", text: "ok" }],
+    });
+    const { registry, server } = createRegistry({
+      config: {
+        readonlyMode: false,
+        allowedCallers: ["alice@example.com"],
+      },
+    });
+
+    registry.register(
+      createTool({
+        name: "crm_customers_get",
+        operation: "read",
+        handler: handlerSpy,
+      }),
+    );
+
+    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const result = await wrappedHandler({ id: 42 });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("caller identity unavailable");
+    expect(handlerSpy).not.toHaveBeenCalled();
   });
 
   it("does not audit read operations", async () => {

@@ -75,7 +75,8 @@ export function registerMarketingSuppressionTools(
       const input = params as z.infer<typeof suppressionEmailSchema>;
 
       try {
-        const data = await client.get(`/tenant/{tenant}/suppressions/${input.email}`);
+        const encodedEmail = encodeURIComponent(input.email);
+        const data = await client.get(`/tenant/{tenant}/suppressions/${encodedEmail}`);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

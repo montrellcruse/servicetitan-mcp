@@ -59,6 +59,8 @@ describe("shapeResponse", () => {
         { customer: "B" },
         { customer: "C" },
       ],
+      _truncated: true,
+      _total: 4,
     });
   });
 
@@ -82,7 +84,7 @@ describe("shapeResponse", () => {
     });
   });
 
-  it("suppresses zero-valued fields without removing array items", () => {
+  it("preserves zero-valued fields", () => {
     const shaped = shapeResponse({
       revenue: 0,
       ratio: 0.0,
@@ -95,8 +97,12 @@ describe("shapeResponse", () => {
     });
 
     expect(shaped).toEqual({
+      revenue: 0,
+      ratio: 0,
+      textZero: "0",
       items: [0, "0", 1],
       nested: {
+        avgTicket: 0,
         keep: 2,
       },
     });
@@ -120,9 +126,10 @@ describe("shapeResponse", () => {
     });
   });
 
-  it("compacts ISO dates to YYYY-MM-DD", () => {
+  it("compacts ISO timestamps while preserving time-of-day", () => {
     const shaped = shapeResponse({
       createdOn: "2026-03-09T10:20:30Z",
+      scheduledDate: "2026-03-10T14:45:00Z",
       nested: {
         startsAt: "2026-03-09T10:20:30.123-07:00",
       },
@@ -130,9 +137,10 @@ describe("shapeResponse", () => {
     });
 
     expect(shaped).toEqual({
-      createdOn: "2026-03-09",
+      createdOn: "2026-03-09T10:20",
+      scheduledDate: "2026-03-10",
       nested: {
-        startsAt: "2026-03-09",
+        startsAt: "2026-03-09T10:20",
       },
       unchanged: "2026-03-09",
     });
