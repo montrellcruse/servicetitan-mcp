@@ -110,8 +110,12 @@ function sendJson(res: ServerResponse, status: number, body: unknown): void {
 function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
   res.setHeader("Access-Control-Allow-Origin", corsOrigin);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-api-key, Authorization, Mcp-Session-Id");
-  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+  res.setHeader(
+    "Access-Control-Allow-Headers",
+    "Content-Type, x-api-key, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID",
+  );
+  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
+  res.setHeader("X-Accel-Buffering", "no");
 }
 
 // ── Response compression helper ──

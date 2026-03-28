@@ -19,6 +19,7 @@ ENV NODE_ENV=production
 
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
+RUN npm prune --omit=dev
 COPY --from=build /app/build ./build
 
 # Default: Streamable HTTP server for remote access (Fly.io / Docker)
