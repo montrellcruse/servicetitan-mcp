@@ -209,7 +209,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 |----------|---------|-------------|
 | `ST_ENVIRONMENT` | `integration` | ServiceTitan environment: `integration` or `production` |
 | `ST_READONLY` | `true` | Skip write and delete tools at registration time |
-| `ST_CONFIRM_WRITES` | `false` | Require `confirm=true` to execute write tools |
+| `ST_CONFIRM_WRITES` | `false` | Require `_confirmed: true` to execute write tools |
 | `ST_MAX_RESPONSE_CHARS` | `100000` | Cap tool response size |
 | `ST_DOMAINS` | *(all)* | Comma-separated domain allowlist (e.g. `crm,dispatch,reporting`) |
 | `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
@@ -288,7 +288,7 @@ npm run start      # run compiled server
 ## Safety
 
 - **Read-only mode** (`ST_READONLY=true` by default) — delete tools are excluded at registration; write tools remain visible but are blocked at execution time
-- **Confirmation workflow** — delete tools always require `confirm=true`; write tools optionally require it via `ST_CONFIRM_WRITES=true`; missing confirmation returns a preview payload instead of executing
+- **Confirmation workflow** — delete tools require `confirm: true` (returns preview payload when missing); write tools optionally require `_confirmed: true` via `ST_CONFIRM_WRITES=true` (returns error when missing)
 - **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
 
 ---

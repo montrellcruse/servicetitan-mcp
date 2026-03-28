@@ -44,29 +44,16 @@ async function main(): Promise<void> {
       try {
         await client.ensureToken();
         checks.authentication = "OK";
-      } catch (error: unknown) {
-        checks.authentication = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      } catch {
+        checks.authentication = "FAILED";
       }
 
       try {
         await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
         checks.tenant_access = "OK";
-      } catch (error: unknown) {
-        checks.tenant_access = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+      } catch {
+        checks.tenant_access = "FAILED";
       }
-
-      checks.environment = config.environment;
-      checks.readonly_mode = String(config.readonlyMode);
-      checks.confirm_writes = String(config.confirmWrites);
-      checks.max_response_chars = String(config.maxResponseChars);
-      checks.enabled_domains =
-        config.enabledDomains && config.enabledDomains.length > 0
-          ? config.enabledDomains.join(", ")
-          : "all";
-
-      const stats = registry.getStats();
-      checks.tools_registered = String(stats.registered);
-      checks.tools_skipped = String(stats.skipped);
 
       return toolResult(checks);
     },

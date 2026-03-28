@@ -265,6 +265,11 @@ export async function fetchAllPagesParallel<T>(
     console.warn(`Failed to fetch ${failedPages.length}/${remainingPages.length} pages. Results may be incomplete.`);
   }
 
+  // Warn if pagination was truncated at max page limit
+  if (totalCount !== undefined && totalPages === maxPages && totalCount > maxPages * DEFAULT_PAGE_SIZE) {
+    console.warn(`Parallel pagination truncated at ${maxPages} pages (${maxPages * DEFAULT_PAGE_SIZE} of ${totalCount} items). Increase ST_INTEL_MAX_PAGES for full coverage.`);
+  }
+
   return [firstItems, ...remainingPages.map((r) => r.items)].flat();
 }
 

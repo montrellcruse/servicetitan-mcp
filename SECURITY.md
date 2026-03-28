@@ -33,7 +33,7 @@ You should receive an acknowledgment within 48 hours.
 ### Remote Deployment (SSE Mode)
 
 - Remote clients authenticate with `ST_MCP_API_KEY` (bearer token via `Authorization: Bearer` header or `x-api-key` header)
-- CORS headers are configurable; the default allows all origins
+- CORS headers are configurable via `ST_CORS_ORIGIN`; the default is empty (no CORS headers emitted by Streamable HTTP; SSE uses the configured value)
 - Request body size is limited to 1MB (HTTP 413 on oversize payloads)
 - The server handles graceful shutdown on `SIGTERM`/`SIGINT` with a 10-second force-exit fallback
 - `uncaughtException` and `unhandledRejection` handlers prevent silent crashes

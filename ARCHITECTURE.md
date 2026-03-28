@@ -145,7 +145,7 @@ All configuration is loaded from environment variables. `loadConfig()` validates
 | `ST_READONLY` | | `true` | Set `false` to enable write/delete tools |
 | `ST_CONFIRM_WRITES` | | `false` | Require `_confirmed: true` for write operations |
 | `ST_MAX_RESPONSE_CHARS` | | `100000` | Max characters in a tool response |
-| `ST_DOMAINS` | | (all) | Comma-separated domain whitelist (e.g. `crm,jpm`) |
+| `ST_DOMAINS` | | (all) | Comma-separated domain whitelist (e.g. `crm,dispatch,marketing`) |
 | `ST_LOG_LEVEL` | | `info` | `debug`, `info`, `warn`, or `error` |
 | `ST_TIMEZONE` | | `UTC` | IANA timezone for date boundary calculation (e.g. `America/New_York`) |
 | `ST_RESPONSE_SHAPING` | | `true` | Set `false` to disable response shaping middleware |
@@ -277,11 +277,11 @@ Every tool goes through `ToolRegistry.register()`, which acts as a gatekeeper an
 ### Filtering (registration time)
 
 1. **Domain filter:** If `ST_DOMAINS` is set, only tools whose `domain` matches are registered. The `_system` domain (health check) is always registered.
-2. **Readonly filter:** If `ST_READONLY=true` (the default), tools with `operation: "write"` or `operation: "delete"` are silently skipped.
+2. **Readonly enforcement:** If `ST_READONLY=true` (the default), delete tools are excluded at registration time. Write tools remain registered but are blocked at execution time with a clear error message ("Readonly mode: operation not permitted").
 
 ### Confirmation wrapper (execution time)
 
-For delete operations, and for write operations when `ST_CONFIRM_WRITES=true`, the registry injects a `confirm` parameter into the tool's Zod schema. When the tool is called without `confirm: true`, it returns a preview object instead of executing:
+**Delete operations** always require `confirm: true`. Without it, the handler returns a preview object:
 
 ```json
 {
@@ -292,6 +292,10 @@ For delete operations, and for write operations when `ST_CONFIRM_WRITES=true`, t
   "confirm": "Call crm_customers_delete again with confirm=true to proceed."
 }
 ```
+
+**Write operations**, when `ST_CONFIRM_WRITES=true`, require `_confirmed: true`. Without it, the handler returns an error message ("Write confirmation required. Re-call with _confirmed: true to proceed.").
+
+The `_confirmed` parameter (for writes) and `confirm` parameter (for deletes) are auto-injected into tool schemas at registration time.
 
 ### Audit logging
 
@@ -356,7 +360,7 @@ Response shaping is a middleware layer applied to all tool responses (enabled by
 
 5. **Limits array lengths** — Specific arrays are truncated to prevent response bloat (e.g. `byTechnician` → 4 items, `campaigns` → 3 items, `staleEstimates` → 3 items).
 
-6. **Suppresses zero values** — Fields with value `0` are omitted to reduce noise.
+6. **Preserves zero values** — Fields with value `0` are kept (zero is meaningful for financial and operational metrics).
 
 ### Why it exists
 

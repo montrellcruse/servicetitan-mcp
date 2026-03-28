@@ -42,7 +42,6 @@ export interface ToolHandlerExtra {
 export class ToolRegistry {
   private registered = 0;
   private skipped = 0;
-  private readonlyFiltered = 0;
   private domainFiltered = 0;
   private readonly byDomain: Record<string, number> = {};
   private readonly registeredTools: ToolDefinition[] = [];
@@ -136,11 +135,11 @@ export class ToolRegistry {
 
   logSummary(): void {
     this.logger.info(
-      `Registered ${this.registered} tools (${this.skipped} skipped: ${this.readonlyFiltered} readonly-filtered, ${this.domainFiltered} domain-filtered)`,
+      `Registered ${this.registered} tools (${this.skipped} skipped, ${this.domainFiltered} domain-filtered)`,
       {
         registered: this.registered,
         skipped: this.skipped,
-        readonlyFiltered: this.readonlyFiltered,
+        
         domainFiltered: this.domainFiltered,
       },
     );

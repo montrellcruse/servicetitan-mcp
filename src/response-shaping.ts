@@ -46,12 +46,14 @@ const EXCLUDED_FIELDS = new Set<string>([
   "breakdownByJobType",
 ]);
 
+// Array limits apply ONLY to intelligence summary arrays where aggregates exist.
+// Never limit generic field names like "items" — those contain real business data
+// (invoice line items, estimate items, receipts, etc).
 const ARRAY_LIMITS = new Map<string, number>([
   ["staleEstimates", 3],
   ["byTechnician", 4],
   ["campaigns", 3],
-  ["items", 10],
-  ["technicians", 3],  // autoresearch round 3: cap to 3 (teamAverages provides full aggregate)
+  ["technicians", 3],  // teamAverages provides full aggregate
 ]);
 
 const FIELD_ABBREVIATIONS = new Map<string, string>([
@@ -157,7 +159,7 @@ function getNumberPrecision(key: string | undefined): number | null {
   }
 
   if (tokens.some((token) => CURRENCY_TOKENS.has(token))) {
-    return 0;
+    return 2; // Preserve cents — rounding to 0 loses financial precision
   }
 
   return null;
@@ -184,12 +186,18 @@ function compactIsoDate(value: string, key: string | undefined): string {
     return value;
   }
 
-  const [, date, hours, minutes] = match;
+  // For date-only fields, strip the time component
   if (key && DATE_ONLY_FIELDS.has(key.toLowerCase())) {
+    const [, date] = match;
     return date;
   }
 
-  return `${date}T${hours}:${minutes}`;
+  // For all other timestamps, preserve the full value including seconds and timezone.
+  // Stripping seconds/timezone loses temporal precision needed for:
+  // - Financial transaction ordering
+  // - Cross-timezone comparisons
+  // - Audit trails
+  return value;
 }
 
 function shapeValue(value: unknown, context: ShapeContext = {}): unknown {

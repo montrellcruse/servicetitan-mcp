@@ -90,10 +90,20 @@ export function activeFilterParam() {
 }
 
 export function sortParam(fields: string[]) {
+  const fieldSet = new Set(fields);
   return {
     sort: z
       .string()
       .regex(/^[+-]?[A-Za-z][A-Za-z0-9_]*$/, "Sort must use +Field or -Field format")
+      .refine(
+        (value) => {
+          const fieldName = value.replace(/^[+-]/, "");
+          return fieldSet.has(fieldName);
+        },
+        {
+          message: `Sort field must be one of: ${fields.join(", ")}`,
+        },
+      )
       .optional()
       .describe(
         `Sort: +Field (asc) or -Field (desc). Fields: ${fields.join(", ")}`,

@@ -39,7 +39,16 @@ export class Logger {
     };
 
     // MCP uses stdout for protocol messages, so all logs must go to stderr.
-    process.stderr.write(`${JSON.stringify(entry)}\n`);
+    // Use a replacer to handle non-JSON-safe values (BigInt, circular refs).
+    try {
+      process.stderr.write(`${JSON.stringify(entry, (_key, value) => {
+        if (typeof value === "bigint") return value.toString();
+        return value;
+      })}\n`);
+    } catch {
+      // Fallback for circular references or other serialization failures
+      process.stderr.write(`${JSON.stringify({ level, ts: new Date().toISOString(), msg, error: "Log serialization failed" })}\n`);
+    }
   }
 
   private shouldLog(level: LogLevel): boolean {

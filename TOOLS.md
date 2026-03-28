@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Total tools: 440
+Total tools: 460
 
 ## accounting
 
@@ -50,7 +50,6 @@ Total tools: 440
 | `crm_booking_provider_tags_update` | `crm` | `write` | Patch a booking provider tag |
 | `crm_bookings_contacts_list` | `crm` | `read` | List contacts for a booking |
 | `crm_bookings_get` | `crm` | `read` | Get a booking by ID |
-| `crm_bookings_get_contact_list2` | `crm` | `read` | List contacts for a provider-scoped booking (legacy naming) |
 | `crm_bookings_list` | `crm` | `read` | List bookings |
 | `crm_bookings_provider_contacts_create` | `crm` | `write` | Create a contact on a provider-scoped booking |
 | `crm_bookings_provider_contacts_list` | `crm` | `read` | List contacts for a provider-scoped booking |
@@ -59,7 +58,6 @@ Total tools: 440
 | `crm_bookings_provider_get` | `crm` | `read` | Get a provider-scoped booking |
 | `crm_bookings_provider_list` | `crm` | `read` | List bookings for a booking provider |
 | `crm_bookings_provider_update` | `crm` | `write` | Patch a provider-scoped booking |
-| `crm_bookings_updatebookingcontact` | `crm` | `write` | Patch a provider-scoped booking contact (legacy naming) |
 | `crm_bulk_tags_add_tags` | `crm` | `write` | Add bulk tags |
 | `crm_bulk_tags_remove_tags` | `crm` | `delete` | Remove bulk tags |
 | `crm_contact_methods_create` | `crm` | `write` | Create a contact method |
@@ -78,26 +76,17 @@ Total tools: 440
 | `crm_contacts_list` | `crm` | `read` | List contacts |
 | `crm_contacts_replace` | `crm` | `write` | Replace a contact |
 | `crm_contacts_update` | `crm` | `write` | Patch a contact |
-| `crm_customer_memberships_create` | `crm` | `write` | Create a customer membership |
-| `crm_customer_memberships_custom_fields_list` | `crm` | `read` | List customer membership custom fields |
-| `crm_customer_memberships_get` | `crm` | `read` | Get a customer membership by ID |
-| `crm_customer_memberships_list` | `crm` | `read` | List customer memberships |
-| `crm_customer_memberships_status_changes_list` | `crm` | `read` | List status changes for a customer membership |
-| `crm_customer_memberships_update` | `crm` | `write` | Patch a customer membership |
 | `crm_customers_contacts_create` | `crm` | `write` | Create a customer contact |
 | `crm_customers_contacts_delete` | `crm` | `delete` | Delete a customer contact |
 | `crm_customers_contacts_list` | `crm` | `read` | List customer contacts |
 | `crm_customers_contacts_modified_list` | `crm` | `read` | List customer contacts modified in a time range |
 | `crm_customers_create` | `crm` | `write` | Create a customer |
 | `crm_customers_custom_field_types_list` | `crm` | `read` | List customer custom field types |
-| `crm_customers_delete_note` | `crm` | `delete` | Delete a customer note (legacy naming) |
-| `crm_customers_delete_tag` | `crm` | `delete` | Delete a tag assignment from a customer (legacy naming) |
 | `crm_customers_get` | `crm` | `read` | Get a customer by ID |
 | `crm_customers_list` | `crm` | `read` | List customers |
 | `crm_customers_notes_create` | `crm` | `write` | Create a note for a customer |
 | `crm_customers_notes_delete` | `crm` | `delete` | Delete a customer note |
 | `crm_customers_notes_list` | `crm` | `read` | List notes for a customer |
-| `crm_customers_tags_create` | `crm` | `write` | Create a tag assignment for a customer |
 | `crm_customers_tags_delete` | `crm` | `delete` | Delete a tag assignment from a customer |
 | `crm_customers_update` | `crm` | `write` | Patch a customer |
 | `crm_leads_create` | `crm` | `write` | Create a lead |
@@ -110,17 +99,10 @@ Total tools: 440
 | `crm_leads_notes_list` | `crm` | `read` | List notes for a lead |
 | `crm_leads_update` | `crm` | `write` | Patch a lead |
 | `crm_location_labor_types_list` | `crm` | `read` | List location labor types by locations |
-| `crm_location_recurring_service_events_list` | `crm` | `read` | List location recurring service events |
-| `crm_location_recurring_service_events_mark_complete` | `crm` | `write` | Mark a recurring service event complete |
-| `crm_location_recurring_service_events_mark_incomplete` | `crm` | `write` | Mark a recurring service event incomplete |
-| `crm_location_recurring_services_get` | `crm` | `read` | Get a location recurring service by ID |
-| `crm_location_recurring_services_list` | `crm` | `read` | List location recurring services |
-| `crm_location_recurring_services_update` | `crm` | `write` | Patch a location recurring service |
 | `crm_locations_contacts_create` | `crm` | `write` | Create a contact for a location |
 | `crm_locations_contacts_delete` | `crm` | `delete` | Delete a location contact |
 | `crm_locations_contacts_list` | `crm` | `read` | List contacts for a location |
 | `crm_locations_contacts_modified_list` | `crm` | `read` | List location contacts modified in a time range |
-| `crm_locations_contacts_update` | `crm` | `write` | Patch a location contact |
 | `crm_locations_create` | `crm` | `write` | Create a location |
 | `crm_locations_custom_field_types_list` | `crm` | `read` | List location custom field types |
 | `crm_locations_get` | `crm` | `read` | Get a location by ID |
@@ -175,13 +157,11 @@ Total tools: 440
 | `dispatch_job_types_list` | `dispatch` | `read` | List job types |
 | `dispatch_job_types_update` | `dispatch` | `write` | Update a job type |
 | `dispatch_jobs_booked_log_get` | `dispatch` | `read` | Get booked log details for a job |
-| `dispatch_jobs_cancel` | `dispatch` | `write` | Cancel a job |
 | `dispatch_jobs_cancel_reasons_list` | `dispatch` | `read` | List cancel reasons available for jobs |
 | `dispatch_jobs_canceled_logs_list` | `dispatch` | `read` | List canceled log entries for a job |
 | `dispatch_jobs_complete` | `dispatch` | `write` | Complete a job |
 | `dispatch_jobs_create` | `dispatch` | `write` | Create a job |
 | `dispatch_jobs_create_attachment` | `dispatch` | `write` | Attach a file to a job |
-| `dispatch_jobs_custom_field_types_list` | `dispatch` | `read` | List job custom field types |
 | `dispatch_jobs_get` | `dispatch` | `read` | Get a job by ID |
 | `dispatch_jobs_get_attachment` | `dispatch` | `read` | Get a job attachment by ID |
 | `dispatch_jobs_history_get` | `dispatch` | `read` | Get history for a job |
@@ -201,7 +181,6 @@ Total tools: 440
 | `dispatch_project_types_list` | `dispatch` | `read` | List project types |
 | `dispatch_projects_attach_job` | `dispatch` | `write` | Attach a job to a project |
 | `dispatch_projects_create` | `dispatch` | `write` | Create a project |
-| `dispatch_projects_custom_field_types_list` | `dispatch` | `read` | List project custom field types |
 | `dispatch_projects_delete` | `dispatch` | `delete` | Delete a project |
 | `dispatch_projects_detach_job` | `dispatch` | `write` | Detach a job from a project |
 | `dispatch_projects_get` | `dispatch` | `read` | Get a project by ID |
@@ -216,19 +195,70 @@ Total tools: 440
 | Name | Domain | Operation | Description |
 | --- | --- | --- | --- |
 | `estimates_create` | `estimates` | `write` | Create a new estimate |
-| `estimates_delete_item` | `estimates` | `delete` | Delete a single item from an estimate |
 | `estimates_dismiss` | `estimates` | `write` | Dismiss an estimate |
 | `estimates_export_estimates` | `estimates` | `read` | Export estimates |
 | `estimates_get` | `estimates` | `read` | Get a single estimate by ID |
-| `estimates_get_items` | `estimates` | `read` | List estimate items with optional filters |
 | `estimates_items_delete` | `estimates` | `delete` | Delete a single item from an estimate |
 | `estimates_items_list` | `estimates` | `read` | List estimate items with optional filters |
 | `estimates_items_update` | `estimates` | `write` | Add or replace an item collection on an estimate |
 | `estimates_list` | `estimates` | `read` | List estimates with filters |
-| `estimates_put_item` | `estimates` | `write` | Add or replace an item collection on an estimate |
 | `estimates_sell` | `estimates` | `write` | Mark an estimate as sold |
 | `estimates_unsell` | `estimates` | `write` | Revert an estimate from sold status |
 | `estimates_update` | `estimates` | `write` | Update an existing estimate |
+
+## export
+
+| Name | Domain | Operation | Description |
+| --- | --- | --- | --- |
+| `export_activities` | `export` | `read` | Export activities |
+| `export_activity_codes` | `export` | `read` | Export activity codes |
+| `export_adjustments` | `export` | `read` | Export adjustments |
+| `export_appointment_assignments` | `export` | `read` | Export appointment assignments |
+| `export_appointments` | `export` | `read` | Export appointments |
+| `export_bookings` | `export` | `read` | Export bookings |
+| `export_business_units` | `export` | `read` | Export business units |
+| `export_calls` | `export` | `read` | Export calls |
+| `export_contacts` | `export` | `read` | Export contacts |
+| `export_customers` | `export` | `read` | Export customers |
+| `export_customers_contacts` | `export` | `read` | Export customer contacts |
+| `export_employees` | `export` | `read` | Export employees |
+| `export_equipment` | `export` | `read` | Export pricebook equipment |
+| `export_gross_pay_items` | `export` | `read` | Export gross pay items |
+| `export_installed_equipment` | `export` | `read` | Export installed equipment |
+| `export_inventory_bills` | `export` | `read` | Export inventory bills |
+| `export_invoice_items` | `export` | `read` | Export invoice items |
+| `export_invoice_templates` | `export` | `read` | Export invoice templates |
+| `export_invoices` | `export` | `read` | Export invoices |
+| `export_job_cancel_reasons` | `export` | `read` | Export job cancel reasons |
+| `export_job_canceled_logs` | `export` | `read` | Export job canceled logs |
+| `export_job_history` | `export` | `read` | Export job history |
+| `export_job_notes` | `export` | `read` | Export job notes |
+| `export_job_splits` | `export` | `read` | Export job splits |
+| `export_jobs` | `export` | `read` | Export jobs |
+| `export_leads` | `export` | `read` | Export leads |
+| `export_location_recurring_service_events` | `export` | `read` | Export location recurring service events |
+| `export_location_recurring_services` | `export` | `read` | Export location recurring services |
+| `export_locations` | `export` | `read` | Export locations |
+| `export_locations_contacts` | `export` | `read` | Export location contacts |
+| `export_materials` | `export` | `read` | Export pricebook materials |
+| `export_membership_status_changes` | `export` | `read` | Export membership status changes |
+| `export_membership_types` | `export` | `read` | Export membership types |
+| `export_memberships` | `export` | `read` | Export memberships |
+| `export_payments` | `export` | `read` | Export payments |
+| `export_payroll_adjustments` | `export` | `read` | Export payroll adjustments |
+| `export_payroll_settings` | `export` | `read` | Export payroll settings |
+| `export_project_notes` | `export` | `read` | Export project notes |
+| `export_projects` | `export` | `read` | Export projects |
+| `export_purchase_orders` | `export` | `read` | Export purchase orders |
+| `export_recurring_service_types` | `export` | `read` | Export recurring service types |
+| `export_returns` | `export` | `read` | Export returns |
+| `export_service_agreements` | `export` | `read` | Export service agreements |
+| `export_services` | `export` | `read` | Export pricebook services |
+| `export_tag_types` | `export` | `read` | Export tag types |
+| `export_technicians` | `export` | `read` | Export technicians |
+| `export_timesheet_codes` | `export` | `read` | Export timesheet codes |
+| `export_timesheets` | `export` | `read` | Export timesheets |
+| `export_transfers` | `export` | `read` | Export transfers |
 
 ## intelligence
 
@@ -241,8 +271,8 @@ Total tools: 440
 | `intel_invoice_tracking` | `intelligence` | `read` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician |
 | `intel_labor_cost` | `intelligence` | `read` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown |
 | `intel_lookup` | `intelligence` | `read` | Look up reference data (technicians, business units, payment types, membership types).  |
-| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, total invoiced revenue, and business-unit membership conversion metrics |
-| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, conversion rates, plus BU-level productivity and sales metrics. |
+| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, tenant-wide totalServiceRevenue from invoices, and business-unit membership conversion metrics. ServiceTitan's invoices API does not expose a membership-only invoice filter, so totalServiceRevenue is not membership-scoped. |
+| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, plus BU-level productivity and sales metrics. Set includeCollections=true for payment/collections data (adds ~20s latency). |
 | `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages |
 
 ## inventory
@@ -292,20 +322,16 @@ Total tools: 440
 | Name | Domain | Operation | Description |
 | --- | --- | --- | --- |
 | `marketing_attributed_leads_get` | `marketing` | `read` | Get attributed leads |
-| `marketing_call_reasons_get` | `marketing` | `read` | List call reasons |
 | `marketing_calls_get` | `marketing` | `read` | Get call details by ID (v2) |
 | `marketing_calls_recording_get` | `marketing` | `read` | Get call recording metadata or payload (v2) |
 | `marketing_calls_update` | `marketing` | `write` | Update a call (v2) |
 | `marketing_calls_v2_list` | `marketing` | `read` | List calls from v2 calls endpoint |
 | `marketing_calls_v3_list` | `marketing` | `read` | List calls from v3 calls endpoint |
 | `marketing_calls_voice_mail_get` | `marketing` | `read` | Get call voicemail metadata or payload (v2) |
-| `marketing_campaign_categories_create` | `marketing` | `write` | Create a campaign category |
-| `marketing_campaign_categories_delete` | `marketing` | `delete` | Delete a campaign category |
-| `marketing_campaign_categories_get` | `marketing` | `read` | Get a campaign category by ID |
-| `marketing_campaign_categories_update` | `marketing` | `write` | Update a campaign category |
 | `marketing_campaign_costs_create` | `marketing` | `write` | Create a campaign cost |
 | `marketing_campaign_costs_delete` | `marketing` | `delete` | Delete a campaign cost |
 | `marketing_campaign_costs_get` | `marketing` | `read` | Get a campaign cost by ID |
+| `marketing_campaign_costs_list` | `marketing` | `read` | List campaign costs |
 | `marketing_campaign_costs_update` | `marketing` | `write` | Update a campaign cost |
 | `marketing_campaigns_costs_list` | `marketing` | `read` | List costs for a campaign |
 | `marketing_campaigns_create` | `marketing` | `write` | Create a campaign |
@@ -315,13 +341,21 @@ Total tools: 440
 | `marketing_client_side_data_get` | `marketing` | `read` | Get marketing client-side data |
 | `marketing_client_specific_pricing_get_all_rate_sheets` | `marketing` | `read` | List all client-specific pricing rate sheets |
 | `marketing_client_specific_pricing_update_rate_sheet` | `marketing` | `write` | Update a client-specific pricing rate sheet |
+| `marketing_external_call_attributions_create` | `marketing` | `write` | Create external call attributions |
+| `marketing_opt_in_outs_create` | `marketing` | `write` | Create opt-in/out record |
+| `marketing_opt_in_outs_list` | `marketing` | `read` | List opt-in/out records |
+| `marketing_opt_in_outs_lookup_create` | `marketing` | `write` | Lookup and create opt-in/out |
 | `marketing_reviews` | `marketing` | `read` | List marketing reviews |
+| `marketing_scheduled_job_attributions_create` | `marketing` | `write` | Create scheduled job attributions |
 | `marketing_scheduler_scheduler_performance` | `marketing` | `read` | Get scheduler performance |
 | `marketing_scheduler_schedulers` | `marketing` | `read` | List schedulers |
 | `marketing_scheduler_schedulersessions` | `marketing` | `read` | List scheduler sessions |
 | `marketing_suppressions_add` | `marketing` | `write` | Add a suppression |
 | `marketing_suppressions_get` | `marketing` | `read` | Get a suppression by email |
+| `marketing_suppressions_list` | `marketing` | `read` | List marketing suppressions |
 | `marketing_suppressions_remove` | `marketing` | `write` | Remove suppression records |
+| `marketing_web_booking_attributions_create` | `marketing` | `write` | Create web booking attributions |
+| `marketing_web_lead_form_attributions_create` | `marketing` | `write` | Create web lead form attributions |
 
 ## memberships
 
@@ -376,7 +410,6 @@ Total tools: 440
 | `payroll_timesheets_job_update` | `payroll` | `write` | Update a job timesheet |
 | `payroll_timesheets_jobs_list` | `payroll` | `read` | List job timesheets across multiple jobs |
 | `payroll_timesheets_non_job_create` | `payroll` | `write` | Create a non-job timesheet |
-| `payroll_timesheets_non_job_delete` | `payroll` | `delete` | Delete a non-job timesheet |
 | `payroll_timesheets_non_job_get` | `payroll` | `read` | Get a non-job timesheet by ID |
 | `payroll_timesheets_non_job_list` | `payroll` | `read` | List non-job timesheets |
 | `payroll_timesheets_non_job_update` | `payroll` | `write` | Update a non-job timesheet |
@@ -399,7 +432,6 @@ Total tools: 440
 | `people_technician_shifts_delete` | `people` | `delete` | Delete a technician shift |
 | `people_technician_shifts_get` | `people` | `read` | Get a technician shift by ID |
 | `people_technician_shifts_list` | `people` | `read` | List technician shifts |
-| `people_technician_shifts_update` | `people` | `write` | Update a technician shift |
 | `people_technicians_accountactions` | `people` | `write` | Run account actions for a technician |
 | `people_technicians_create` | `people` | `write` | Create a technician |
 | `people_technicians_get` | `people` | `read` | Get a technician by ID |
@@ -428,8 +460,6 @@ Total tools: 440
 | `pricebook_equipment_get` | `pricebook` | `read` | Get equipment item by ID |
 | `pricebook_equipment_list` | `pricebook` | `read` | List equipment pricebook items |
 | `pricebook_equipment_update` | `pricebook` | `write` | Update equipment item |
-| `pricebook_images_create` | `pricebook` | `write` | Create a new pricebook image placeholder |
-| `pricebook_images_get` | `pricebook` | `read` | Get pricebook images by storage path |
 | `pricebook_materials_cost_types_list` | `pricebook` | `read` | List material cost types |
 | `pricebook_materials_create` | `pricebook` | `write` | Create a material pricebook item |
 | `pricebook_materials_delete` | `pricebook` | `delete` | Delete a material by ID |
@@ -475,12 +505,6 @@ Total tools: 440
 | `scheduling_teams_delete` | `scheduling` | `delete` | Delete a team |
 | `scheduling_teams_get` | `scheduling` | `read` | Get a team by ID |
 | `scheduling_teams_list` | `scheduling` | `read` | List teams |
-| `scheduling_technician_shifts_bulk_delete` | `scheduling` | `write` | Delete multiple technician shifts |
-| `scheduling_technician_shifts_create` | `scheduling` | `write` | Create a technician shift |
-| `scheduling_technician_shifts_delete` | `scheduling` | `delete` | Delete a technician shift |
-| `scheduling_technician_shifts_get` | `scheduling` | `read` | Get a technician shift by ID |
-| `scheduling_technician_shifts_list` | `scheduling` | `read` | List technician shifts |
-| `scheduling_technician_shifts_update` | `scheduling` | `write` | Update a technician shift |
 | `scheduling_zones_get` | `scheduling` | `read` | Get a zone by ID |
 | `scheduling_zones_list` | `scheduling` | `read` | List zones |
 
@@ -511,3 +535,9 @@ Total tools: 440
 | `settings_tasks_get` | `settings` | `read` | Get a task by ID |
 | `settings_tasks_list` | `settings` | `read` | List tasks |
 | `settings_user_roles_list` | `settings` | `read` | List user roles |
+
+## system
+
+| Name | Domain | Operation | Description |
+| --- | --- | --- | --- |
+| `st_health_check` | `system` | `read` | Check ServiceTitan API connectivity and server status |

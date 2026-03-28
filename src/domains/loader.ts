@@ -20,8 +20,20 @@ export async function loadDomainModules(
     let module: { default?: DomainLoader; loadDomain?: DomainLoader };
     try {
       module = (await import(fileUrl)) as typeof module;
-    } catch {
-      logger.debug("No index.js in domain directory", { domain: dirName });
+    } catch (error: unknown) {
+      // Distinguish "file not found" (expected) from real import errors (bugs)
+      const isModuleNotFound =
+        error instanceof Error &&
+        "code" in error &&
+        (error as NodeJS.ErrnoException).code === "ERR_MODULE_NOT_FOUND";
+      if (isModuleNotFound) {
+        logger.debug("No index.js in domain directory", { domain: dirName });
+      } else {
+        logger.error("Failed to load domain module", {
+          domain: dirName,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
       continue;
     }
 

@@ -108,9 +108,17 @@ describe("shapeResponse", () => {
     });
   });
 
-  it("rounds currency values to whole numbers and ratios to one decimal place", () => {
+  it("does not truncate generic 'items' arrays", () => {
+    const items = Array.from({ length: 25 }, (_, i) => ({ id: i + 1, name: `Item ${i + 1}` }));
+    const shaped = shapeResponse({ items });
+
+    expect((shaped as Record<string, unknown>).items).toHaveLength(25);
+    expect((shaped as Record<string, unknown>)._truncated).toBeUndefined();
+  });
+
+  it("rounds currency values to two decimal places and ratios to one decimal place", () => {
     const shaped = shapeResponse({
-      revenue: 1234.56,
+      revenue: 1234.567,
       averageTicket: 89.5,
       conversionRate: 0.194,
       closeRatio: 47.44,
@@ -118,15 +126,15 @@ describe("shapeResponse", () => {
     });
 
     expect(shaped).toEqual({
-      revenue: 1235,
-      avgTicket: 90,
+      revenue: 1234.57,
+      avgTicket: 89.5,
       conversionRate: 0.2,
       closeRatio: 47.4,
       billHrs: 7.25,
     });
   });
 
-  it("compacts ISO timestamps while preserving time-of-day", () => {
+  it("preserves full timestamp precision for non-date-only fields", () => {
     const shaped = shapeResponse({
       createdOn: "2026-03-09T10:20:30Z",
       scheduledDate: "2026-03-10T14:45:00Z",
@@ -137,10 +145,10 @@ describe("shapeResponse", () => {
     });
 
     expect(shaped).toEqual({
-      createdOn: "2026-03-09T10:20",
+      createdOn: "2026-03-09T10:20:30Z",
       scheduledDate: "2026-03-10",
       nested: {
-        startsAt: "2026-03-09T10:20",
+        startsAt: "2026-03-09T10:20:30.123-07:00",
       },
       unchanged: "2026-03-09",
     });
