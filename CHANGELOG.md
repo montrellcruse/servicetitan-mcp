@@ -6,6 +6,60 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-03-28
+
+### Security
+- **Write middleware** — readonly mode, confirmation enforcement (`_confirmed: true`), and audit logging now enforced at the registry level. No write tool can bypass these guards regardless of handler implementation.
+- **CORS** — default changed from wildcard `*` to empty (no CORS headers sent). Set `ST_CORS_ORIGIN` explicitly for remote deployments.
+- **Health check** — stripped config details (environment, readonly_mode, tools_registered). Returns only auth and tenant connectivity status.
+- **Error sanitization** — Zod validation errors now return human-readable `Invalid input: field: message` instead of raw schema internals.
+- **Health check errors** — FAILED messages no longer leak internal error text.
+
+### Fixed
+- **Response shaping** — semantic fields (id, type, description, active, count, date, notes, tags, source, category) no longer stripped from tool output. Only true metadata (pagination, HTTP status, internal timestamps) excluded.
+- **Route table** — added 48 missing API route prefixes (18 regular + 17 export + 13 domain routes). Added drift test to prevent regressions.
+- **Session lifecycle** — proper `server.close()` on client disconnect for both SSE and Streamable HTTP transports. Prevents file descriptor leaks.
+- **HTTP timeouts** — 60s request timeout, 15s token fetch timeout, exponential backoff. `parseRetryAfter()` now handles HTTP-date format.
+- **Report 175 validation** — Zod runtime schema validates response structure before data extraction. Fails fast with clear error on schema drift.
+- **safeDivide()** — all division operations in intelligence layer protected against NaN/Infinity. Zero-denominator edge-case tests for all 10 intel tools.
+- **Empty write schemas** — 6 write tools (capacity calculate, payment create, payment status update, AP credits/payments mark-as-exported, invoice adjustment/mark-as-exported) now require valid input instead of accepting empty `{}`.
+- **Server-managed fields** — removed `createdOn`, `modifiedOn`, `createdBy`, `modifiedBy`, `mergedToId`, `id` from write schemas across CRM, inventory, pricebook, and settings domains.
+
+### Changed
+- **12 duplicate tool registrations removed** — CRM (customer note/tag delete aliases), marketing (campaign category list alias), scheduling (technician shifts moved to canonical domain), pricebook (images alias). Net **-1,300 lines**.
+- **getErrorMessage** consolidated from 59 per-file copies to 1 shared utility in `src/utils.ts`.
+- **Domain loader** extracted to `src/domains/loader.ts`, replacing 3 identical `loadDomainModules()` copies across stdio, SSE, and Streamable HTTP transports.
+- **Duplicate tool name detection** — `ToolRegistry.register()` now throws on duplicate tool names at startup.
+- Dead gzip infrastructure removed from Streamable HTTP transport (`createGzip` import, `acceptsGzip`, `supportsGzip()`).
+- Version bumped to 2.3.0 across package.json and all transports.
+
+### Added
+- **Per-tool cache TTL** — `withIntelCache()` and `ReferenceDataCache.getOrLoad()` support per-call TTL overrides (default 5min unchanged).
+- `tests/safety/write-middleware.test.ts` — dedicated test suite for readonly blocking, confirmation enforcement, audit logging, and schema hardening.
+- `tests/domains/intelligence-revenue-validation.test.ts` — Report 175 structure validation and empty dataset handling.
+- `cacheTtlMs` field on `ToolDefinition` for declarative per-tool cache configuration.
+- 245 tests across 17 test files (up from 222 / 14).
+
+## [2.2.0] - 2026-03-27
+
+### Security
+- **Constant-time API key comparison** via `timingSafeEqual` (replaces `===`)
+- Request ID tracking on all error responses (UUID per request)
+- Configurable CORS origin (`ST_CORS_ORIGIN`)
+- SSE keepalive (30s interval) with dead connection detection
+- Graceful shutdown on SIGTERM/SIGINT
+
+### Added
+- **Streamable HTTP transport** (`src/streamable-http.ts`) — replaces SSE as primary remote transport. Per-session server isolation, session TTL (30min), 1MB body limit.
+- Full README rewrite with hero section, Claude Desktop quickstart, tool catalog, intelligence spotlight, comparison table
+- CHANGELOG, ARCHITECTURE.md, CONTRIBUTING.md, SECURITY.md
+- GitHub issue/PR templates, CI + MIT badges
+- Startup banner with version, port, tool count, config summary
+
+### Changed
+- **94 → 222 tests** (+136%) — SSE transport, cache, domain registration, accounting, CRM domain tests
+- SSE transport deprecated in favor of Streamable HTTP (still available at `build/sse.js`)
+
 ## [2.1.1] - 2026-03-26
 
 ### Security
@@ -119,6 +173,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.3.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.2.0...v2.3.0
+[2.2.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v1.0.0...v2.0.0
