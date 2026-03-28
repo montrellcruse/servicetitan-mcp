@@ -266,6 +266,7 @@ describe("intelligence domain", () => {
       startDate: "2026-01-01",
       endDate: "2026-01-31",
       businessUnitId: 7,
+      includeCollections: true,
     });
     const payload = payloadFrom(result);
 
@@ -403,6 +404,7 @@ describe("intelligence domain", () => {
     const result = await handler({
       startDate: "2026-01-01",
       endDate: "2026-01-31",
+      includeCollections: true,
     });
     const payload = payloadFrom(result);
 
@@ -435,7 +437,7 @@ describe("intelligence domain", () => {
     postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
 
-    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeCollections: true });
     const payload = payloadFrom(result);
 
     expect(payload.totalRevenue).toBe(0);

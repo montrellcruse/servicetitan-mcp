@@ -22,6 +22,7 @@ const revenueSummarySchema = z.object({
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
+  includeCollections: z.boolean().optional().default(false).describe("Include payment/collections data (totalCollected, outstanding). Adds ~20s latency due to payment pagination. Default: false."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -285,7 +286,7 @@ export function registerIntelligenceRevenueTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), collections, outstanding balance, opportunities, conversion rates, plus BU-level productivity and sales metrics." +
+      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, plus BU-level productivity and sales metrics. Set includeCollections=true for payment/collections data (adds ~20s latency)." +
       '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC"\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: revenueSummarySchema.shape,
     handler: async (params) => {
@@ -318,57 +319,66 @@ export function registerIntelligenceRevenueTool(
           });
         }
 
-        // Compute date range for payments (needed alongside reports)
+        // Compute date range (needed for payments if requested)
         const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
 
-        // Parallelize ALL fetches — 3 reports + payments are independent
+        // Core fetches: 3 reports (always). Payments only when includeCollections=true.
+        const reportFetches: [
+          Promise<unknown>,
+          Promise<unknown>,
+          Promise<unknown>,
+          Promise<GenericRecord[]>,
+        ] = [
+          fetchWithWarning(
+            warnings,
+            "Revenue report (Report 175)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+                { parameters: reportParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Productivity report (Report 177)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
+                { parameters: reportParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Sales report (Report 179)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
+                { parameters: reportParams },
+              ),
+            null,
+          ),
+          input.includeCollections
+            ? fetchWithWarning(
+                warnings,
+                "Payment data",
+                () =>
+                  fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/payments", {
+                    paidOnAfter: startIso,
+                    paidOnBefore: endIso,
+                    businessUnitIds:
+                      effectiveBuId === undefined
+                        ? undefined
+                        : String(effectiveBuId),
+                  }),
+                [],
+              )
+            : Promise.resolve([]),
+        ];
+
         const [reportResponse, productivityReportResponse, salesReportResponse, payments] =
-          await Promise.all([
-            fetchWithWarning(
-              warnings,
-              "Revenue report (Report 175)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
-                  { parameters: reportParams },
-                ),
-              null,
-            ),
-            fetchWithWarning(
-              warnings,
-              "Productivity report (Report 177)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
-                  { parameters: reportParams },
-                ),
-              null,
-            ),
-            fetchWithWarning(
-              warnings,
-              "Sales report (Report 179)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
-                  { parameters: reportParams },
-                ),
-              null,
-            ),
-            fetchWithWarning(
-              warnings,
-              "Payment data",
-              () =>
-                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/payments", {
-                  paidOnAfter: startIso,
-                  paidOnBefore: endIso,
-                  businessUnitIds:
-                    effectiveBuId === undefined
-                      ? undefined
-                      : String(effectiveBuId),
-                }),
-              [],
-            ),
-          ]);
+          await Promise.all(reportFetches);
 
         const revenueRows = reportResponse ? parseReportRows(reportResponse) : [];
         const productivityRows = productivityReportResponse
@@ -391,8 +401,13 @@ export function registerIntelligenceRevenueTool(
         const productivityByBU = byBU.filter(hasProductivity);
         const salesByBU = byBU.filter(hasSales);
 
-        const totalCollected = round(sumBy(payments, paymentAmount), 2);
-        const outstanding = round(totalRevenue - totalCollected, 2);
+        // Collections only computed when explicitly requested
+        const totalCollected = input.includeCollections
+          ? round(sumBy(payments, paymentAmount), 2)
+          : undefined;
+        const outstanding = totalCollected !== undefined
+          ? round(totalRevenue - totalCollected, 2)
+          : undefined;
 
         const result: Record<string, unknown> = {
           period: { start: input.startDate, end: input.endDate },
