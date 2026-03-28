@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type { ServiceTitanClient } from "../../client.js";
 import { buildParams } from "../../utils.js";
 
@@ -5,6 +7,70 @@ const DEFAULT_PAGE_SIZE = 500;
 const DEFAULT_MAX_PAGES = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+// ── Intelligence Result Cache ────────────────────────────────────────────────
+// Caches complete tool responses by tool name + args hash.
+// TTL is configurable via ST_INTEL_CACHE_TTL_MS env var (default 5 minutes).
+// In-flight dedup prevents concurrent identical calls from hitting the API twice.
+
+const INTEL_CACHE_TTL_MS = Number(process.env.ST_INTEL_CACHE_TTL_MS) || 5 * 60 * 1000;
+
+interface IntelCacheEntry {
+  value: unknown;
+  expiresAt: number;
+}
+
+const intelCache = new Map<string, IntelCacheEntry>();
+const intelInflight = new Map<string, Promise<unknown>>();
+
+function intelCacheKey(toolName: string, args: unknown): string {
+  const argsStr = JSON.stringify(args, Object.keys(args as Record<string, unknown>).sort());
+  return `${toolName}:${createHash("sha256").update(argsStr).digest("hex").slice(0, 16)}`;
+}
+
+/**
+ * Wrap an async function with the intelligence result cache.
+ * If a cached result exists and hasn't expired, returns it immediately.
+ * If another call with the same key is already in flight, deduplicates.
+ */
+export async function withIntelCache<T>(
+  toolName: string,
+  args: unknown,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const key = intelCacheKey(toolName, args);
+
+  // Check cache
+  const cached = intelCache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value as T;
+  }
+
+  // Check in-flight dedup
+  const inflight = intelInflight.get(key);
+  if (inflight) {
+    return inflight as Promise<T>;
+  }
+
+  // Execute and cache
+  const promise = fn().then((result) => {
+    intelCache.set(key, { value: result, expiresAt: Date.now() + INTEL_CACHE_TTL_MS });
+    intelInflight.delete(key);
+    return result;
+  }).catch((err) => {
+    intelInflight.delete(key);
+    throw err;
+  });
+
+  intelInflight.set(key, promise);
+  return promise;
+}
+
+/** Clear the intelligence cache (useful for testing). */
+export function clearIntelCache(): void {
+  intelCache.clear();
+  intelInflight.clear();
+}
 
 type JsonRecord = Record<string, unknown>;
 
