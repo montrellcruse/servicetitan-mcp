@@ -36,6 +36,6 @@ primary_region = "iad"
   path = "/health"
 
 [[vm]]
-  memory = "512mb"
-  cpu_kind = "performance"
+  memory = "1024mb"
+  cpu_kind = "shared"
   cpus = 1
