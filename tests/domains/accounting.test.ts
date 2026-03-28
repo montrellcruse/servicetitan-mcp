@@ -37,6 +37,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     logLevel: "error",
     timezone: "UTC",
     corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -249,7 +250,7 @@ describe("accounting domain", () => {
     });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
     expect(patchMock).not.toHaveBeenCalled();
   });
 });

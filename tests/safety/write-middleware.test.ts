@@ -21,6 +21,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     logLevel: "error",
     timezone: "UTC",
     corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -94,7 +95,7 @@ describe("write middleware safety", () => {
     const result = await wrapped({ id: 7 });
 
     expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
     expect(handler).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
@@ -117,7 +118,7 @@ describe("write middleware safety", () => {
     expect(handler).not.toHaveBeenCalled();
 
     await wrapped({ id: 7, _confirmed: true });
-    expect(handler).toHaveBeenCalledWith({ id: 7 });
+    expect(handler).toHaveBeenCalledWith({ id: 7 }, undefined);
   });
 
   it("audit logger is called for every successful write execution", async () => {
@@ -136,6 +137,27 @@ describe("write middleware safety", () => {
         operation: "write",
         resourceId: 7,
         success: true,
+      }),
+    );
+  });
+
+  it("audits thrown write handler failures and rethrows the error", async () => {
+    const handler = vi.fn().mockRejectedValue(new Error("write exploded"));
+    const { registry, server, auditLogger } = createRegistry();
+
+    registry.register(createWriteTool({ handler }));
+
+    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+
+    await expect(wrapped({ id: 7 })).rejects.toThrow("write exploded");
+    expect(auditLogger.log).toHaveBeenCalledTimes(1);
+    expect(auditLogger.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tool: "crm_customers_update",
+        operation: "write",
+        resourceId: 7,
+        success: false,
+        error: "write exploded",
       }),
     );
   });

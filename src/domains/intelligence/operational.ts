@@ -4,6 +4,7 @@ import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
+  currentDateInTimezone,
   fetchAllPages,
   fetchWithWarning,
   firstValue,
@@ -23,7 +24,6 @@ const dailySnapshotSchema = z.object({
   date: z.string().optional().describe("Date to snapshot (YYYY-MM-DD, defaults to today)"),
 });
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 const MAX_UPCOMING_JOBS = 20;
 
 const UPCOMING_JOBS_FIELD = {
@@ -106,20 +106,6 @@ function extractReportRows(response: unknown): unknown[][] {
   return response.data.filter(Array.isArray);
 }
 
-function formatDateInTimezone(date: Date, timezone: string): string {
-  const formatter = new Intl.DateTimeFormat("en-US", {
-    timeZone: timezone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-
-  const parts = formatter.formatToParts(date);
-  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? "00";
-
-  return `${get("year")}-${get("month")}-${get("day")}`;
-}
-
 function parseUpcomingJobsReport(response: unknown): UpcomingJob[] {
   const rows = extractReportRows(response);
   const jobs: UpcomingJob[] = [];
@@ -162,6 +148,13 @@ export function registerIntelligenceDailySnapshotTool(
     domain: "intelligence",
     operation: "read",
     cacheTtlMs: 60_000,
+    cacheKeyParams: (params) => {
+      const input = dailySnapshotSchema.parse(params);
+      return {
+        ...input,
+        date: input.date ?? currentDateInTimezone(registry.timezone),
+      };
+    },
     description:
       "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, next-day upcoming jobs, and plain-English highlights" +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
@@ -169,15 +162,12 @@ export function registerIntelligenceDailySnapshotTool(
     handler: async (params) => {
       try {
         const input = dailySnapshotSchema.parse(params);
-        const date = input.date ?? new Date().toISOString().slice(0, 10);
-        const { start, startIso, endIso, nextDayStartIso } = toSingleDayRange(
+        const date = input.date ?? currentDateInTimezone(registry.timezone);
+        const { startIso, endIso, nextDate, nextDayStartIso } = toSingleDayRange(
           date,
           registry.timezone,
         );
-        const tomorrowDate = formatDateInTimezone(
-          new Date(start.getTime() + DAY_MS),
-          registry.timezone,
-        );
+        const tomorrowDate = nextDate;
         const warnings: string[] = [];
 
         const appointments = await fetchWithWarning(

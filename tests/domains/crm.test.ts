@@ -44,6 +44,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     logLevel: "error",
     timezone: "UTC",
     corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -277,13 +278,13 @@ describe("crm domain", () => {
     // Write tools stay registered and are blocked by middleware
     expect(handlers.has("crm_customers_create")).toBe(true);
     expect(handlers.has("crm_customers_update")).toBe(true);
-    // Delete tools should not be registered
-    expect(handlers.has("crm_customers_notes_delete")).toBe(false);
+    // Delete tools also stay registered and are blocked by middleware
+    expect(handlers.has("crm_customers_notes_delete")).toBe(true);
 
     const createResult = await getHandler(handlers, "crm_customers_create")({
       name: "Read Only Customer",
     });
     expect(createResult.isError).toBe(true);
-    expect(createResult.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(createResult.content[0]?.text).toContain("Readonly mode: operation not permitted");
   });
 });

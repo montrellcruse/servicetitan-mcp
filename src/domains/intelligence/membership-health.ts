@@ -154,7 +154,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, total invoiced revenue, and business-unit membership conversion metrics" +
+      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, tenant-wide totalServiceRevenue from invoices, and business-unit membership conversion metrics. ServiceTitan's invoices API does not expose a membership-only invoice filter, so totalServiceRevenue is not membership-scoped." +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
@@ -196,6 +196,8 @@ export function registerIntelligenceMembershipHealthTool(
               warnings,
               "Invoice data",
               () =>
+                // The invoices endpoint supports job/customer/BU filters, but not membership-level
+                // scoping, so this revenue is tenant-wide service revenue for the selected period.
                 fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/invoices", {
                   invoicedOnOrAfter: startIso,
                   invoicedOnBefore: endIso,
@@ -210,7 +212,7 @@ export function registerIntelligenceMembershipHealthTool(
         const conversionByBusinessUnit = membershipConversionReport
           ? parseMembershipConversionReport(membershipConversionReport)
           : [];
-        const totalRevenue = round(sumBy(invoices, invoiceTotal), 2);
+        const totalServiceRevenue = round(sumBy(invoices, invoiceTotal), 2);
 
         const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));
         const newSignups = Math.round(sumBy(membershipTypeStats, (type) => type.newSales));
@@ -254,10 +256,10 @@ export function registerIntelligenceMembershipHealthTool(
           reactivated,
           deleted,
           retentionRate: round(
-            safeDivide(activeMemberships - cancellations, activeMemberships),
+            safeDivide(activeMemberships, activeMemberships + cancellations),
             3,
           ),
-          totalRevenue,
+          totalServiceRevenue,
           conversionTotals: {
             opportunities: conversionOpportunities,
             converted: convertedMemberships,

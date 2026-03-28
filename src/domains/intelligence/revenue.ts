@@ -272,10 +272,10 @@ const report175ResponseSchema = buildReportResponseSchema(REPORT_175_REQUIRED_FI
   requireFieldMetadata: true,
 });
 const report177ResponseSchema = buildReportResponseSchema(REPORT_177_REQUIRED_FIELDS, {
-  requireFieldMetadata: false,
+  requireFieldMetadata: true,
 });
 const report179ResponseSchema = buildReportResponseSchema(REPORT_179_REQUIRED_FIELDS, {
-  requireFieldMetadata: false,
+  requireFieldMetadata: true,
 });
 
 function requiredFieldList(requiredFields: readonly RequiredReportField[]): string {
@@ -324,6 +324,13 @@ export function extractReportRows(response: unknown): ReportRowsResult {
     data: parsed.data,
     count: parsed.data.length,
   };
+}
+
+export function sumReport175TotalRevenue(response: unknown): number {
+  return round(
+    sumBy(extractReportRows(response).data, (row) => toNumber(row[FIELD.TotalRevenue])),
+    2,
+  );
 }
 
 function extractProductivityRows(response: unknown): ReportRowsResult {
@@ -460,25 +467,45 @@ function mergeBusinessUnitReports(
   productivityRows: BUProductivityRow[],
   salesRows: BUSalesRow[],
 ): BURevenue[] {
+  const revenueByName = buildBusinessUnitMap(revenueRows);
   const productivityByName = buildBusinessUnitMap(productivityRows);
   const salesByName = buildBusinessUnitMap(salesRows);
+  const businessUnitNames = new Set<string>([
+    ...revenueRows.map((row) => row.name),
+    ...productivityRows.map((row) => row.name),
+    ...salesRows.map((row) => row.name),
+  ]);
 
-  return revenueRows.map((revenueRow) => {
-    const key = normalizeBusinessUnitName(revenueRow.name);
-    const merged: BURevenue = { ...revenueRow };
+  return Array.from(businessUnitNames)
+    .map((name) => {
+      const key = normalizeBusinessUnitName(name);
+      const revenueRow = revenueByName.get(key);
+      const merged: BURevenue = revenueRow
+        ? { ...revenueRow }
+        : {
+            name,
+            totalRevenue: 0,
+            completedRevenue: 0,
+            nonJobRevenue: 0,
+            adjustmentRevenue: 0,
+            opportunities: 0,
+            convertedJobs: 0,
+            conversionRate: 0,
+          };
 
-    const productivity = productivityByName.get(key);
-    if (productivity) {
-      merged.productivity = productivity.productivity;
-    }
+      const productivity = productivityByName.get(key);
+      if (productivity) {
+        merged.productivity = productivity.productivity;
+      }
 
-    const sales = salesByName.get(key);
-    if (sales) {
-      merged.sales = sales.sales;
-    }
+      const sales = salesByName.get(key);
+      if (sales) {
+        merged.sales = sales.sales;
+      }
 
-    return merged;
-  });
+      return merged;
+    })
+    .sort((left, right) => right.totalRevenue - left.totalRevenue || left.name.localeCompare(right.name));
 }
 
 function hasProductivity(

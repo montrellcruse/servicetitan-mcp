@@ -142,6 +142,7 @@ function createConfig(
     enabledDomains: null,
     logLevel: "info",
     timezone: "UTC",
+    allowedCallers: null,
   };
 }
 

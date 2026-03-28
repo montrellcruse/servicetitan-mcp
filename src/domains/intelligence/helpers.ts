@@ -7,6 +7,7 @@ const DEFAULT_PAGE_SIZE = 500;
 const DEFAULT_MAX_PAGES = 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const DEFAULT_INTELLIGENCE_TIMEZONE = process.env.ST_TIMEZONE || "UTC";
 
 // ── Intelligence Result Cache ────────────────────────────────────────────────
 // Caches complete tool responses by tool name + args hash.
@@ -85,6 +86,27 @@ export function asArray<T>(value: unknown): T[] {
 
 export function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+export function formatDateInTimezone(
+  date: Date,
+  timezone: string = DEFAULT_INTELLIGENCE_TIMEZONE,
+): string {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(date);
+  const get = (type: string): string => parts.find((part) => part.type === type)?.value ?? "00";
+
+  return `${get("year")}-${get("month")}-${get("day")}`;
+}
+
+export function currentDateInTimezone(timezone: string = DEFAULT_INTELLIGENCE_TIMEZONE): string {
+  return formatDateInTimezone(new Date(), timezone);
 }
 
 export async function fetchWithWarning<T>(
@@ -365,17 +387,21 @@ export function toSingleDayRange(
   end: Date;
   startIso: string;
   endIso: string;
+  nextDate: string;
   nextDayStartIso: string;
 } {
   const start = parseDateInput(date, false, timezone);
   const end = parseDateInput(date, true, timezone);
+  const nextDate = incrementDateString(date);
+  const nextDayStart = parseDateInput(nextDate, false, timezone);
 
   return {
     start,
     end,
     startIso: start.toISOString(),
     endIso: end.toISOString(),
-    nextDayStartIso: new Date(start.getTime() + DAY_MS).toISOString(),
+    nextDate,
+    nextDayStartIso: nextDayStart.toISOString(),
   };
 }
 
@@ -414,6 +440,23 @@ function parseDateInput(value: string, endOfDay: boolean, timezone = "UTC"): Dat
   // Shift: "Feb 1 00:00 EST" = "Feb 1 05:00 UTC" (offset = +5h for EST)
   const offsetMs = getTimezoneOffsetMs(timezone, utcMidnight);
   return new Date(utcMidnight.getTime() - offsetMs);
+}
+
+function incrementDateString(value: string): string {
+  if (!DATE_ONLY_PATTERN.test(value)) {
+    throw new Error(`Invalid date: ${value}`);
+  }
+
+  const [yearText, monthText, dayText] = value.split("-");
+  const nextDate = new Date(
+    Date.UTC(Number(yearText), Number(monthText) - 1, Number(dayText) + 1),
+  );
+
+  const year = String(nextDate.getUTCFullYear());
+  const month = String(nextDate.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(nextDate.getUTCDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 export function toNumber(value: unknown): number {

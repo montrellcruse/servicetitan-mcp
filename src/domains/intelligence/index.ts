@@ -29,17 +29,19 @@ function createCachingRegistry(inner: ToolRegistry): ToolRegistry {
           name: string;
           handler: (params: unknown) => Promise<ToolResponse>;
           cacheTtlMs?: number;
+          cacheKeyParams?: (params: unknown) => unknown;
           [k: string]: unknown;
         }) => {
           // Only cache intel_ tools (not lookup, which is reference data)
           if (tool.name.startsWith(CACHEABLE_PREFIX) && tool.name !== "intel_lookup") {
             const originalHandler = tool.handler;
+            const normalizeCacheParams = tool.cacheKeyParams ?? ((params: unknown) => params);
             tool = {
               ...tool,
               handler: async (params: unknown) => {
                 return withIntelCache(
                   tool.name,
-                  params,
+                  normalizeCacheParams(params),
                   () => originalHandler(params),
                   tool.cacheTtlMs,
                 );

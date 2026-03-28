@@ -20,6 +20,7 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
     logLevel: "error",
     timezone: "UTC",
     corsOrigin: "",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -95,7 +96,8 @@ describe("safety confirmation wrapper", () => {
     const [, , wrapped] = server.tool.mock.calls[0] ?? [];
     await wrapped({ id: 55, confirm: true });
 
-    expect(handler).toHaveBeenCalledWith({ id: 55 });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
   });
 
   it("write tools require _confirmed=true when ST_CONFIRM_WRITES=true", async () => {
@@ -117,7 +119,8 @@ describe("safety confirmation wrapper", () => {
     expect(handler).not.toHaveBeenCalled();
 
     await wrapped({ id: 55, _confirmed: true });
-    expect(handler).toHaveBeenCalledWith({ id: 55 });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
   });
 
   it("write tools execute immediately when ST_CONFIRM_WRITES=false", async () => {
@@ -135,6 +138,7 @@ describe("safety confirmation wrapper", () => {
     const [, , wrapped] = server.tool.mock.calls[0] ?? [];
     await wrapped({ id: 55 });
 
-    expect(handler).toHaveBeenCalledWith({ id: 55 });
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
   });
 });

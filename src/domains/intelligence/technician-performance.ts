@@ -104,6 +104,21 @@ const JOB_DETAIL_FIELD = {
   AssignedTechnicians: 2,
 } as const;
 
+const REPORT_165_ASSIGNED_TECHNICIAN_ID_FIELDS = [
+  "AssignedTechnicianId",
+  "AssignedTechnicianIds",
+  "TechnicianId",
+  "TechnicianIds",
+] as const;
+
+const REPORT_165_ASSIGNED_TECHNICIAN_NAME_FIELDS = [
+  "AssignedTechnicians",
+  "AssignedTechnician",
+  "Assigned Technician(s)",
+  "Technician",
+  "Technicians",
+] as const;
+
 interface RevenueByTech {
   id: number;
   name: string;
@@ -174,6 +189,13 @@ interface TechnicianScorecard {
   memberships: MembershipMetrics;
   salesFromTechLeads: LeadSalesMetrics;
   salesFromMarketingLeads: LeadSalesMetrics;
+}
+
+interface CompletedJobAttribution {
+  countsByTechId: Map<number, number>;
+  namesByTechId: Map<number, string>;
+  technicianIds: Set<number>;
+  warnings: string[];
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -416,6 +438,10 @@ function normalizeTechnicianName(name: string): string {
   return name.trim().toLowerCase();
 }
 
+function normalizeReportFieldName(name: string): string {
+  return name.replace(/[^a-z0-9]/gi, "").toLowerCase();
+}
+
 function buildNameToTechIds(
   ...techGroups: ReadonlyArray<ReadonlyArray<TechnicianIdentity>>
 ): Map<string, Set<number>> {
@@ -441,33 +467,136 @@ function buildNameToTechIds(
   return byName;
 }
 
+function findReportFieldIndex(
+  response: unknown,
+  candidateNames: readonly string[],
+  fallbackIndex?: number,
+): number | null {
+  if (isRecord(response) && Array.isArray(response.fields)) {
+    const normalizedCandidates = new Set(candidateNames.map(normalizeReportFieldName));
+    const matchedIndex = response.fields.findIndex((field) => {
+      if (!isRecord(field) || typeof field.name !== "string") {
+        return false;
+      }
+      return normalizedCandidates.has(normalizeReportFieldName(field.name));
+    });
+
+    if (matchedIndex >= 0) {
+      return matchedIndex;
+    }
+  }
+
+  return fallbackIndex ?? null;
+}
+
+function splitAssignedTechnicianNames(value: unknown): string[] {
+  const text = toText(value);
+  if (!text) {
+    return [];
+  }
+
+  return text
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
+
+function parseAssignedTechnicianIds(value: unknown): number[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => Math.round(toNumber(entry)))
+      .filter((entry) => entry > 0);
+  }
+
+  if (typeof value === "number") {
+    const id = Math.round(value);
+    return id > 0 ? [id] : [];
+  }
+
+  const text = toText(value);
+  if (!text) {
+    return [];
+  }
+
+  return text
+    .split(/[;,]/)
+    .map((part) => Math.round(toNumber(part.trim())))
+    .filter((entry) => entry > 0);
+}
+
 function countCompletedJobsByTech(
   response: unknown,
   nameToTechIds: Map<string, Set<number>>,
-): Map<number, number> {
+): CompletedJobAttribution {
   const rows = extractReportRows(response);
   const completedByTechId = new Map<number, number>();
+  const namesByTechId = new Map<number, string>();
+  const technicianIds = new Set<number>();
+  const warningMessages = new Set<string>();
+  const assignedTechnicianIdIndex = findReportFieldIndex(
+    response,
+    REPORT_165_ASSIGNED_TECHNICIAN_ID_FIELDS,
+  );
+  const assignedTechnicianNameIndex = findReportFieldIndex(
+    response,
+    REPORT_165_ASSIGNED_TECHNICIAN_NAME_FIELDS,
+    JOB_DETAIL_FIELD.AssignedTechnicians,
+  );
 
   for (const row of rows) {
-    const assigned = toText(row[JOB_DETAIL_FIELD.AssignedTechnicians]);
-    if (!assigned) {
+    const assignedNames = assignedTechnicianNameIndex === null
+      ? []
+      : splitAssignedTechnicianNames(row[assignedTechnicianNameIndex]);
+    const assignedIds = assignedTechnicianIdIndex === null
+      ? []
+      : parseAssignedTechnicianIds(row[assignedTechnicianIdIndex]);
+
+    if (assignedNames.length === 0 && assignedIds.length === 0) {
       continue;
     }
 
     const matchedIds = new Set<number>();
-    for (const rawName of assigned.split(",")) {
-      const normalizedName = normalizeTechnicianName(rawName);
-      if (normalizedName.length === 0) {
-        continue;
-      }
 
-      const ids = nameToTechIds.get(normalizedName);
-      if (!ids) {
-        continue;
-      }
-
-      for (const id of ids) {
+    if (assignedIds.length > 0) {
+      assignedIds.forEach((id, index) => {
         matchedIds.add(id);
+        technicianIds.add(id);
+
+        const assignedName = assignedNames[index] ?? (assignedNames.length === 1 ? assignedNames[0] : undefined);
+        if (assignedName) {
+          namesByTechId.set(id, assignedName);
+        }
+      });
+    } else {
+      for (const rawName of assignedNames) {
+        const normalizedName = normalizeTechnicianName(rawName);
+        if (normalizedName.length === 0) {
+          continue;
+        }
+
+        const ids = nameToTechIds.get(normalizedName);
+        if (!ids) {
+          continue;
+        }
+
+        if (ids.size > 1) {
+          warningMessages.add(
+            `Skipped completed-job attribution for ambiguous technician name "${rawName}" in Report 165.`,
+          );
+          console.warn(
+            `Skipped completed-job attribution for ambiguous technician name "${rawName}" in Report 165.`,
+          );
+          continue;
+        }
+
+        const [id] = ids;
+        if (id === undefined) {
+          continue;
+        }
+
+        matchedIds.add(id);
+        technicianIds.add(id);
+        namesByTechId.set(id, rawName);
       }
     }
 
@@ -476,14 +605,23 @@ function countCompletedJobsByTech(
     }
   }
 
-  return completedByTechId;
+  return {
+    countsByTechId: completedByTechId,
+    namesByTechId,
+    technicianIds,
+    warnings: Array.from(warningMessages),
+  };
 }
 
 function hasAnyActivity(tech: TechnicianScorecard): boolean {
   return (
+    tech.jobsCompleted > 0 ||
     tech.revenue > 0 ||
     tech.opportunities > 0 ||
+    tech.customerSatisfaction > 0 ||
     tech.revenuePerHour > 0 ||
+    tech.billableEfficiency > 0 ||
+    tech.recallsCaused > 0 ||
     tech.upsold > 0 ||
     hasAnyLeadGenerationMetrics(tech.leadGeneration) ||
     hasAnyMembershipMetrics(tech.memberships) ||
@@ -577,21 +715,25 @@ export function registerIntelligenceTechnicianPerformanceTool(
         ];
 
         if (effectiveBuId !== undefined) {
-          revenueParams.push({
+          revenueParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
+          productivityParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
+          leadGenerationParams.push({
+            name: "BusinessUnitId",
+            value: String(effectiveBuId),
+          });
+          membershipsParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
+          salesFromTechLeadsParams.push({
             name: "BusinessUnitIds",
             value: String(effectiveBuId),
           });
-          leadGenerationParams.push({
-            name: "BusinessUnitId",
+          salesFromMarketingLeadsParams.push({
+            name: "BusinessUnitIds",
             value: String(effectiveBuId),
           });
           completedJobsParams.push({
             name: "BusinessUnitId",
             value: String(effectiveBuId),
           });
-          warnings.push(
-            "Business unit filtering only applies to completed jobs (Report 165) and lead generation (Report 169). Revenue, productivity, memberships, and lead-sales metrics are tenant-wide.",
-          );
         }
 
         // Parallelize all 7 report fetches — independent API calls
@@ -713,7 +855,11 @@ export function registerIntelligenceTechnicianPerformanceTool(
           salesFromTechLeadRows,
           salesFromMarketingLeadRows,
         );
-        const completedJobsByTechId = countCompletedJobsByTech(completedJobsReport, nameToTechIds);
+        const completedJobAttribution = countCompletedJobsByTech(completedJobsReport, nameToTechIds);
+        warnings.push(...completedJobAttribution.warnings);
+
+        const completedJobsByTechId = completedJobAttribution.countsByTechId;
+        const completedJobNamesByTechId = completedJobAttribution.namesByTechId;
 
         const scorecards: TechnicianScorecard[] = [];
         const technicianIds = new Set<number>([
@@ -723,7 +869,16 @@ export function registerIntelligenceTechnicianPerformanceTool(
           ...membershipsById.keys(),
           ...salesFromTechLeadById.keys(),
           ...salesFromMarketingLeadById.keys(),
+          ...completedJobAttribution.technicianIds,
         ]);
+
+        if (effectiveTechId !== undefined) {
+          technicianIds.forEach((id) => {
+            if (id !== effectiveTechId) {
+              technicianIds.delete(id);
+            }
+          });
+        }
 
         for (const id of technicianIds) {
           const revenue = revenueById.get(id);
@@ -744,6 +899,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
               memberships?.name ??
               salesFromTechLeads?.name ??
               salesFromMarketingLeads?.name ??
+              completedJobNamesByTechId.get(id) ??
               `Technician ${id}`,
             jobsCompleted,
             revenue: revenue?.revenue ?? 0,
@@ -769,6 +925,50 @@ export function registerIntelligenceTechnicianPerformanceTool(
         }
 
         const totalAvailable = scorecards.length;
+        const teamAverages = {
+          jobsCompleted: averageBy(scorecards, (tech) => tech.jobsCompleted, 2),
+          revenue: averageBy(scorecards, (tech) => tech.revenue, 2),
+          averageTicket: averageBy(scorecards, (tech) => tech.averageTicket, 2),
+          opportunities: averageBy(scorecards, (tech) => tech.opportunities, 2),
+          convertedJobs: averageBy(scorecards, (tech) => tech.convertedJobs, 2),
+          conversionRate: averageBy(scorecards, (tech) => tech.conversionRate, 1),
+          customerSatisfaction: averageBy(scorecards, (tech) => tech.customerSatisfaction, 2),
+          revenuePerHour: averageBy(scorecards, (tech) => tech.revenuePerHour, 2),
+          billableEfficiency: averageBy(scorecards, (tech) => tech.billableEfficiency, 3),
+          recallsCaused: averageBy(scorecards, (tech) => tech.recallsCaused, 2),
+          upsold: averageBy(scorecards, (tech) => tech.upsold, 2),
+          jobsPerDay: averageBy(scorecards, (tech) => tech.jobsPerDay, 2),
+          leadGeneration: {
+            replacementOpps: averageBy(scorecards, (tech) => tech.leadGeneration.replacementOpps, 2),
+            leadsSet: averageBy(scorecards, (tech) => tech.leadGeneration.leadsSet, 2),
+            avgLeadSale: averageBy(scorecards, (tech) => tech.leadGeneration.avgLeadSale, 2),
+            conversionRate: averageBy(scorecards, (tech) => tech.leadGeneration.conversionRate, 1),
+            totalLeadSales: averageBy(scorecards, (tech) => tech.leadGeneration.totalLeadSales, 2),
+          },
+          memberships: {
+            opportunities: averageBy(scorecards, (tech) => tech.memberships.opportunities, 2),
+            sold: averageBy(scorecards, (tech) => tech.memberships.sold, 2),
+            conversionRate: averageBy(scorecards, (tech) => tech.memberships.conversionRate, 1),
+          },
+          salesFromTechLeads: {
+            totalSales: averageBy(scorecards, (tech) => tech.salesFromTechLeads.totalSales, 2),
+            avgSale: averageBy(scorecards, (tech) => tech.salesFromTechLeads.avgSale, 2),
+            closeRate: averageBy(scorecards, (tech) => tech.salesFromTechLeads.closeRate, 1),
+          },
+          salesFromMarketingLeads: {
+            totalSales: averageBy(
+              scorecards,
+              (tech) => tech.salesFromMarketingLeads.totalSales,
+              2,
+            ),
+            avgSale: averageBy(scorecards, (tech) => tech.salesFromMarketingLeads.avgSale, 2),
+            closeRate: averageBy(
+              scorecards,
+              (tech) => tech.salesFromMarketingLeads.closeRate,
+              1,
+            ),
+          },
+        };
         const limitedScorecards =
           scorecards.length > maxTechnicians ? scorecards.slice(0, maxTechnicians) : scorecards;
         if (scorecards.length > maxTechnicians) {
@@ -776,91 +976,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
             `Limited to ${maxTechnicians} of ${totalAvailable} technicians. Use 'limit' param to increase (max 50) or 'technicianId' for a specific tech.`,
           );
         }
-
-        const teamAverages = {
-          jobsCompleted: averageBy(limitedScorecards, (tech) => tech.jobsCompleted, 2),
-          revenue: averageBy(limitedScorecards, (tech) => tech.revenue, 2),
-          averageTicket: averageBy(limitedScorecards, (tech) => tech.averageTicket, 2),
-          opportunities: averageBy(limitedScorecards, (tech) => tech.opportunities, 2),
-          convertedJobs: averageBy(limitedScorecards, (tech) => tech.convertedJobs, 2),
-          conversionRate: averageBy(limitedScorecards, (tech) => tech.conversionRate, 1),
-          customerSatisfaction: averageBy(
-            limitedScorecards,
-            (tech) => tech.customerSatisfaction,
-            2,
-          ),
-          revenuePerHour: averageBy(limitedScorecards, (tech) => tech.revenuePerHour, 2),
-          billableEfficiency: averageBy(limitedScorecards, (tech) => tech.billableEfficiency, 3),
-          recallsCaused: averageBy(limitedScorecards, (tech) => tech.recallsCaused, 2),
-          upsold: averageBy(limitedScorecards, (tech) => tech.upsold, 2),
-          jobsPerDay: averageBy(limitedScorecards, (tech) => tech.jobsPerDay, 2),
-          leadGeneration: {
-            replacementOpps: averageBy(
-              limitedScorecards,
-              (tech) => tech.leadGeneration.replacementOpps,
-              2,
-            ),
-            leadsSet: averageBy(limitedScorecards, (tech) => tech.leadGeneration.leadsSet, 2),
-            avgLeadSale: averageBy(
-              limitedScorecards,
-              (tech) => tech.leadGeneration.avgLeadSale,
-              2,
-            ),
-            conversionRate: averageBy(
-              limitedScorecards,
-              (tech) => tech.leadGeneration.conversionRate,
-              1,
-            ),
-            totalLeadSales: averageBy(
-              limitedScorecards,
-              (tech) => tech.leadGeneration.totalLeadSales,
-              2,
-            ),
-          },
-          memberships: {
-            opportunities: averageBy(
-              limitedScorecards,
-              (tech) => tech.memberships.opportunities,
-              2,
-            ),
-            sold: averageBy(limitedScorecards, (tech) => tech.memberships.sold, 2),
-            conversionRate: averageBy(
-              limitedScorecards,
-              (tech) => tech.memberships.conversionRate,
-              1,
-            ),
-          },
-          salesFromTechLeads: {
-            totalSales: averageBy(
-              limitedScorecards,
-              (tech) => tech.salesFromTechLeads.totalSales,
-              2,
-            ),
-            avgSale: averageBy(limitedScorecards, (tech) => tech.salesFromTechLeads.avgSale, 2),
-            closeRate: averageBy(
-              limitedScorecards,
-              (tech) => tech.salesFromTechLeads.closeRate,
-              1,
-            ),
-          },
-          salesFromMarketingLeads: {
-            totalSales: averageBy(
-              limitedScorecards,
-              (tech) => tech.salesFromMarketingLeads.totalSales,
-              2,
-            ),
-            avgSale: averageBy(
-              limitedScorecards,
-              (tech) => tech.salesFromMarketingLeads.avgSale,
-              2,
-            ),
-            closeRate: averageBy(
-              limitedScorecards,
-              (tech) => tech.salesFromMarketingLeads.closeRate,
-              1,
-            ),
-          },
-        };
 
         const result: Record<string, unknown> = {
           period: {

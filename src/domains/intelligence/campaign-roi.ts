@@ -17,6 +17,7 @@ import {
   toNumber,
   toText,
 } from "./helpers.js";
+import { sumReport175TotalRevenue } from "./revenue.js";
 
 const campaignPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
@@ -28,7 +29,7 @@ const campaignPerformanceSchema = z.object({
     .min(1)
     .max(50)
     .optional()
-    .describe("Max campaigns to analyze (default 20, max 50). Only active campaigns are included."),
+    .describe("Max campaigns to analyze (default 20, max 50)."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -181,7 +182,7 @@ export function registerIntelligenceCampaignPerformanceTool(
               () =>
                 fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/campaigns", {
                   ids: input.campaignId === undefined ? undefined : String(input.campaignId),
-                  active: input.campaignId === undefined ? "True" : "Any",
+                  active: input.campaignId === undefined ? "Any" : undefined,
                 }),
               [],
             ),
@@ -290,7 +291,7 @@ export function registerIntelligenceCampaignPerformanceTool(
           campaignRows.length > maxCampaigns ? campaignRows.slice(0, maxCampaigns) : campaignRows;
         if (campaignRows.length > maxCampaigns) {
           warnings.push(
-            `Limited to ${maxCampaigns} of ${totalAvailable} active campaigns. Use 'limit' param to increase (max 50) or 'campaignId' for a specific campaign.`,
+            `Limited to ${maxCampaigns} of ${totalAvailable} campaigns. Use 'limit' param to increase (max 50) or 'campaignId' for a specific campaign.`,
           );
         }
 
@@ -301,15 +302,7 @@ export function registerIntelligenceCampaignPerformanceTool(
         const totalsBookings = limitedCampaignRows.reduce((total, row) => total + row.bookings, 0);
 
         // Extract total revenue from Report 175 instead of paginating all invoices
-        let totalsRevenue = 0;
-        if (revenueReport && isRecord(revenueReport) && Array.isArray(revenueReport.data)) {
-          for (const row of revenueReport.data) {
-            if (Array.isArray(row) && row.length > 8) {
-              totalsRevenue += toNumber(row[8]); // TotalRevenue is at index 8
-            }
-          }
-        }
-        totalsRevenue = round(totalsRevenue, 2);
+        const totalsRevenue = revenueReport === null ? 0 : sumReport175TotalRevenue(revenueReport);
 
         const result: Record<string, unknown> = {
           period: {
@@ -325,6 +318,11 @@ export function registerIntelligenceCampaignPerformanceTool(
           },
           leadGeneration,
         };
+
+        if (campaignRows.length > maxCampaigns) {
+          result.totalsNote =
+            "Revenue represents the full period; calls and bookings reflect only the top N listed campaigns.";
+        }
 
         if (warnings.length > 0) {
           result._warnings = warnings;

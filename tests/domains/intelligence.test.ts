@@ -35,6 +35,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     enabledDomains: null,
     logLevel: "error",
     timezone: "UTC",
+    allowedCallers: null,
     ...overrides,
   };
 }
@@ -106,9 +107,62 @@ function expectAllNumbersFinite(value: unknown): void {
   }
 }
 
+function reportFields(...names: string[]): Array<{ name: string }> {
+  return names.map((name) => ({ name }));
+}
+
 const PER_CAMPAIGN_REVENUE_WARNING =
   "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
 const EMPTY_REPORT = { fields: [], data: [], hasMore: false };
+const REPORT_175_FIELDS = reportFields(
+  "Name",
+  "CompletedRevenue",
+  "OpportunityJobAverage",
+  "OpportunityConversionRate",
+  "Opportunity",
+  "ConvertedJobs",
+  "CustomerSatisfaction",
+  "AdjustmentRevenue",
+  "TotalRevenue",
+  "NonJobRevenue",
+);
+const REPORT_176_FIELDS = reportFields(
+  "Name",
+  "LeadGenerationOpportunity",
+  "LeadsSet",
+  "LeadConversionRate",
+  "AverageLeadSale",
+  "ReplacementOpportunity",
+  "ReplacementLeadsSet",
+  "ReplacementLeadConversionRate",
+  "MembershipSales",
+  "AdjustmentRevenue",
+  "TotalRevenue",
+  "NonJobRevenue",
+);
+const REPORT_177_FIELDS = reportFields(
+  "Name",
+  "RevenuePerHour",
+  "BillableEfficiency",
+  "Upsold",
+  "TasksPerOpportunity",
+  "OptionsPerOpportunity",
+  "RecallsCaused",
+  "AdjustmentRevenue",
+  "TotalRevenue",
+  "NonJobRevenue",
+);
+const REPORT_179_FIELDS = reportFields(
+  "Name",
+  "TotalSales",
+  "ClosedAverageSale",
+  "CloseRate",
+  "SalesOpportunity",
+  "OptionsPerOpportunity",
+  "AdjustmentRevenue",
+  "TotalRevenue",
+  "NonJobRevenue",
+);
 const ZERO_TECHNICIAN_LEAD_GENERATION = {
   replacementOpps: 0,
   leadsSet: 0,
@@ -246,18 +300,7 @@ describe("intelligence domain", () => {
         // [Name, CompletedRevenue, OpportunityJobAvg, ConversionRate, Opportunity, ConvertedJobs,
         //  CustomerSatisfaction, AdjustmentRevenue, TotalRevenue, NonJobRevenue]
         return {
-          fields: [
-            { name: "Name" },
-            { name: "CompletedRevenue" },
-            { name: "OpportunityJobAverage" },
-            { name: "OpportunityConversionRate" },
-            { name: "Opportunity" },
-            { name: "ConvertedJobs" },
-            { name: "CustomerSatisfaction" },
-            { name: "AdjustmentRevenue" },
-            { name: "TotalRevenue" },
-            { name: "NonJobRevenue" },
-          ],
+          fields: REPORT_175_FIELDS,
           data: [
             ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
             ["HVAC - Service", 100, 100, 0.5, 10, 5, 0, 0, 150, 50],
@@ -269,7 +312,7 @@ describe("intelligence domain", () => {
 
       if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data") {
         return {
-          fields: [],
+          fields: REPORT_177_FIELDS,
           data: [
             ["HVAC - Install", 100, 0.8, 300, 2, 1.5, 1, 0, 450, 50],
             ["HVAC - Service", 80, 0.7, 100, 1.5, 1, 0, 0, 150, 50],
@@ -281,7 +324,7 @@ describe("intelligence domain", () => {
 
       if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data") {
         return {
-          fields: [],
+          fields: REPORT_179_FIELDS,
           data: [
             ["HVAC - Install", 1000, 500, 0.5, 4, 1.2, 0, 450, 50],
             ["HVAC - Service", 300, 300, 1.0, 1, 1, 0, 150, 50],
@@ -635,48 +678,66 @@ describe("intelligence domain", () => {
           closeRate: 60,
         },
       },
+      {
+        id: 12,
+        name: "Install Leader",
+        jobsCompleted: 2,
+        revenue: 0,
+        averageTicket: 0,
+        opportunities: 0,
+        convertedJobs: 0,
+        conversionRate: 0,
+        customerSatisfaction: 0,
+        revenuePerHour: 0,
+        billableEfficiency: 0,
+        recallsCaused: 0,
+        upsold: 0,
+        jobsPerDay: 0.29,
+        leadGeneration: ZERO_TECHNICIAN_LEAD_GENERATION,
+        memberships: ZERO_TECHNICIAN_MEMBERSHIPS,
+        salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
+        salesFromMarketingLeads: ZERO_TECHNICIAN_LEAD_SALES,
+      },
     ]);
 
     expect(payload.teamAverages).toEqual({
       jobsCompleted: 2,
-      revenue: 1000,
-      averageTicket: 250,
-      opportunities: 4,
-      convertedJobs: 2,
-      conversionRate: 50,
-      customerSatisfaction: 4.8,
-      revenuePerHour: 200,
-      billableEfficiency: 0.85,
-      recallsCaused: 1,
-      upsold: 300,
+      revenue: 500,
+      averageTicket: 125,
+      opportunities: 2,
+      convertedJobs: 1,
+      conversionRate: 25,
+      customerSatisfaction: 2.4,
+      revenuePerHour: 100,
+      billableEfficiency: 0.425,
+      recallsCaused: 0.5,
+      upsold: 150,
       jobsPerDay: 0.29,
       leadGeneration: {
-        replacementOpps: 3,
-        leadsSet: 2,
-        avgLeadSale: 750,
-        conversionRate: 50,
-        totalLeadSales: 1500,
+        replacementOpps: 1.5,
+        leadsSet: 1,
+        avgLeadSale: 375,
+        conversionRate: 25,
+        totalLeadSales: 750,
       },
       memberships: {
-        opportunities: 4,
-        sold: 1,
-        conversionRate: 25,
+        opportunities: 2,
+        sold: 0.5,
+        conversionRate: 12.5,
       },
       salesFromTechLeads: {
-        totalSales: 500,
-        avgSale: 250,
-        closeRate: 40,
+        totalSales: 250,
+        avgSale: 125,
+        closeRate: 20,
       },
       salesFromMarketingLeads: {
-        totalSales: 300,
-        avgSale: 300,
-        closeRate: 60,
+        totalSales: 150,
+        avgSale: 150,
+        closeRate: 30,
       },
     });
 
-    expect(payload._warnings).toEqual([
-      "Business unit filtering only applies to completed jobs (Report 165) and lead generation (Report 169). Revenue, productivity, memberships, and lead-sales metrics are tenant-wide.",
-    ]);
+    expect(payload._warnings).toBeUndefined();
 
     expect(postMock).toHaveBeenCalledWith(
       "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
@@ -695,6 +756,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitIds", value: "3" },
         ],
       },
     );
@@ -716,6 +778,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitIds", value: "3" },
         ],
       },
     );
@@ -726,6 +789,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitIds", value: "3" },
         ],
       },
     );
@@ -736,6 +800,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
+          { name: "BusinessUnitIds", value: "3" },
         ],
       },
     );
@@ -961,8 +1026,8 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(3);
     expect(payload.reactivated).toBe(1);
     expect(payload.deleted).toBe(1);
-    expect(payload.retentionRate).toBeCloseTo(0.88, 3);
-    expect(payload.totalRevenue).toBe(580);
+    expect(payload.retentionRate).toBeCloseTo(0.893, 3);
+    expect(payload.totalServiceRevenue).toBe(580);
     expect(payload.conversionTotals).toEqual({
       opportunities: 10,
       converted: 4,
@@ -1069,7 +1134,7 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(0);
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
-    expect(payload.totalRevenue).toBe(125);
+    expect(payload.totalServiceRevenue).toBe(125);
     expect(payload.conversionTotals).toEqual({
       opportunities: 4,
       converted: 2,
@@ -1103,7 +1168,7 @@ describe("intelligence domain", () => {
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
     expect(payload.retentionRate).toBe(0);
-    expect(payload.totalRevenue).toBe(0);
+    expect(payload.totalServiceRevenue).toBe(0);
     expect(payload.conversionTotals).toEqual({
       opportunities: 0,
       converted: 0,
@@ -1154,8 +1219,8 @@ describe("intelligence domain", () => {
     postMock.mockResolvedValue({
       fields: [],
       data: [
-        ["Jamie Tech", 15000, 7500, 0.5, 6, 1.8, 77, 100, 15100],
-        ["Pat Tech", 9000, 4500, 0.25, 8, 1.2, 88, 0, 9000],
+        ["Jamie Tech", 2, 7500, 0.5, 6, 1.8, 77, 100, 15100],
+        ["Pat Tech", 1, 4500, 0.25, 8, 1.2, 88, 0, 9000],
         // Zero-activity tech — should be filtered out
         ["Admin Ghost", 0, 0, 0, 0, 0, 99, 0, 0],
       ],
@@ -1188,15 +1253,15 @@ describe("intelligence domain", () => {
     ]);
     // Zero-activity "Admin Ghost" should be filtered out; soldById=77 filters to Jamie only
     expect(payload.salesFunnel).toEqual({
-      totalSales: 15000,
-      averageCloseRate: 50,
+      totalSales: 2,
+      averageCloseRate: 33.3,
       totalOpportunities: 6,
       averageClosedSale: 7500,
       byTechnician: [
         {
           id: 77,
           name: "Jamie Tech",
-          totalSales: 15000,
+          totalSales: 2,
           closedAverageSale: 7500,
           closeRate: 50,
           salesOpportunity: 6,
@@ -1232,7 +1297,7 @@ describe("intelligence domain", () => {
     getMock.mockRejectedValue(new Error("pipeline unavailable"));
     postMock.mockResolvedValue({
       fields: [],
-      data: [["Jordan Tech", 1200, 600, 0.5, 2, 1.1, 10, 0, 1200]],
+      data: [["Jordan Tech", 1, 1200, 0.5, 2, 1.1, 10, 0, 1200]],
       hasMore: false,
     });
 
@@ -1246,16 +1311,16 @@ describe("intelligence domain", () => {
       dismissed: { count: 0, value: 0 },
     });
     expect(payload.salesFunnel).toEqual({
-      totalSales: 1200,
+      totalSales: 1,
       averageCloseRate: 50,
       totalOpportunities: 2,
-      averageClosedSale: 600,
+      averageClosedSale: 1200,
       byTechnician: [
         {
           id: 10,
           name: "Jordan Tech",
-          totalSales: 1200,
-          closedAverageSale: 600,
+          totalSales: 1,
+          closedAverageSale: 1200,
           closeRate: 50,
           salesOpportunity: 2,
           optionsPerOpportunity: 1.1,
@@ -1299,8 +1364,8 @@ describe("intelligence domain", () => {
     postMock.mockResolvedValue({
       fields: [],
       data: [
-        ["Sam Keller", 1000, 500, 0.4, 5, 1.2, 20, 0, 1000],
-        ["Ria Brooks", 2000, 1000, 0.6, 10, 1.6, 21, 0, 2000],
+        ["Sam Keller", 2, 500, 0.4, 5, 1.2, 20, 0, 1000],
+        ["Ria Brooks", 1, 1000, 0.6, 10, 1.6, 21, 0, 2000],
       ],
       hasMore: false,
     });
@@ -1309,15 +1374,15 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(result);
 
     expect(payload.salesFunnel).toEqual({
-      totalSales: 3000,
-      averageCloseRate: 50,
+      totalSales: 3,
+      averageCloseRate: 20,
       totalOpportunities: 15,
-      averageClosedSale: 750,
+      averageClosedSale: 666.67,
       byTechnician: [
         {
           id: 20,
           name: "Sam Keller",
-          totalSales: 1000,
+          totalSales: 2,
           closedAverageSale: 500,
           closeRate: 40,
           salesOpportunity: 5,
@@ -1326,7 +1391,7 @@ describe("intelligence domain", () => {
         {
           id: 21,
           name: "Ria Brooks",
-          totalSales: 2000,
+          totalSales: 1,
           closedAverageSale: 1000,
           closeRate: 60,
           salesOpportunity: 10,
@@ -1439,15 +1504,32 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    postMock.mockResolvedValue({
-      fields: [],
-      data: [
-        ["HVAC", 10, 4, 0.4, 2500, 5, 2, 0.4, 1200, 50, 2750, 25],
-        ["Plumbing", 3, 1, 0.333, 1500, 2, 1, 0.5, 300, 0, 1800, 0],
-        // Zero-activity BU — should be filtered out
-        ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-      ],
-      hasMore: false,
+    postMock.mockImplementation(async (path: string) => {
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data") {
+        return {
+          fields: REPORT_175_FIELDS,
+          data: [
+            ["HVAC", 1000, 0, 0, 0, 0, 0, 0, 1200, 200],
+            ["Plumbing", 200, 0, 0, 0, 0, 0, 0, 300, 100],
+          ],
+          hasMore: false,
+        };
+      }
+
+      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data") {
+        return {
+          fields: REPORT_176_FIELDS,
+          data: [
+            ["HVAC", 10, 4, 0.4, 2500, 5, 2, 0.4, 1200, 50, 2750, 25],
+            ["Plumbing", 3, 1, 0.333, 1500, 2, 1, 0.5, 300, 0, 1800, 0],
+            // Zero-activity BU — should be filtered out
+            ["Admin", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+          ],
+          hasMore: false,
+        };
+      }
+
+      throw new Error(`Unexpected path: ${path}`);
     });
 
     const result = await handler({

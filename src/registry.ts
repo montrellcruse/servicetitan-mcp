@@ -16,15 +16,28 @@ export interface ToolDefinition {
   domain: string;
   operation: ToolOperation;
   schema: Record<string, ZodType>;
-  handler: (params: unknown) => Promise<ToolResponse>;
+  handler: (params: unknown, extra?: ToolHandlerExtra) => Promise<ToolResponse>;
   description?: string;
   cacheTtlMs?: number;
+  cacheKeyParams?: (params: unknown) => unknown;
 }
 
 export type DomainLoader = (
   client: ServiceTitanClient,
   registry: ToolRegistry,
 ) => void;
+
+export interface ToolHandlerExtra {
+  authInfo?: {
+    clientId?: string;
+    extra?: Record<string, unknown>;
+  };
+  sessionId?: string;
+  _meta?: Record<string, unknown>;
+  requestInfo?: {
+    headers?: Record<string, string | string[] | undefined>;
+  };
+}
 
 export class ToolRegistry {
   private registered = 0;
@@ -68,17 +81,6 @@ export class ToolRegistry {
       this.logger.debug("Skipped tool due to domain filter", {
         tool: tool.name,
         domain,
-      });
-      return;
-    }
-
-    if (this.config.readonlyMode && tool.operation === "delete") {
-      this.skipped += 1;
-      this.readonlyFiltered += 1;
-      this.logger.info("Skipped tool in readonly mode", {
-        tool: tool.name,
-        domain,
-        operation: tool.operation,
       });
       return;
     }
@@ -147,7 +149,8 @@ export class ToolRegistry {
   private wrapTool(tool: ToolDefinition): ToolDefinition {
     const isWrite = tool.operation === "write";
     const requiresDeleteConfirmation = tool.operation === "delete";
-    const shouldAudit = tool.operation === "write" || tool.operation === "delete";
+    const isMutating = tool.operation === "write" || tool.operation === "delete";
+    const shouldAudit = isMutating;
 
     const schema: Record<string, ZodType> = requiresDeleteConfirmation
       ? {
@@ -174,7 +177,18 @@ export class ToolRegistry {
 
     const originalHandler = tool.handler;
 
-    const wrappedHandler = async (params: unknown): Promise<ToolResponse> => {
+    /*
+     * Authorization model:
+     * This server is intended for a single trusted operator. Confirmation prompts
+     * for writes and deletes are safety UX to prevent accidental changes, not
+     * access control. Multi-tenant deployments should enforce authorization at the
+     * transport or proxy layer. ST_ALLOWED_CALLERS adds a narrow allowlist check
+     * against caller identity only when the MCP transport exposes one.
+     */
+    const wrappedHandler = async (
+      params: unknown,
+      extra?: ToolHandlerExtra,
+    ): Promise<ToolResponse> => {
       const paramRecord = this.toRecord(params);
       const shouldExecuteDelete = !requiresDeleteConfirmation || paramRecord.confirm === true;
       const executionParams = isWrite
@@ -183,8 +197,13 @@ export class ToolRegistry {
           ? this.withoutConfirm(paramRecord)
           : paramRecord;
 
-      if (isWrite && this.config.readonlyMode) {
-        return toolError("Write operations are disabled in readonly mode");
+      const authorizationError = this.authorizeCaller(extra);
+      if (authorizationError) {
+        return authorizationError;
+      }
+
+      if (isMutating && this.config.readonlyMode) {
+        return toolError("Readonly mode: operation not permitted");
       }
 
       if (isWrite && this.config.confirmWrites && paramRecord._confirmed !== true) {
@@ -198,7 +217,7 @@ export class ToolRegistry {
       }
 
       try {
-        const result = await originalHandler(executionParams);
+        const result = await originalHandler(executionParams, extra);
 
         if (shouldAudit) {
           this.auditLogger.log(
@@ -247,6 +266,86 @@ export class ToolRegistry {
   private withoutWriteConfirmation(params: Record<string, unknown>): Record<string, unknown> {
     const { _confirmed: __confirmed, confirm: _confirm, ...rest } = params;
     return rest;
+  }
+
+  private authorizeCaller(extra?: ToolHandlerExtra): ToolResponse | null {
+    if (this.config.allowedCallers == null) {
+      return null;
+    }
+
+    const caller = this.extractCallerIdentity(extra);
+    if (!caller) {
+      return toolError("Authorization failed: caller identity unavailable");
+    }
+
+    if (!this.config.allowedCallers.includes(caller)) {
+      return toolError("Authorization failed: caller not permitted");
+    }
+
+    return null;
+  }
+
+  private extractCallerIdentity(extra?: ToolHandlerExtra): string | null {
+    const authExtra = this.toRecord(extra?.authInfo?.extra);
+    const requestMeta = this.toRecord(extra?._meta);
+    const headers = this.normalizeHeaders(extra?.requestInfo?.headers);
+
+    const candidates = [
+      extra?.authInfo?.clientId,
+      this.readString(authExtra, "caller"),
+      this.readString(authExtra, "user"),
+      this.readString(authExtra, "username"),
+      this.readString(authExtra, "email"),
+      this.readString(authExtra, "sub"),
+      this.readString(requestMeta, "caller"),
+      this.readString(requestMeta, "user"),
+      this.readString(requestMeta, "username"),
+      this.readString(requestMeta, "email"),
+      headers["x-caller-id"],
+      headers["x-user-id"],
+      headers["x-user-email"],
+      headers["x-forwarded-user"],
+      headers["x-auth-request-email"],
+      headers["x-ms-client-principal-name"],
+    ];
+
+    for (const candidate of candidates) {
+      const normalized = this.normalizeCaller(candidate);
+      if (normalized) {
+        return normalized;
+      }
+    }
+
+    return null;
+  }
+
+  private normalizeHeaders(
+    headers: Record<string, string | string[] | undefined> | undefined,
+  ): Record<string, string | undefined> {
+    if (!headers) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(headers).map(([key, value]) => [
+        key.toLowerCase(),
+        Array.isArray(value) ? value[0] : value,
+      ]),
+    );
+  }
+
+  private readString(record: Record<string, unknown>, key: string): string | undefined {
+    const value = record[key];
+    return typeof value === "string" ? value : undefined;
+  }
+
+  private normalizeCaller(value: string | undefined): string | null {
+    if (typeof value !== "string") {
+      return null;
+    }
+
+    const normalized = value.trim().toLowerCase();
+    return normalized.length > 0 ? normalized : null;
   }
 
   private buildConfirmationPreview(

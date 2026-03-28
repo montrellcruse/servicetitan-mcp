@@ -282,18 +282,19 @@ export function registerIntelligenceEstimatePipelineTool(
           (total, tech) => total + tech.salesOpportunity,
           0,
         );
-        const averageCloseRate = round(
-          safeDivide(
-            salesByTechnician.reduce((total, tech) => total + tech.closeRate, 0),
-            salesByTechnician.length,
+        const totalRevenue = round(
+          salesByTechnician.reduce(
+            (total, tech) => total + (tech.totalSales * tech.closedAverageSale),
+            0,
           ),
+          2,
+        );
+        const averageCloseRate = round(
+          safeDivide(totalSales, totalOpportunities) * 100,
           1,
         );
         const averageClosedSale = round(
-          safeDivide(
-            salesByTechnician.reduce((total, tech) => total + tech.closedAverageSale, 0),
-            salesByTechnician.length,
-          ),
+          safeDivide(totalRevenue, totalSales),
           2,
         );
 

@@ -28,6 +28,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     enabledDomains: null,
     logLevel: "error",
     timezone: "UTC",
+    allowedCallers: null,
     ...overrides,
   };
 }
