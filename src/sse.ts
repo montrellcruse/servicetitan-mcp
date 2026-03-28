@@ -137,17 +137,14 @@ async function main(): Promise<void> {
         await client.ensureToken();
         checks.authentication = "OK";
       } catch (error: unknown) {
-        checks.authentication = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+        checks.authentication = "FAILED";
       }
       try {
         await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
         checks.tenant_access = "OK";
       } catch (error: unknown) {
-        checks.tenant_access = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+        checks.tenant_access = "FAILED";
       }
-      checks.environment = config.environment;
-      checks.readonly_mode = String(config.readonlyMode);
-      checks.tools_registered = String(registry.getStats().registered);
       return toolResult(checks);
     },
   });

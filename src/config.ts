@@ -163,6 +163,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     enabledDomains: parseDomains(env.ST_DOMAINS),
     logLevel: parseLogLevel(env.ST_LOG_LEVEL),
     timezone: parseTimezone(env.ST_TIMEZONE),
-    corsOrigin: env.ST_CORS_ORIGIN ?? "*",
+    corsOrigin: env.ST_CORS_ORIGIN ?? "",
   };
 }

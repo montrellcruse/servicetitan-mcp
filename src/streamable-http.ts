@@ -21,7 +21,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { readdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
-import { createGzip } from "node:zlib";
+
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
@@ -105,27 +105,21 @@ function authenticate(req: IncomingMessage): boolean {
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
   const json = JSON.stringify(body);
-  const acceptsGzip = false; // Simple responses don't need compression
   res.writeHead(status, { "Content-Type": "application/json" });
   res.end(json);
 }
 
 function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
-  res.setHeader("Access-Control-Allow-Origin", corsOrigin);
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader(
-    "Access-Control-Allow-Headers",
-    "Content-Type, x-api-key, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID",
-  );
-  res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
+  if (corsOrigin.length > 0) {
+    res.setHeader("Access-Control-Allow-Origin", corsOrigin);
+    res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, x-api-key, Authorization, Mcp-Session-Id, Mcp-Protocol-Version, Last-Event-ID",
+    );
+    res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id, Mcp-Protocol-Version");
+  }
   res.setHeader("X-Accel-Buffering", "no");
-}
-
-// ── Response compression helper ──
-
-function supportsGzip(req: IncomingMessage): boolean {
-  const accept = req.headers["accept-encoding"];
-  return typeof accept === "string" && accept.includes("gzip");
 }
 
 function isInitializeRequest(body: unknown): boolean {
@@ -164,17 +158,14 @@ async function main(): Promise<void> {
         await client.ensureToken();
         checks.authentication = "OK";
       } catch (error: unknown) {
-        checks.authentication = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+        checks.authentication = "FAILED";
       }
       try {
         await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
         checks.tenant_access = "OK";
       } catch (error: unknown) {
-        checks.tenant_access = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+        checks.tenant_access = "FAILED";
       }
-      checks.environment = config.environment;
-      checks.readonly_mode = String(config.readonlyMode);
-      checks.tools_registered = String(templateRegistry.getStats().registered);
       return toolResult(checks);
     },
   });
@@ -209,17 +200,14 @@ async function main(): Promise<void> {
           await client.ensureToken();
           checks.authentication = "OK";
         } catch (error: unknown) {
-          checks.authentication = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+          checks.authentication = "FAILED";
         }
         try {
           await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
           checks.tenant_access = "OK";
         } catch (error: unknown) {
-          checks.tenant_access = `FAILED: ${error instanceof Error ? error.message : String(error)}`;
+          checks.tenant_access = "FAILED";
         }
-        checks.environment = config.environment;
-        checks.readonly_mode = String(config.readonlyMode);
-        checks.tools_registered = String(sessionRegistry.getStats().registered);
         return toolResult(checks);
       },
     });
