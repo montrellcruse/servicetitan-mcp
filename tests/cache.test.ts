@@ -168,6 +168,26 @@ describe("ReferenceDataCache", () => {
     expect(loader).toHaveBeenCalledTimes(2);
   });
 
+  it("supports per-call TTL overrides on cached reference data", async () => {
+    const defaultTtlMs = 60_000;
+    const overrideTtlMs = 1_000;
+    const loader = vi
+      .fn()
+      .mockResolvedValueOnce({ data: [{ id: 1, name: "First" }], hasMore: false, page: 1 })
+      .mockResolvedValueOnce({ data: [{ id: 2, name: "Second" }], hasMore: false, page: 1 });
+    const client = makeClient(loader);
+    const cache = new ReferenceDataCache(defaultTtlMs);
+
+    const first = await cache.getTechnicians(client, overrideTtlMs);
+    expect(first).toEqual([{ id: 1, name: "First" }]);
+
+    vi.advanceTimersByTime(overrideTtlMs + 1);
+
+    const second = await cache.getTechnicians(client, overrideTtlMs);
+    expect(second).toEqual([{ id: 2, name: "Second" }]);
+    expect(loader).toHaveBeenCalledTimes(2);
+  });
+
   it("returns technician name from cache by ID", async () => {
     const loader = vi.fn().mockResolvedValue({
       data: [

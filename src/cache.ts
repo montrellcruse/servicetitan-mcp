@@ -184,9 +184,7 @@ export class TtlCache<T> {
   private readonly store = new Map<string, CacheEntry<T>>();
 
   constructor(private readonly ttlMs: number = DEFAULT_TTL_MS) {
-    if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
-      throw new Error(`ttlMs must be a positive number. Received: ${ttlMs}`);
-    }
+    this.assertPositiveTtl(ttlMs);
   }
 
   get(key: string): T | undefined {
@@ -203,10 +201,11 @@ export class TtlCache<T> {
     return entry.value;
   }
 
-  set(key: string, value: T): void {
+  set(key: string, value: T, ttlMs: number = this.ttlMs): void {
+    this.assertPositiveTtl(ttlMs);
     this.store.set(key, {
       value,
-      expiresAt: Date.now() + this.ttlMs,
+      expiresAt: Date.now() + ttlMs,
     });
   }
 
@@ -227,6 +226,12 @@ export class TtlCache<T> {
   clear(): void {
     this.store.clear();
   }
+
+  private assertPositiveTtl(ttlMs: number): void {
+    if (!Number.isFinite(ttlMs) || ttlMs <= 0) {
+      throw new Error(`ttlMs must be a positive number. Received: ${ttlMs}`);
+    }
+  }
 }
 
 export class ReferenceDataCache {
@@ -242,27 +247,43 @@ export class ReferenceDataCache {
     this.inFlight.clear();
   }
 
-  async getTechnicians(client: ServiceTitanClient): Promise<GenericRecord[]> {
+  async getTechnicians(
+    client: ServiceTitanClient,
+    ttlMs?: number,
+  ): Promise<GenericRecord[]> {
     return this.getOrLoad("technicians", () =>
       fetchAllPages(client, "/tenant/{tenant}/technicians", { active: "Any" }),
+      ttlMs,
     );
   }
 
-  async getBusinessUnits(client: ServiceTitanClient): Promise<GenericRecord[]> {
+  async getBusinessUnits(
+    client: ServiceTitanClient,
+    ttlMs?: number,
+  ): Promise<GenericRecord[]> {
     return this.getOrLoad("business-units", () =>
       fetchAllPages(client, "/tenant/{tenant}/business-units", { active: "Any" }),
+      ttlMs,
     );
   }
 
-  async getPaymentTypes(client: ServiceTitanClient): Promise<GenericRecord[]> {
+  async getPaymentTypes(
+    client: ServiceTitanClient,
+    ttlMs?: number,
+  ): Promise<GenericRecord[]> {
     return this.getOrLoad("payment-types", () =>
       fetchAllPages(client, "/tenant/{tenant}/payment-types", { active: "Any" }),
+      ttlMs,
     );
   }
 
-  async getMembershipTypes(client: ServiceTitanClient): Promise<GenericRecord[]> {
+  async getMembershipTypes(
+    client: ServiceTitanClient,
+    ttlMs?: number,
+  ): Promise<GenericRecord[]> {
     return this.getOrLoad("membership-types", () =>
       fetchAllPages(client, "/tenant/{tenant}/membership-types", { active: "Any" }),
+      ttlMs,
     );
   }
 
@@ -296,6 +317,7 @@ export class ReferenceDataCache {
   private async getOrLoad(
     key: string,
     loader: () => Promise<GenericRecord[]>,
+    ttlMs?: number,
   ): Promise<GenericRecord[]> {
     const cached = this.cache.get(key);
     if (cached !== undefined) {
@@ -309,7 +331,7 @@ export class ReferenceDataCache {
 
     const request = loader()
       .then((value) => {
-        this.cache.set(key, value);
+        this.cache.set(key, value, ttlMs);
         this.inFlight.delete(key);
         return value;
       })

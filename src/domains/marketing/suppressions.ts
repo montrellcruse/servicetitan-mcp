@@ -24,7 +24,7 @@ const suppressionsListSchema = paginationParams(z.object({}));
 function registerSuppressionsListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
-  name: "marketing_suppressions_list" | "marketing_suppressions_getlist",
+  name: "marketing_suppressions_list",
   description: string,
 ): void {
   registry.register({
@@ -63,13 +63,6 @@ export function registerMarketingSuppressionTools(
     registry,
     "marketing_suppressions_list",
     "List suppressions",
-  );
-
-  registerSuppressionsListTool(
-    client,
-    registry,
-    "marketing_suppressions_getlist",
-    "List suppressions (legacy naming)",
   );
 
   registry.register({

@@ -38,7 +38,7 @@ const campaignCostsListSchema = paginationParams(
 function registerCampaignCostListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
-  name: "marketing_campaign_costs_list" | "marketing_campaign_costs_get_list",
+  name: "marketing_campaign_costs_list",
   description: string,
 ): void {
   registry.register({
@@ -81,13 +81,6 @@ export function registerMarketingCampaignCostTools(
     registry,
     "marketing_campaign_costs_list",
     "List campaign costs",
-  );
-
-  registerCampaignCostListTool(
-    client,
-    registry,
-    "marketing_campaign_costs_get_list",
-    "List campaign costs (legacy naming)",
   );
 
   registry.register({

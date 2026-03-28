@@ -40,7 +40,7 @@ function getNumbers(input: z.infer<typeof phoneNumbersSchema>): string[] {
 function registerOptOutListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
-  name: "marketing_opt_in_out_get_all_opt_outs" | "marketing_opt_in_outs_list",
+  name: "marketing_opt_in_outs_list",
   description: string,
 ): void {
   registry.register({
@@ -63,7 +63,7 @@ function registerOptOutListTool(
 function registerOptOutCreateTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
-  name: "marketing_opt_in_out_create_opt_out_list" | "marketing_opt_in_outs_create",
+  name: "marketing_opt_in_outs_create",
   description: string,
 ): void {
   registry.register({
@@ -90,7 +90,7 @@ function registerOptOutCreateTool(
 function registerOptOutLookupTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,
-  name: "marketing_opt_in_out_lookup_create" | "marketing_opt_in_outs_lookup_create",
+  name: "marketing_opt_in_outs_lookup_create",
   description: string,
 ): void {
   registry.register({
@@ -122,42 +122,21 @@ export function registerMarketingOptInOutTools(
   registerOptOutListTool(
     client,
     registry,
-    "marketing_opt_in_out_get_all_opt_outs",
-    "List all opt-out records",
-  );
-
-  registerOptOutListTool(
-    client,
-    registry,
     "marketing_opt_in_outs_list",
-    "List all opt-out records (legacy naming)",
-  );
-
-  registerOptOutCreateTool(
-    client,
-    registry,
-    "marketing_opt_in_out_create_opt_out_list",
-    "Create opt-out records for phone numbers",
+    "List all opt-out records",
   );
 
   registerOptOutCreateTool(
     client,
     registry,
     "marketing_opt_in_outs_create",
-    "Create opt-out records for phone numbers (legacy naming)",
-  );
-
-  registerOptOutLookupTool(
-    client,
-    registry,
-    "marketing_opt_in_out_lookup_create",
-    "Lookup opt-out records for phone numbers",
+    "Create opt-out records for phone numbers",
   );
 
   registerOptOutLookupTool(
     client,
     registry,
     "marketing_opt_in_outs_lookup_create",
-    "Lookup opt-out records for phone numbers (legacy naming)",
+    "Lookup opt-out records for phone numbers",
   );
 }

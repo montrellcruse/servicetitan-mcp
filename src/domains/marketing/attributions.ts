@@ -17,16 +17,6 @@ const attributionCreateSchema = z.object({
   payload: z.object({}).passthrough().optional().describe("Attribution payload"),
 });
 
-const callReasonsListSchema = dateFilterParams(
-  paginationParams(
-    z
-      .object({
-        ...sortParam(["Id", "ModifiedOn", "CreatedOn"]),
-      })
-      .extend(activeFilterParam()),
-  ),
-);
-
 const attributedLeadsListSchema = paginationParams(
   z.object({
     fromUtc: z
@@ -154,38 +144,6 @@ export function registerMarketingAttributionTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,
 ): void {
-  registry.register({
-    name: "marketing_call_reasons_get",
-    domain: "marketing",
-    operation: "read",
-    description: "List call reasons",
-    schema: callReasonsListSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof callReasonsListSchema>;
-
-      try {
-        const data = await client.get(
-          "/tenant/{tenant}/call-reasons",
-          buildParams({
-            page: input.page,
-            pageSize: input.pageSize,
-            includeTotal: input.includeTotal,
-            active: input.active,
-            createdBefore: input.createdBefore,
-            createdOnOrAfter: input.createdOnOrAfter,
-            modifiedBefore: input.modifiedBefore,
-            modifiedOnOrAfter: input.modifiedOnOrAfter,
-            sort: input.sort,
-          }),
-        );
-
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
   registerAttributionCreateTool(client, registry, {
     name: "marketing_external_call_attributions_create",
     description: "Create external call attributions",

@@ -161,6 +161,7 @@ export function registerIntelligenceDailySnapshotTool(
     name: "intel_daily_snapshot",
     domain: "intelligence",
     operation: "read",
+    cacheTtlMs: 60_000,
     description:
       "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, next-day upcoming jobs, and plain-English highlights" +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',

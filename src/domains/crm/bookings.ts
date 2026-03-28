@@ -321,64 +321,10 @@ export function registerBookingTools(
   });
 
   registry.register({
-    name: "crm_bookings_get_contact_list2",
-    domain: "crm",
-    operation: "read",
-    description: "List contacts for a provider-scoped booking (legacy naming)",
-    schema: bookingProviderContactsListSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof bookingProviderContactsListSchema>;
-
-      try {
-        const data = await client.get(
-          `/tenant/{tenant}/booking-provider/${input.bookingProvider}/bookings/${input.id}/contacts`,
-          buildParams({
-            page: input.page,
-            pageSize: input.pageSize,
-            includeTotal: input.includeTotal,
-          }),
-        );
-
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
     name: "crm_bookings_provider_contacts_update",
     domain: "crm",
     operation: "write",
     description: "Patch a provider-scoped booking contact",
-    schema: bookingUpdateContactSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof bookingUpdateContactSchema>;
-
-      try {
-        const body = bookingContactSchema.parse({
-          type: input.type,
-          value: input.value,
-          memo: input.memo,
-        });
-
-        const data = await client.patch(
-          `/tenant/{tenant}/booking-provider/${input.bookingProvider}/bookings/${input.id}/contacts/${input.contactId}`,
-          body,
-        );
-
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
-    name: "crm_bookings_updatebookingcontact",
-    domain: "crm",
-    operation: "write",
-    description: "Patch a provider-scoped booking contact (legacy naming)",
     schema: bookingUpdateContactSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingUpdateContactSchema>;

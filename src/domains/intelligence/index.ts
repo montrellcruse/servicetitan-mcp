@@ -25,14 +25,24 @@ function createCachingRegistry(inner: ToolRegistry): ToolRegistry {
   return new Proxy(inner, {
     get(target, prop, receiver) {
       if (prop === "register") {
-        return (tool: { name: string; handler: (params: unknown) => Promise<ToolResponse>; [k: string]: unknown }) => {
+        return (tool: {
+          name: string;
+          handler: (params: unknown) => Promise<ToolResponse>;
+          cacheTtlMs?: number;
+          [k: string]: unknown;
+        }) => {
           // Only cache intel_ tools (not lookup, which is reference data)
           if (tool.name.startsWith(CACHEABLE_PREFIX) && tool.name !== "intel_lookup") {
             const originalHandler = tool.handler;
             tool = {
               ...tool,
               handler: async (params: unknown) => {
-                return withIntelCache(tool.name, params, () => originalHandler(params));
+                return withIntelCache(
+                  tool.name,
+                  params,
+                  () => originalHandler(params),
+                  tool.cacheTtlMs,
+                );
               },
             };
           }

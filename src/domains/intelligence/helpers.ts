@@ -37,6 +37,7 @@ export async function withIntelCache<T>(
   toolName: string,
   args: unknown,
   fn: () => Promise<T>,
+  ttlMs: number = INTEL_CACHE_TTL_MS,
 ): Promise<T> {
   const key = intelCacheKey(toolName, args);
 
@@ -54,7 +55,7 @@ export async function withIntelCache<T>(
 
   // Execute and cache
   const promise = fn().then((result) => {
-    intelCache.set(key, { value: result, expiresAt: Date.now() + INTEL_CACHE_TTL_MS });
+    intelCache.set(key, { value: result, expiresAt: Date.now() + ttlMs });
     intelInflight.delete(key);
     return result;
   }).catch((err) => {

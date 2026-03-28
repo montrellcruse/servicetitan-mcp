@@ -7,6 +7,7 @@ import {
   clearIntelCache,
   fetchAllPages,
   safeDivide,
+  withIntelCache,
 } from "../../src/domains/intelligence/helpers.js";
 import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
@@ -216,6 +217,23 @@ describe("intelligence domain", () => {
     expect(safeDivide(10, Number.NaN)).toBe(0);
     expect(safeDivide(10, Number.POSITIVE_INFINITY)).toBe(0);
     expect(safeDivide(10, 0, 7)).toBe(7);
+  });
+
+  it("withIntelCache honors ttl overrides", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+
+    const load = async () => {
+      calls += 1;
+      return { calls };
+    };
+
+    expect(await withIntelCache("intel_test", { id: 1 }, load, 1_000)).toEqual({ calls: 1 });
+    expect(await withIntelCache("intel_test", { id: 1 }, load, 1_000)).toEqual({ calls: 1 });
+
+    vi.advanceTimersByTime(1_001);
+
+    expect(await withIntelCache("intel_test", { id: 1 }, load, 1_000)).toEqual({ calls: 2 });
   });
 
   it("intel_revenue_summary uses Report 175 for revenue and payments for collections", async () => {

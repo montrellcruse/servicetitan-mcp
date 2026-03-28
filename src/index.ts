@@ -1,48 +1,13 @@
-import { readdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
-
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 
 import { AuditLogger } from "./audit.js";
 import { ServiceTitanClient } from "./client.js";
 import { loadConfig } from "./config.js";
+import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
-import { type DomainLoader, ToolRegistry } from "./registry.js";
+import { ToolRegistry } from "./registry.js";
 import { setMaxResponseChars, toolResult } from "./utils.js";
-
-async function loadDomainModules(
-  registry: ToolRegistry,
-  logger: Logger,
-): Promise<void> {
-  const domainsDirectory = fileURLToPath(new URL("./domains", import.meta.url));
-
-  const entries = await readdir(domainsDirectory, { withFileTypes: true });
-  const domainDirs = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-
-  for (const dirName of domainDirs) {
-    const fileUrl = new URL(`./domains/${dirName}/index.js`, import.meta.url).href;
-
-    let module: { default?: DomainLoader; loadDomain?: DomainLoader };
-    try {
-      module = (await import(fileUrl)) as typeof module;
-    } catch {
-      logger.debug("No index.js in domain directory", { domain: dirName });
-      continue;
-    }
-
-    const loader = module.default ?? module.loadDomain;
-
-    if (!loader) {
-      logger.warn("Domain module missing loader export", { domain: dirName });
-      continue;
-    }
-
-    registry.registerDomain(dirName, loader);
-  }
-}
 
 async function main(): Promise<void> {
   // 1. Load and validate config (throws on missing vars)

@@ -87,39 +87,6 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
   });
 
   registry.register({
-    name: "estimates_get_items",
-    domain: "estimates",
-    operation: "read",
-    description: "List estimate items with optional filters",
-    schema: estimateItemsListSchema.shape,
-    handler: async (params) => {
-      const parsed = estimateItemsListSchema.parse(params);
-
-      try {
-        const data = await client.get(
-          "/tenant/{tenant}/estimates/items",
-          buildParams({
-            estimateId: parsed.estimateId,
-            ids: parsed.ids,
-            active: parsed.active,
-            createdBefore: parsed.createdBefore,
-            createdOnOrAfter: parsed.createdOnOrAfter,
-            modifiedBefore: parsed.modifiedBefore,
-            modifiedOnOrAfter: parsed.modifiedOnOrAfter,
-            page: parsed.page,
-            pageSize: parsed.pageSize,
-            includeTotal: parsed.includeTotal,
-          }),
-        );
-
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
     name: "estimates_items_update",
     domain: "estimates",
     operation: "write",
@@ -143,48 +110,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
   });
 
   registry.register({
-    name: "estimates_put_item",
-    domain: "estimates",
-    operation: "write",
-    description: "Add or replace an item collection on an estimate",
-    schema: estimateItemUpdateSchema.shape,
-    handler: async (params) => {
-      const parsed = estimateItemUpdateSchema.parse(params);
-      const { id, ...item } = parsed;
-
-      try {
-        const data = await client.put(
-          `/tenant/{tenant}/estimates/${id}/items`,
-          buildParams(item),
-        );
-
-        return toolResult(data);
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
     name: "estimates_items_delete",
-    domain: "estimates",
-    operation: "delete",
-    description: "Delete a single item from an estimate",
-    schema: estimateItemDeleteSchema.shape,
-    handler: async (params) => {
-      const { id, itemId } = estimateItemDeleteSchema.parse(params);
-
-      try {
-        await client.delete(`/tenant/{tenant}/estimates/${id}/items/${itemId}`);
-        return toolResult({ success: true, message: "Estimate item deleted" });
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
-    name: "estimates_delete_item",
     domain: "estimates",
     operation: "delete",
     description: "Delete a single item from an estimate",
