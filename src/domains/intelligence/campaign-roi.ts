@@ -171,9 +171,8 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         const maxCampaigns = input.limit ?? 20;
 
-        // Parallelize all data fetches — these are independent API calls
-        // Use Report 175 for revenue instead of paginating all invoices (much faster)
-        // Parallel page fetching: probe page 1 for totalCount, then fetch remaining pages concurrently
+        // Parallelize all data fetches — independent API calls
+        // Report 175 for revenue (single POST vs paginating all invoices)
         const [fetchedCampaigns, calls, bookings, revenueReport, leadGenerationReport] =
           await Promise.all([
             fetchWithWarning(
