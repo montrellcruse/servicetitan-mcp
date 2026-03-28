@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServiceTitanClient } from "../../src/client.js";
 import type { ServiceTitanConfig } from "../../src/config.js";
 import { loadIntelligenceDomain } from "../../src/domains/intelligence/index.js";
-import { clearIntelCache, fetchAllPages } from "../../src/domains/intelligence/helpers.js";
+import {
+  clearIntelCache,
+  fetchAllPages,
+  safeDivide,
+} from "../../src/domains/intelligence/helpers.js";
 import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
 
@@ -83,6 +87,22 @@ function payloadFrom(result: ToolResponse): Record<string, any> {
   const text = result.content[0]?.text;
   expect(typeof text).toBe("string");
   return JSON.parse(text ?? "{}");
+}
+
+function expectAllNumbersFinite(value: unknown): void {
+  if (typeof value === "number") {
+    expect(Number.isFinite(value)).toBe(true);
+    return;
+  }
+
+  if (Array.isArray(value)) {
+    value.forEach((item) => expectAllNumbersFinite(item));
+    return;
+  }
+
+  if (value && typeof value === "object") {
+    Object.values(value).forEach((item) => expectAllNumbersFinite(item));
+  }
 }
 
 const PER_CAMPAIGN_REVENUE_WARNING =
@@ -188,6 +208,14 @@ describe("intelligence domain", () => {
       "/tenant/{tenant}/invoices",
       expect.objectContaining({ page: 2, pageSize: 500, includeTotal: true }),
     );
+  });
+
+  it("safeDivide handles finite and zero-denominator edge cases", () => {
+    expect(safeDivide(10, 2)).toBe(5);
+    expect(safeDivide(10, 0)).toBe(0);
+    expect(safeDivide(10, Number.NaN)).toBe(0);
+    expect(safeDivide(10, Number.POSITIVE_INFINITY)).toBe(0);
+    expect(safeDivide(10, 0, 7)).toBe(7);
   });
 
   it("intel_revenue_summary uses Report 175 for revenue and payments for collections", async () => {
@@ -444,7 +472,9 @@ describe("intelligence domain", () => {
     expect(payload.totalCollected).toBe(0);
     expect(payload.outstanding).toBe(0);
     expect(payload.avgTicket).toBe(0);
+    expect(payload.overallConversionRate).toBe(0);
     expect(payload.byBusinessUnit).toEqual([]);
+    expectAllNumbersFinite(payload);
   });
 
   it("intel_technician_scorecard computes per-tech and team metrics with date handling", async () => {
@@ -839,6 +869,7 @@ describe("intelligence domain", () => {
       salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
       salesFromMarketingLeads: ZERO_TECHNICIAN_LEAD_SALES,
     });
+    expectAllNumbersFinite(payload);
   });
 
   it("intel_membership_health computes retention and total revenue context", async () => {
@@ -1055,7 +1086,13 @@ describe("intelligence domain", () => {
     expect(payload.deleted).toBe(0);
     expect(payload.retentionRate).toBe(0);
     expect(payload.totalRevenue).toBe(0);
+    expect(payload.conversionTotals).toEqual({
+      opportunities: 0,
+      converted: 0,
+      conversionRate: 0,
+    });
     expect(payload.membershipTypes).toEqual([]);
+    expectAllNumbersFinite(payload);
   });
 
   it("intel_estimate_pipeline computes funnel, age buckets, stale list, and date params", async () => {
@@ -1233,6 +1270,7 @@ describe("intelligence domain", () => {
       averageClosedSale: 0,
       byTechnician: [],
     });
+    expectAllNumbersFinite(payload);
   });
 
   it("intel_estimate_pipeline returns report 172 sales funnel output shape", async () => {
@@ -1648,6 +1686,7 @@ describe("intelligence domain", () => {
     });
     expect(payload.leadGeneration).toEqual([]);
     expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
+    expectAllNumbersFinite(payload);
   });
 
   it("intel_daily_snapshot computes counts, revenues, upcoming jobs, highlights, and date params", async () => {
@@ -1888,5 +1927,136 @@ describe("intelligence domain", () => {
       "0 jobs scheduled for tomorrow",
       "$0 in estimates sold",
     ]);
+    expect(payload.highlights.join(" ")).not.toContain("NaN");
+    expect(payload.highlights.join(" ")).not.toContain("Infinity");
+    expectAllNumbersFinite(payload);
+  });
+
+  it("intel_csr_performance avoids NaN when no CSR rows are returned", async () => {
+    const { handlers, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_csr_performance");
+
+    postMock.mockResolvedValue(EMPTY_REPORT);
+
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const payload = payloadFrom(result);
+
+    expect(payload.csrs).toEqual([]);
+    expect(payload.teamAverages).toEqual({
+      jobsBooked: 0,
+      totalRevenue: 0,
+      avgTicket: 0,
+      completedJobs: 0,
+      invoicedJobs: 0,
+      canceledJobs: 0,
+      openJobs: 0,
+      completionRate: 0,
+      invoiceRate: 0,
+      cancellationRate: 0,
+    });
+    expectAllNumbersFinite(payload);
+  });
+
+  it("intel_labor_cost avoids Infinity when gross pay exists with zero hours", async () => {
+    const { handlers, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_labor_cost");
+
+    postMock.mockImplementation(async (path: string) => {
+      if (path !== "/tenant/{tenant}/report-category/accounting/reports/166/data") {
+        throw new Error(`Unexpected path: ${path}`);
+      }
+
+      return {
+        fields: [],
+        data: [
+          [
+            "Jamie Tech",
+            "Training",
+            "2026-01-15",
+            "INV-1",
+            "HVAC",
+            0,
+            0,
+            0,
+            0,
+            120,
+            "Customer",
+            "Project",
+            "Zone",
+            "TaxZone",
+            "85001",
+            "Phoenix",
+            "123 Main St",
+            "TRAIN",
+          ],
+        ],
+        hasMore: false,
+      };
+    });
+
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const payload = payloadFrom(result);
+
+    expect(payload.avgHourlyRate).toBe(0);
+    expect(payload.overtimePercent).toBe(0);
+    expect(payload.employees).toEqual([
+      {
+        name: "Jamie Tech",
+        businessUnits: ["HVAC"],
+        totalHours: 0,
+        regularHours: 0,
+        overtimeHours: 0,
+        doubleOvertimeHours: 0,
+        grossPay: 120,
+        avgHourlyRate: 0,
+        activityBreakdown: [
+          {
+            activity: "Training",
+            entries: 1,
+            hours: 0,
+            grossPay: 120,
+            avgHourlyRate: 0,
+          },
+        ],
+      },
+    ]);
+    expect(payload.byBusinessUnit).toEqual([
+      {
+        name: "HVAC",
+        employeeCount: 1,
+        totalHours: 0,
+        regularHours: 0,
+        overtimeHours: 0,
+        doubleOvertimeHours: 0,
+        grossPay: 120,
+        avgHourlyRate: 0,
+        overtimePercent: 0,
+      },
+    ]);
+    expectAllNumbersFinite(payload);
+  });
+
+  it("intel_invoice_tracking avoids NaN when no invoices are returned", async () => {
+    const { handlers, postMock } = createContext();
+    const handler = getHandler(handlers, "intel_invoice_tracking");
+
+    postMock.mockResolvedValue(EMPTY_REPORT);
+
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const payload = payloadFrom(result);
+
+    expect(payload.sentCount).toBe(0);
+    expect(payload.notSentCount).toBe(0);
+    expect(payload.sendRate).toBe(0);
+    expect(payload.totalAmountSent).toBe(0);
+    expect(payload.totalAmountNotSent).toBe(0);
+    expect(payload.notSentBreakdown).toEqual({
+      byBusinessUnit: [],
+      byTechnician: [],
+    });
+    expect(payload.highlights).toEqual([
+      "All 0 invoices in the period were sent.",
+    ]);
+    expectAllNumbersFinite(payload);
   });
 });

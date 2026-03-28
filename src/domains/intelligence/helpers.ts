@@ -254,12 +254,14 @@ export function round(value: number, decimals = 2): number {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-export function safeDivide(numerator: number, denominator: number): number {
-  if (!Number.isFinite(denominator) || denominator <= 0) {
-    return 0;
-  }
-
-  return numerator / denominator;
+export function safeDivide(
+  numerator: number,
+  denominator: number,
+  defaultValue = 0,
+): number {
+  if (denominator === 0 || !Number.isFinite(denominator)) return defaultValue;
+  const result = numerator / denominator;
+  return Number.isFinite(result) ? result : defaultValue;
 }
 
 export function sumBy<T>(items: T[], mapper: (item: T) => number): number {

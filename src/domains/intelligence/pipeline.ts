@@ -266,7 +266,13 @@ export function registerIntelligenceEstimatePipelineTool(
         const averageDaysToClose =
           daysToClose.length === 0
             ? 0
-            : round(daysToClose.reduce((total, dayCount) => total + dayCount, 0) / daysToClose.length, 1);
+            : round(
+                safeDivide(
+                  daysToClose.reduce((total, dayCount) => total + dayCount, 0),
+                  daysToClose.length,
+                ),
+                1,
+              );
 
         const totalSales = round(
           salesByTechnician.reduce((total, tech) => total + tech.totalSales, 0),
