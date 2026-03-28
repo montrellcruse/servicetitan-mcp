@@ -101,6 +101,15 @@ export function sortParam(fields: string[]) {
 }
 
 export function getErrorMessage(error: unknown): string {
+  // Sanitize Zod validation errors — don't expose schema internals to callers
+  if (error instanceof z.ZodError) {
+    const issues = error.issues.map((issue) => {
+      const path = issue.path.length > 0 ? `${issue.path.join(".")}: ` : "";
+      return `${path}${issue.message}`;
+    });
+    return `Invalid input: ${issues.join("; ")}`;
+  }
+
   return error instanceof Error ? error.message : String(error);
 }
 
