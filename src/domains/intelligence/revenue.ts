@@ -8,7 +8,6 @@ import {
   fetchAllPagesParallel,
   fetchWithWarning,
   getErrorMessage,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -111,16 +110,240 @@ interface BUSalesRow {
   sales: BUSales;
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
+interface RequiredReportField {
+  index: number;
+  name: string;
+  schema: z.ZodType<unknown>;
+}
+
+interface ReportRowsResult {
+  data: unknown[][];
+  count: number;
+}
+
+interface ReportResponse {
+  fields: Array<{ name: string }>;
+  data: unknown[][];
+  count?: number;
+  [key: string]: unknown;
+}
+
+const NAME_CELL_SCHEMA = z.string().trim().min(1);
+const NUMERIC_CELL_SCHEMA = z.union([
+  z.number().finite(),
+  z.string().trim().refine(
+    (value) => Number.isFinite(Number.parseFloat(value)),
+    "Expected a numeric string",
+  ),
+]);
+
+const REPORT_175_REQUIRED_FIELDS: readonly RequiredReportField[] = [
+  { index: FIELD.Name, name: "Name", schema: NAME_CELL_SCHEMA },
+  { index: FIELD.CompletedRevenue, name: "CompletedRevenue", schema: NUMERIC_CELL_SCHEMA },
+  {
+    index: FIELD.OpportunityConversionRate,
+    name: "OpportunityConversionRate",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  { index: FIELD.Opportunity, name: "Opportunity", schema: NUMERIC_CELL_SCHEMA },
+  { index: FIELD.ConvertedJobs, name: "ConvertedJobs", schema: NUMERIC_CELL_SCHEMA },
+  { index: FIELD.AdjustmentRevenue, name: "AdjustmentRevenue", schema: NUMERIC_CELL_SCHEMA },
+  { index: FIELD.TotalRevenue, name: "TotalRevenue", schema: NUMERIC_CELL_SCHEMA },
+  { index: FIELD.NonJobRevenue, name: "NonJobRevenue", schema: NUMERIC_CELL_SCHEMA },
+] as const;
+
+const REPORT_177_REQUIRED_FIELDS: readonly RequiredReportField[] = [
+  { index: PRODUCTIVITY_FIELD.Name, name: "Name", schema: NAME_CELL_SCHEMA },
+  { index: PRODUCTIVITY_FIELD.RevenuePerHour, name: "RevenuePerHour", schema: NUMERIC_CELL_SCHEMA },
+  {
+    index: PRODUCTIVITY_FIELD.BillableEfficiency,
+    name: "BillableEfficiency",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  { index: PRODUCTIVITY_FIELD.Upsold, name: "Upsold", schema: NUMERIC_CELL_SCHEMA },
+  {
+    index: PRODUCTIVITY_FIELD.TasksPerOpportunity,
+    name: "TasksPerOpportunity",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  {
+    index: PRODUCTIVITY_FIELD.OptionsPerOpportunity,
+    name: "OptionsPerOpportunity",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  { index: PRODUCTIVITY_FIELD.RecallsCaused, name: "RecallsCaused", schema: NUMERIC_CELL_SCHEMA },
+  {
+    index: PRODUCTIVITY_FIELD.AdjustmentRevenue,
+    name: "AdjustmentRevenue",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  { index: PRODUCTIVITY_FIELD.TotalRevenue, name: "TotalRevenue", schema: NUMERIC_CELL_SCHEMA },
+  { index: PRODUCTIVITY_FIELD.NonJobRevenue, name: "NonJobRevenue", schema: NUMERIC_CELL_SCHEMA },
+] as const;
+
+const REPORT_179_REQUIRED_FIELDS: readonly RequiredReportField[] = [
+  { index: SALES_FIELD.Name, name: "Name", schema: NAME_CELL_SCHEMA },
+  { index: SALES_FIELD.TotalSales, name: "TotalSales", schema: NUMERIC_CELL_SCHEMA },
+  { index: SALES_FIELD.ClosedAverageSale, name: "ClosedAverageSale", schema: NUMERIC_CELL_SCHEMA },
+  { index: SALES_FIELD.CloseRate, name: "CloseRate", schema: NUMERIC_CELL_SCHEMA },
+  { index: SALES_FIELD.SalesOpportunity, name: "SalesOpportunity", schema: NUMERIC_CELL_SCHEMA },
+  {
+    index: SALES_FIELD.OptionsPerOpportunity,
+    name: "OptionsPerOpportunity",
+    schema: NUMERIC_CELL_SCHEMA,
+  },
+  { index: SALES_FIELD.AdjustmentRevenue, name: "AdjustmentRevenue", schema: NUMERIC_CELL_SCHEMA },
+  { index: SALES_FIELD.TotalRevenue, name: "TotalRevenue", schema: NUMERIC_CELL_SCHEMA },
+  { index: SALES_FIELD.NonJobRevenue, name: "NonJobRevenue", schema: NUMERIC_CELL_SCHEMA },
+] as const;
+
+const reportFieldSchema = z
+  .object({
+    name: z.string().trim().min(1).optional(),
+  })
+  .passthrough()
+  .required({ name: true });
+
+function emptyListResult<T>(): { data: T[]; count: 0 } {
+  return { data: [], count: 0 };
+}
+
+function createEmptyReportResponse(): ReportResponse {
+  return {
+    fields: [],
+    ...emptyListResult<unknown[]>(),
+  };
+}
+
+function buildReportResponseSchema(
+  requiredFields: readonly RequiredReportField[],
+  options?: { requireFieldMetadata?: boolean },
+) {
+  const rowSchema = z.array(z.unknown()).superRefine((row, ctx) => {
+    for (const field of requiredFields) {
+      if (field.index >= row.length) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Missing required row index ${field.index} (${field.name})`,
+        });
+        continue;
+      }
+
+      const parsedValue = field.schema.safeParse(row[field.index]);
+      if (!parsedValue.success) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `Invalid value for ${field.name}`,
+        });
+      }
+    }
+  });
+
+  return z
+    .object({
+      fields: z.array(reportFieldSchema).optional(),
+      data: z.array(rowSchema).optional(),
+      count: z.number().int().nonnegative().optional(),
+    })
+    .passthrough()
+    .required({ fields: true, data: true })
+    .superRefine((response, ctx) => {
+      if (response.data.length === 0) {
+        return;
+      }
+
+      if (options?.requireFieldMetadata === false) {
+        return;
+      }
+
+      for (const field of requiredFields) {
+        const actualFieldName = response.fields[field.index]?.name;
+        if (actualFieldName !== field.name) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: `Expected field ${field.name} at index ${field.index}`,
+          });
+        }
+      }
+    });
+}
+
+const report175ResponseSchema = buildReportResponseSchema(REPORT_175_REQUIRED_FIELDS, {
+  requireFieldMetadata: true,
+});
+const report177ResponseSchema = buildReportResponseSchema(REPORT_177_REQUIRED_FIELDS, {
+  requireFieldMetadata: false,
+});
+const report179ResponseSchema = buildReportResponseSchema(REPORT_179_REQUIRED_FIELDS, {
+  requireFieldMetadata: false,
+});
+
+function requiredFieldList(requiredFields: readonly RequiredReportField[]): string {
+  return requiredFields.map((field) => field.name).join(", ");
+}
+
+function buildReportStructureError(
+  reportId: number,
+  requiredFields: readonly RequiredReportField[],
+): Error {
+  return new Error(
+    `Report ${reportId} response structure changed — expected fields: ${requiredFieldList(requiredFields)}`,
+  );
+}
+
+export function validateReport175Response(response: unknown): ReportResponse {
+  const parsed = report175ResponseSchema.safeParse(response);
+  if (!parsed.success) {
+    throw buildReportStructureError(175, REPORT_175_REQUIRED_FIELDS);
   }
 
-  return response.data.filter(Array.isArray);
+  return parsed.data;
+}
+
+function validateProductivityReportResponse(response: unknown): ReportResponse {
+  const parsed = report177ResponseSchema.safeParse(response);
+  if (!parsed.success) {
+    throw buildReportStructureError(177, REPORT_177_REQUIRED_FIELDS);
+  }
+
+  return parsed.data;
+}
+
+function validateSalesReportResponse(response: unknown): ReportResponse {
+  const parsed = report179ResponseSchema.safeParse(response);
+  if (!parsed.success) {
+    throw buildReportStructureError(179, REPORT_179_REQUIRED_FIELDS);
+  }
+
+  return parsed.data;
+}
+
+export function extractReportRows(response: unknown): ReportRowsResult {
+  const parsed = validateReport175Response(response);
+  return {
+    data: parsed.data,
+    count: parsed.data.length,
+  };
+}
+
+function extractProductivityRows(response: unknown): ReportRowsResult {
+  const parsed = validateProductivityReportResponse(response);
+  return {
+    data: parsed.data,
+    count: parsed.data.length,
+  };
+}
+
+function extractSalesRows(response: unknown): ReportRowsResult {
+  const parsed = validateSalesReportResponse(response);
+  return {
+    data: parsed.data,
+    count: parsed.data.length,
+  };
 }
 
 function parseReportRows(response: unknown): BURevenue[] {
-  const rows = extractReportRows(response);
+  const rows = extractReportRows(response).data;
   const results: BURevenue[] = [];
 
   for (const row of rows) {
@@ -160,7 +383,7 @@ function hasAnyProductivityActivity(row: unknown[]): boolean {
 }
 
 function parseProductivityRows(response: unknown): BUProductivityRow[] {
-  const rows = extractReportRows(response);
+  const rows = extractProductivityRows(response).data;
   const results: BUProductivityRow[] = [];
 
   for (const row of rows) {
@@ -201,7 +424,7 @@ function hasAnySalesActivity(row: unknown[]): boolean {
 }
 
 function parseSalesRows(response: unknown): BUSalesRow[] {
-  const rows = extractReportRows(response);
+  const rows = extractSalesRows(response).data;
   const results: BUSalesRow[] = [];
 
   for (const row of rows) {
@@ -337,7 +560,7 @@ export function registerIntelligenceRevenueTool(
                 "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
                 { parameters: reportParams },
               ),
-            null,
+            createEmptyReportResponse(),
           ),
           fetchWithWarning(
             warnings,
@@ -347,7 +570,7 @@ export function registerIntelligenceRevenueTool(
                 "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
                 { parameters: reportParams },
               ),
-            null,
+            createEmptyReportResponse(),
           ),
           fetchWithWarning(
             warnings,
@@ -357,7 +580,7 @@ export function registerIntelligenceRevenueTool(
                 "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
                 { parameters: reportParams },
               ),
-            null,
+            createEmptyReportResponse(),
           ),
           input.includeCollections
             ? fetchWithWarning(
@@ -380,11 +603,9 @@ export function registerIntelligenceRevenueTool(
         const [reportResponse, productivityReportResponse, salesReportResponse, payments] =
           await Promise.all(reportFetches);
 
-        const revenueRows = reportResponse ? parseReportRows(reportResponse) : [];
-        const productivityRows = productivityReportResponse
-          ? parseProductivityRows(productivityReportResponse)
-          : [];
-        const salesRows = salesReportResponse ? parseSalesRows(salesReportResponse) : [];
+        const revenueRows = parseReportRows(reportResponse);
+        const productivityRows = parseProductivityRows(productivityReportResponse);
+        const salesRows = parseSalesRows(salesReportResponse);
         const byBU = mergeBusinessUnitReports(revenueRows, productivityRows, salesRows);
 
         const totalRevenue = round(sumBy(byBU, (bu) => bu.totalRevenue), 2);

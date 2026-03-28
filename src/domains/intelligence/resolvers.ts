@@ -5,6 +5,18 @@
 import type { ServiceTitanClient } from "../../client.js";
 import { referenceCache } from "../../cache.js";
 
+interface MatchSet<T> {
+  data: T[];
+  count: number;
+}
+
+function toMatchSet<T>(items: T[]): MatchSet<T> {
+  return {
+    data: items,
+    count: items.length,
+  };
+}
+
 /**
  * Resolve a business unit by name or ID. If `businessUnitName` is provided,
  * searches the cached BU list for a match. Returns the numeric ID or undefined.
@@ -23,7 +35,7 @@ export async function resolveBusinessUnitId(
   }
 
   const query = businessUnitName.trim().toLowerCase();
-  const businessUnits = await referenceCache.getBusinessUnits(client);
+  const businessUnits = toMatchSet(await referenceCache.getBusinessUnits(client));
 
   // Exact match first, then prefix, then contains
   for (const matcher of [
@@ -31,7 +43,7 @@ export async function resolveBusinessUnitId(
     (name: string) => name.startsWith(query),
     (name: string) => name.includes(query),
   ]) {
-    const match = businessUnits.find((bu) => {
+    const match = businessUnits.data.find((bu) => {
       const name = extractName(bu)?.toLowerCase();
       return name ? matcher(name) : false;
     });
@@ -63,11 +75,11 @@ export async function resolveTechnicianId(
     return { id: undefined, resolvedName: undefined };
   }
 
-  const results = await referenceCache.findTechniciansByName(client, technicianName);
+  const results = toMatchSet(await referenceCache.findTechniciansByName(client, technicianName));
 
-  if (results.length > 0) {
-    const id = extractId(results[0]);
-    const name = extractName(results[0]);
+  if (results.count > 0) {
+    const id = extractId(results.data[0]);
+    const name = extractName(results.data[0]);
     return id !== undefined ? { id, resolvedName: name ?? undefined } : { id: undefined, resolvedName: undefined };
   }
 
@@ -88,7 +100,7 @@ function extractId(record: Record<string, unknown>): number | undefined {
   return undefined;
 }
 
-function extractName(record: Record<string, unknown>): string | null {
+function extractName(record: Record<string, unknown>): string | undefined {
   for (const key of ["name", "displayName", "fullName"]) {
     const value = record[key];
     if (typeof value === "string" && value.trim().length > 0) {
@@ -100,5 +112,5 @@ function extractName(record: Record<string, unknown>): string | null {
   const first = typeof record.firstName === "string" ? record.firstName.trim() : "";
   const last = typeof record.lastName === "string" ? record.lastName.trim() : "";
   const combined = `${first} ${last}`.trim();
-  return combined.length > 0 ? combined : null;
+  return combined.length > 0 ? combined : undefined;
 }
