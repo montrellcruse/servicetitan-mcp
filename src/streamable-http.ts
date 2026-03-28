@@ -14,7 +14,7 @@
  *   GET  /mcp         → SSE stream for server-initiated notifications
  *   DELETE /mcp       → Close session
  *   GET  /health      → Health check (no auth required)
- *   GET  /sse         → Legacy SSE endpoint (redirects to /mcp with deprecation notice)
+ *   GET  /sse         → Legacy SSE endpoint (returns 410 Gone with deprecation notice)
  */
 import { timingSafeEqual, randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";

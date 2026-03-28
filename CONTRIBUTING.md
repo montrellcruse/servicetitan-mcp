@@ -27,7 +27,10 @@ npm run build
 # Run locally (stdio mode)
 npm start
 
-# Run as SSE server
+# Run as Streamable HTTP server
+npm run start:streamable-http
+
+# Run as legacy SSE server
 npm run start:sse
 
 # Run tests

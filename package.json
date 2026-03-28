@@ -13,7 +13,8 @@
     "test:watch": "vitest",
     "docker:build": "docker build -t servicetitan-mcp .",
     "docs:tools": "bash scripts/generate-tool-catalog.sh",
-    "start:sse": "node build/sse.js"
+    "start:sse": "node build/sse.js",
+    "start:streamable-http": "node build/streamable-http.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",

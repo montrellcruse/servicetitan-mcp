@@ -33,7 +33,7 @@ The only MCP server for the ServiceTitan API — 505 tools across 15 domains, pl
 - **Domain filtering** — expose only the tool groups you need via `ST_DOMAINS`
 - **Name-based filtering** — pass `businessUnitName` or `technicianName` instead of numeric IDs; resolved via 30-minute cache
 - **LLM-optimized responses** — response shaping trims API noise and structures data for AI consumption
-- **SSE remote deployment** — deploy to Fly.io (or anywhere) and connect via `mcp-remote`
+- **Streamable HTTP remote deployment** — deploy to Fly.io (or anywhere) and connect via `mcp-remote`
 - **Built-in health check** — `st_health_check` validates auth, tenant access, and registration summary
 
 ---
@@ -87,13 +87,13 @@ ST_TIMEZONE=America/New_York \
 node /absolute/path/to/servicetitan-mcp-server/build/index.js
 ```
 
-### Remote Deployment (SSE)
+### Remote Deployment (Streamable HTTP)
 
 Deploy to Fly.io or any server, then connect via `mcp-remote`:
 
 ```bash
 # On the server
-ST_MCP_API_KEY=your-secret node build/sse.js
+ST_MCP_API_KEY=your-secret node build/streamable-http.js
 ```
 
 ```json
@@ -103,7 +103,7 @@ ST_MCP_API_KEY=your-secret node build/sse.js
       "command": "npx",
       "args": [
         "mcp-remote",
-        "https://your-instance.fly.dev/sse",
+        "https://your-instance.fly.dev/mcp",
         "--header",
         "x-api-key: YOUR_MCP_API_KEY"
       ]
@@ -111,6 +111,8 @@ ST_MCP_API_KEY=your-secret node build/sse.js
   }
 }
 ```
+
+> SSE remains available at `build/sse.js` for backward compatibility, but it is deprecated. Prefer Streamable HTTP at `/mcp` for new deployments.
 
 ---
 
@@ -198,7 +200,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | `ST_CLIENT_SECRET` | ServiceTitan OAuth client secret |
 | `ST_APP_KEY` | ServiceTitan app key (`ST-App-Key` header) |
 | `ST_TENANT_ID` | ServiceTitan tenant identifier |
-| `ST_MCP_API_KEY` | API key for remote MCP clients *(required for SSE deployment only)* |
+| `ST_MCP_API_KEY` | API key for remote MCP clients *(required for remote HTTP deployment)* |
 
 **Optional**
 
@@ -212,7 +214,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 | `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — critical for date-bound intelligence tools |
 | `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable response transformation and return raw API data |
-| `ST_CORS_ORIGIN` | `*` | Allowed CORS origin for the SSE server |
+| `ST_CORS_ORIGIN` | `*` | Allowed CORS origin for the Streamable HTTP server |
 
 > **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants.
 
@@ -265,7 +267,7 @@ The CLI and this MCP server share the same design philosophy: push the business 
 | Safety layer | ✅ Read-only default, audit log | ❌ None |
 | Response shaping | ✅ LLM-optimized | ❌ Raw API responses |
 | Name-based filtering | ✅ Resolve names to IDs automatically | ❌ Numeric IDs required |
-| Remote deployment | ✅ SSE + `mcp-remote` | ⚠️ Varies |
+| Remote deployment | ✅ Streamable HTTP + `mcp-remote` | ⚠️ Varies |
 
 ---
 

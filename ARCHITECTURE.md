@@ -74,12 +74,12 @@ This document describes the internal design of the ServiceTitan MCP Server.
               ┌──────────┴──────────────┐
               │                         │
               ▼                         ▼
-   ┌────────────────────┐   ┌───────────────────────┐
-   │  StdioTransport    │   │   SSEServerTransport  │
-   │  (index.ts)        │   │   (sse.ts)            │
-   │  Local use /       │   │  Remote HTTP access   │
-   │  Claude Desktop    │   │  Fly.io deployment    │
-   └────────────────────┘   └───────────────────────┘
+   ┌────────────────────┐   ┌────────────────────────────────┐
+   │  StdioTransport    │   │ StreamableHTTPServerTransport │
+   │  (index.ts)        │   │   (streamable-http.ts)        │
+   │  Local use /       │   │  Remote HTTP access           │
+   │  Claude Desktop    │   │  Fly.io deployment            │
+   └────────────────────┘   └────────────────────────────────┘
 ```
 
 ---
@@ -98,14 +98,16 @@ npm start
 # or: node build/index.js
 ```
 
-### SSE (`src/sse.ts`)
+### Streamable HTTP (`src/streamable-http.ts`)
 
-An HTTP server that exposes the MCP server over Server-Sent Events, enabling remote access from Claude Desktop or any MCP client that supports SSE transport.
+The primary remote transport. It exposes the MCP server over Streamable HTTP for remote MCP clients, with `GET /mcp` available for server-initiated notifications and `POST /mcp` for MCP requests.
 
 Endpoints:
-- `GET /sse` — opens the SSE stream; authenticates via `x-api-key` or `Authorization: Bearer` header
-- `POST /messages?sessionId=<id>` — MCP message endpoint; routes to the active SSE transport
+- `POST /mcp` — MCP request endpoint; initializes and reuses per-session transports
+- `GET /mcp` — SSE stream for server-initiated notifications
+- `DELETE /mcp` — closes the active session
 - `GET /health` — health check (no auth); returns tool count, environment, and readonly mode
+- `GET /sse` — deprecated legacy route; returns `410 Gone`
 
 Security:
 - `ST_MCP_API_KEY` is required at startup; the server exits if it's missing
@@ -117,9 +119,13 @@ Port: `PORT` env var, then `ST_MCP_PORT`, then `3100`.
 
 Start with:
 ```bash
-npm run start:sse
-# or: ST_MCP_API_KEY=<secret> node build/sse.js
+npm run start:streamable-http
+# or: ST_MCP_API_KEY=<secret> node build/streamable-http.js
 ```
+
+Legacy note:
+- `src/sse.ts` remains available for backward compatibility.
+- Prefer `src/streamable-http.ts` for all new remote deployments.
 
 ---
 
@@ -143,7 +149,7 @@ All configuration is loaded from environment variables. `loadConfig()` validates
 | `ST_LOG_LEVEL` | | `info` | `debug`, `info`, `warn`, or `error` |
 | `ST_TIMEZONE` | | `UTC` | IANA timezone for date boundary calculation (e.g. `America/New_York`) |
 | `ST_RESPONSE_SHAPING` | | `true` | Set `false` to disable response shaping middleware |
-| `ST_MCP_API_KEY` | SSE only | — | Bearer token for remote SSE authentication |
+| `ST_MCP_API_KEY` | Remote HTTP only | — | Bearer token for remote Streamable HTTP authentication |
 
 `ST_TIMEZONE` is critical for intelligence tools: date inputs like `2025-02-01` are interpreted as midnight in this timezone, then converted to UTC boundaries before being sent to the ServiceTitan API.
 
