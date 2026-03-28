@@ -55,7 +55,7 @@ async function main(): Promise<void> {
   // 3. Create MCP server
   const server = new McpServer({
     name: "ServiceTitan",
-    version: "2.0.0",
+    version: "2.3.0",
   });
 
   // 4. Create API client

@@ -141,7 +141,7 @@ async function main(): Promise<void> {
   const auditLogger = new AuditLogger(logger);
 
   // Create a "template" McpServer + registry to register tools once, then log stats
-  const templateServer = new McpServer({ name: "ServiceTitan", version: "2.2.0" });
+  const templateServer = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
   const templateRegistry = new ToolRegistry(templateServer, config, logger, auditLogger);
   templateRegistry.attachClient(client);
 
@@ -183,7 +183,7 @@ async function main(): Promise<void> {
 
   /** Create a fresh McpServer + ToolRegistry per session */
   async function createSessionServer(): Promise<McpServer> {
-    const sessionMcpServer = new McpServer({ name: "ServiceTitan", version: "2.2.0" });
+    const sessionMcpServer = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
     const sessionRegistry = new ToolRegistry(sessionMcpServer, config, logger, auditLogger);
     sessionRegistry.attachClient(client);
 

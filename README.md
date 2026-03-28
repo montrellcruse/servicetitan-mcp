@@ -34,7 +34,7 @@ The only MCP server for the ServiceTitan API — 505 tools across 15 domains, pl
 - **Name-based filtering** — pass `businessUnitName` or `technicianName` instead of numeric IDs; resolved via 30-minute cache
 - **LLM-optimized responses** — response shaping trims API noise and structures data for AI consumption
 - **Streamable HTTP remote deployment** — deploy to Fly.io (or anywhere) and connect via `mcp-remote`
-- **Built-in health check** — `st_health_check` validates auth, tenant access, and registration summary
+- **Built-in health check** — `st_health_check` validates auth and tenant access (no config details exposed)
 
 ---
 
@@ -214,7 +214,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 | `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — critical for date-bound intelligence tools |
 | `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable response transformation and return raw API data |
-| `ST_CORS_ORIGIN` | `*` | Allowed CORS origin for the Streamable HTTP server |
+| `ST_CORS_ORIGIN` | _(none)_ | Allowed CORS origin for the Streamable HTTP server. Required for browser access. |
 
 > **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants.
 

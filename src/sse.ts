@@ -117,7 +117,7 @@ async function main(): Promise<void> {
   setMaxResponseChars(config.maxResponseChars);
 
   const logger = new Logger(config.logLevel);
-  const server = new McpServer({ name: "ServiceTitan", version: "2.0.0" });
+  const server = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
   const client = new ServiceTitanClient(config);
   const auditLogger = new AuditLogger(logger);
   const registry = new ToolRegistry(server, config, logger, auditLogger);
