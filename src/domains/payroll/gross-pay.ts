@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const grossPayItemCreateSchema = z.object({
   name: z.string().describe("Gross pay item name"),
@@ -49,11 +49,6 @@ const grossPayItemListSchema = paginationParams(
       .describe("Filter items on or before this UTC timestamp"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPayrollGrossPayTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

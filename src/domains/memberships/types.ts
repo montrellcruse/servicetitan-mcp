@@ -9,12 +9,8 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const billingFrequencyEnum = z.enum([
   "OneTime",
   "Monthly",

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const suppressionEmailSchema = z.object({
   email: z.string().email().describe("Suppression email address"),
@@ -21,11 +21,6 @@ const suppressionRemoveSchema = z.object({
 });
 
 const suppressionsListSchema = paginationParams(z.object({}));
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function registerSuppressionsListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,

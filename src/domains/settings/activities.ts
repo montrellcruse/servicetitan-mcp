@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const activityCodeIdSchema = z.object({
@@ -61,11 +62,6 @@ const exportSchema = z.object({
     .optional()
     .describe("Prioritize recent changes in the export stream"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerActivityTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "settings_activity_codes_get",

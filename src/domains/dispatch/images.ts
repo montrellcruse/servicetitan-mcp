@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const imageGetSchema = z.object({
   path: z.string().optional().describe("Storage path of the image to retrieve"),
@@ -13,11 +13,6 @@ const imageCreateSchema = z.object({
   fileName: z.string().optional().describe("Image file name"),
   url: z.string().optional().describe("Public image URL"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDispatchImageTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 import { discountAndFeePayloadSchema } from "./schemas.js";
 
@@ -48,11 +49,6 @@ const discountAndFeeListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDiscountAndFeeTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

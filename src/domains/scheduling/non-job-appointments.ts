@@ -9,6 +9,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -35,11 +36,6 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
       .describe("Return items modified on or after this UTC timestamp"),
   });
 }
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const nonJobAppointmentCreateSchema = {
   technicianId: z.number().int().describe("Technician ID"),
   start: z.string().describe("Appointment start timestamp"),

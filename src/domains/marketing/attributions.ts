@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const attributionCreateSchema = z.object({
@@ -117,11 +118,6 @@ const schedulerSessionsListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function toCsv<T>(items: T[] | undefined): string | undefined {
   return items && items.length > 0 ? items.join(",") : undefined;
 }

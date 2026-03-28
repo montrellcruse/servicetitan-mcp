@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const shiftTypeSchema = z.enum(["Normal", "OnCall", "TimeOff"]);
@@ -38,11 +39,6 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
       .describe("Return shifts modified on or after this UTC timestamp"),
   });
 }
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const technicianShiftListSchema = paginationParams(
   withDescribedDateFilters(
     z.object({

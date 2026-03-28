@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const payrollStatusSchema = z.enum(["Pending", "Expired", "Approved", "Paid", "Locked"]);
 const employeeTypeSchema = z.enum(["Technician", "Employee"]);
@@ -60,11 +60,6 @@ const employeePayrollsListSchema = paginationParams(
     employeeId: z.number().int().describe("Employee ID"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPayrollTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "payroll_payrolls_list",

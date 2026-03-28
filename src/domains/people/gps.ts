@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult } from "../../utils.js";
+import { toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const gpsPingSchema = z.object({
   recordedOn: z
@@ -21,11 +21,6 @@ const gpsPingSchema = z.object({
     .optional()
     .describe("Technician identifier from the provider system"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPeopleGpsTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

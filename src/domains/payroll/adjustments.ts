@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const payrollAdjustmentPayloadSchema = z.object({}).passthrough();
 
@@ -33,11 +33,6 @@ const listPayrollAdjustmentsSchema = paginationParams(
       .describe("Filter adjustments posted on or before this UTC timestamp"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPayrollAdjustmentTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

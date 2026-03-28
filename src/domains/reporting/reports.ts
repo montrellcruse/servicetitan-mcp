@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const reportListSchema = paginationParams(
   z.object({
@@ -32,11 +32,6 @@ const reportDataSchema = z.object({
     .describe("Records per page"),
   includeTotal: z.boolean().optional().describe("Include total count"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerReportTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "reporting_reports_list",

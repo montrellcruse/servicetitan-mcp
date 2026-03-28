@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const taskGetSchema = z.object({
@@ -115,11 +116,6 @@ const taskCreateSubtaskSchema = z.object({
     .optional()
     .describe("Subtask payload"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "settings_tasks_get",

@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 import { categoryPayloadSchema } from "./schemas.js";
 
@@ -27,11 +28,6 @@ const categoryListSchema = dateFilterParams(
 );
 
 const categoryUpdateSchema = categoryPayloadSchema.partial().describe("Category update payload");
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerCategoryTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "pricebook_categories_create",

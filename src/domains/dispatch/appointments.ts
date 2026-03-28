@@ -9,6 +9,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const appointmentStatusSchema = z.enum([
@@ -44,11 +45,6 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
       .describe("Return appointments modified on or after this UTC timestamp"),
   });
 }
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const appointmentListSchema = paginationParams(
   withDescribedDateFilters(
     z.object({

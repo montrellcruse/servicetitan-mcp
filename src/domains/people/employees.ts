@@ -9,6 +9,7 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z
@@ -102,11 +103,6 @@ const employeeExportSchema = z.object({
     .optional()
     .describe("Prioritize recent changes in the export stream"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPeopleEmployeeTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

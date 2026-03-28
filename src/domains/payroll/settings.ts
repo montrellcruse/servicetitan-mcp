@@ -9,6 +9,7 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const employeeTypeSchema = z.enum(["Technician", "Employee"]);
@@ -71,11 +72,6 @@ const payrollSettingsListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPayrollSettingsTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

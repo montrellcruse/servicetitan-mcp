@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const dynamicValueSetSchema = paginationParams(
   z.object({
@@ -11,11 +11,6 @@ const dynamicValueSetSchema = paginationParams(
       .describe("Dynamic set ID from report metadata"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDynamicValueSetTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

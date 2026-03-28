@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult } from "../../utils.js";
+import { toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const phoneNumbersShapeSchema = z.object({
   contact_numbers: z
@@ -33,11 +33,6 @@ const phoneNumbersLookupSchema = phoneNumbersLookupShapeSchema.refine(
     message: "Provide contact_numbers or contactNumbers",
   },
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function getNumbers(input: z.infer<typeof phoneNumbersSchema>): string[] {
   return input.contact_numbers ?? input.contactNumbers ?? [];
 }

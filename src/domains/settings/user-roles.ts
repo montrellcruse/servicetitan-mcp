@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { activeFilterParam, buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
+import { activeFilterParam, buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const userRoleListSchema = paginationParams(
   z.object({
@@ -21,11 +21,6 @@ const userRoleListSchema = paginationParams(
       .describe("Filter roles by employee type"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerUserRoleTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "settings_user_roles_list",

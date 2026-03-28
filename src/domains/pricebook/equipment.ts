@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 import { equipmentPayloadSchema } from "./schemas.js";
 
@@ -44,11 +45,6 @@ const equipmentListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerEquipmentTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "pricebook_equipment_list",

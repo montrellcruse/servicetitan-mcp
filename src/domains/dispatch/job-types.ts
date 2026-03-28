@@ -9,6 +9,7 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z.object({
@@ -124,11 +125,6 @@ const jobTypesListSchema = paginationParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDispatchJobTypeTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

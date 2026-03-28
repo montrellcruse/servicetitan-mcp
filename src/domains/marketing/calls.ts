@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const callIdSchema = z.object({
@@ -73,11 +74,6 @@ const v2CallsListSchema = paginationParams(
     ids: z.array(z.number().int()).optional().describe("Specific call IDs"),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerMarketingCallTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

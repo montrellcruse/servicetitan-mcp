@@ -9,12 +9,8 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const estimateItemPayloadSchema = z.object({
   skuAccount: z.string().optional().describe("SKU account code for the estimate item"),
   description: z.string().optional().describe("Description of the estimate item"),

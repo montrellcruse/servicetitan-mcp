@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, sortParam, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const campaignCostPayloadSchema = z.object({
   year: z.number().int().optional().describe("Cost year"),
@@ -35,11 +35,6 @@ const campaignCostsListSchema = paginationParams(
     ...sortParam(["Id", "Date"]),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function registerCampaignCostListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,

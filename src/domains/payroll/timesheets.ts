@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const timesheetCodeListSchema = paginationParams(
@@ -132,11 +133,6 @@ const createNonJobTimesheetSchema = nonJobTimesheetPayloadSchema;
 const updateNonJobTimesheetSchema = nonJobTimesheetPayloadSchema.extend({
   id: z.number().int().describe("Non-job timesheet ID"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerPayrollTimesheetTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const installedEquipmentIdSchema = z.object({
@@ -122,11 +123,6 @@ const installedEquipmentListSchema = paginationParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDispatchInstalledEquipmentTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

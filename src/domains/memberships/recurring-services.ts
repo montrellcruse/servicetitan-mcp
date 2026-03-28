@@ -10,12 +10,8 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const recurringServiceEventStatusEnum = z.enum([
   "NotAttempted",
   "Unreachable",

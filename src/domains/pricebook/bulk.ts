@@ -2,13 +2,8 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, toolError, toolResult } from "../../utils.js";
+import { buildParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
 import { pricebookBulkPayloadSchema } from "./schemas.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerBulkTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "pricebook_bulk_create",

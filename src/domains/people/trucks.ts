@@ -10,12 +10,8 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const externalDataEntrySchema = z.object({
   key: z.string().optional().describe("External data key"),
   value: z.string().optional().describe("External data value"),

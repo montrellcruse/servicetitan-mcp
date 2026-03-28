@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const jobStatusSchema = z.enum([
@@ -259,11 +260,6 @@ const jobSplitsByJobsListSchema = paginationParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDispatchJobTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

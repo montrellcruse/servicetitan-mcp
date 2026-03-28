@@ -1,11 +1,6 @@
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
+import { toolError, toolResult, getErrorMessage } from "../../utils.js";
 export function registerSchedulingCapacityTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

@@ -9,6 +9,7 @@ import {
   paginationParams,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const businessUnitUpdateSchema = z.object({
@@ -42,11 +43,6 @@ const businessUnitListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerBusinessUnitTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

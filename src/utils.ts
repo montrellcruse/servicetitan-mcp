@@ -100,6 +100,10 @@ export function sortParam(fields: string[]) {
   };
 }
 
+export function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 export function buildParams(obj: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(obj).filter(([, value]) => value !== undefined && value !== null),

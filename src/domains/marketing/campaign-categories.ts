@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
+import { buildParams, paginationParams, sortParam, toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const campaignCategoryPayloadSchema = z.object({
   name: z.string().optional().describe("Campaign category name"),
@@ -33,11 +33,6 @@ const campaignCategoryListSchema = paginationParams(
     ...sortParam(["Id", "CreatedOn", "Name"]),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function registerCampaignCategoryListTool(
   client: ServiceTitanClient,
   registry: ToolRegistry,

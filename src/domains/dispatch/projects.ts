@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z.object({
@@ -221,11 +222,6 @@ const projectsGetSchema = projectIdSchema.extend({
     .optional()
     .describe("External data application GUID"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerDispatchProjectTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

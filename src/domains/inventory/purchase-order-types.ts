@@ -10,12 +10,8 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const purchaseOrderTypePayloadSchema = z.object({
   name: z.string().optional().describe("Purchase order type name"),
   active: z.boolean().optional().describe("Whether the purchase order type is active"),

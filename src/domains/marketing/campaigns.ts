@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const campaignPayloadSchema = z
@@ -60,11 +61,6 @@ const campaignCostsByCampaignSchema = paginationParams(
     ...sortParam(["Id", "Date"]),
   }),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerMarketingCampaignTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

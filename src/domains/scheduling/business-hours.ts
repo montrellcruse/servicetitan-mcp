@@ -2,17 +2,12 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult } from "../../utils.js";
+import { toolError, toolResult, getErrorMessage } from "../../utils.js";
 
 const hourRangeSchema = z.object({
   fromHour: z.number().int().describe("Starting hour (0-23)"),
   toHour: z.number().int().describe("Ending hour (0-23)"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerSchedulingBusinessHourTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,

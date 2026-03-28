@@ -9,12 +9,8 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const purchaseOrderMarkupPayloadSchema = z.object({
   from: z.number().optional().describe("Starting value for this markup range"),
   to: z.number().optional().describe("Ending value for this markup range"),

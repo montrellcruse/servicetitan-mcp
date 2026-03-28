@@ -10,12 +10,8 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 const warehouseAddressSchema = z.object({
   street: z.string().optional().describe("Street address"),
   unit: z.string().optional().describe("Address unit/suite"),

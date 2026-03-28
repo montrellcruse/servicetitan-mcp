@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 import { serviceCreateInputSchema, serviceUpdateInputSchema } from "./schemas.js";
 
@@ -44,11 +45,6 @@ const servicesListSchema = dateFilterParams(
     }),
   ),
 );
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerServiceTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "pricebook_services_get",

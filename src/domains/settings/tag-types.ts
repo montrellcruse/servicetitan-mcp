@@ -10,6 +10,7 @@ import {
   sortParam,
   toolError,
   toolResult,
+  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z
@@ -64,11 +65,6 @@ const tagTypeExportSchema = z.object({
     .optional()
     .describe("Prioritize recent changes in the export stream"),
 });
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "settings_tag_types_get",
