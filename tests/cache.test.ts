@@ -205,7 +205,7 @@ describe("ReferenceDataCache", () => {
     const loader = vi.fn().mockResolvedValue({
       data: [
         { id: 1, name: "Alex Ramirez" },
-        { id: 2, name: "raheem khan" },
+        { id: 2, name: "jordan khan" },
         { id: 3, name: "John Smith" },
       ],
       hasMore: false,
@@ -214,13 +214,13 @@ describe("ReferenceDataCache", () => {
     const client = makeClient(loader);
     const cache = new ReferenceDataCache();
 
-    const hits = await cache.findTechniciansByName(client, "gonzalo");
+    const hits = await cache.findTechniciansByName(client, "alex");
     expect(hits).toHaveLength(1);
     expect(hits[0]).toMatchObject({ id: 1 });
 
-    const raheem = await cache.findTechniciansByName(client, "RAHEEM");
-    expect(raheem).toHaveLength(1);
-    expect(raheem[0]).toMatchObject({ id: 2 });
+    const jordan = await cache.findTechniciansByName(client, "JORDAN");
+    expect(jordan).toHaveLength(1);
+    expect(jordan[0]).toMatchObject({ id: 2 });
   });
 
   it("findTechniciansByName returns empty array for blank query", async () => {
