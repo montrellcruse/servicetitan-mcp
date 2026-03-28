@@ -125,6 +125,7 @@ export async function fetchAllPagesWithTotal<T>(
   const allData: T[] = [];
   let page = 1;
   let totalCount: number | undefined;
+  let truncated = false;
 
   while (page <= maxPages) {
     const response = await client.get(
@@ -153,7 +154,24 @@ export async function fetchAllPagesWithTotal<T>(
     page += 1;
   }
 
-  return { data: allData, totalCount };
+  // Warn if pagination was truncated at max page limit
+  if (page === maxPages) {
+    const response = await client.get(
+      path,
+      buildParams({
+        ...params,
+        page: maxPages,
+        pageSize: 1,
+      }),
+    );
+    const stillHasMore = isRecord(response) && response.hasMore === true;
+    if (stillHasMore) {
+      console.warn(`Pagination truncated at ${maxPages} pages. Set higher ST_INTEL_MAX_PAGES if you need deeper pagination.`);
+      truncated = true;
+    }
+  }
+
+  return { data: allData, totalCount, ...(truncated && { _truncated: true }) };
 }
 
 /**
@@ -199,8 +217,8 @@ export async function fetchAllPagesParallel<T>(
 
   if (totalPages <= 1) return firstItems;
 
-  // Fetch pages 2..N in parallel
-  const pagePromises: Promise<T[]>[] = [];
+  // Fetch pages 2..N in parallel, tracking failures
+  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
   for (let page = 2; page <= totalPages; page++) {
     pagePromises.push(
       client
@@ -212,13 +230,20 @@ export async function fetchAllPagesParallel<T>(
             pageSize: DEFAULT_PAGE_SIZE,
           }),
         )
-        .then((response) => extractItems<T>(response))
-        .catch(() => [] as T[]),
+        .then((response) => ({ items: extractItems<T>(response) }))
+        .catch((error) => ({ items: [] as T[], error: error as Error })),
     );
   }
 
   const remainingPages = await Promise.all(pagePromises);
-  return [firstItems, ...remainingPages].flat();
+  
+  // Log any page fetch failures
+  const failedPages = remainingPages.filter((r) => r.error);
+  if (failedPages.length > 0) {
+    console.warn(`Failed to fetch ${failedPages.length}/${remainingPages.length} pages. Results may be incomplete.`);
+  }
+
+  return [firstItems, ...remainingPages.map((r) => r.items)].flat();
 }
 
 function extractItems<T>(response: unknown): T[] {
