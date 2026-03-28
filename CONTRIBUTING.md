@@ -4,7 +4,7 @@ Thank you for your interest in contributing! This document covers development se
 
 ## Prerequisites
 
-- Node.js >= 20
+- Node.js >= 22
 - npm >= 10
 - A ServiceTitan developer account with API credentials
 
@@ -53,7 +53,7 @@ npm run docs:tools
 3. Each tool file exports a function that takes `(client, registry)` and registers tools via `registry.register()`
 4. Use Zod schemas for input validation
 5. Use `toolResult()` and `toolError()` helpers from `src/utils.ts`
-6. Use `getErrorMessage()` from `src/domains/intelligence/helpers.ts` for error formatting
+6. Use `getErrorMessage()` from `src/utils.ts` for error formatting
 7. Create an `index.ts` that imports and re-exports all tool registrations
 8. Add tests in `tests/domains/<domain>.test.ts`
 
@@ -62,7 +62,7 @@ npm run docs:tools
 Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed business answers (revenue summaries, snapshots, leaderboards) rather than raw CRUD access.
 
 1. Create the tool in `src/domains/intelligence/`
-2. Register with `isIntelligence: true` flag
+2. Register through the caching proxy in `src/domains/intelligence/index.ts` — the `createCachingRegistry()` wrapper automatically adds intel cache to any tool prefixed with `intel_`
 3. Handle partial failures gracefully (use `Promise.allSettled` or `fetchWithWarning` pattern from existing tools)
 4. Include timezone-aware date handling via the `timezone` field from `registry.timezone`
 5. Add comprehensive tests — intelligence tools are the project's core differentiator
@@ -80,7 +80,7 @@ Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed 
 - Use `getErrorMessage()` for error formatting (do NOT define local copies)
 - Use Zod schemas for all tool input validation
 - Use `toolResult()` / `toolError()` for tool responses
-- Respect read-only mode: the registry skips write/delete tools automatically when `ST_READONLY=true`
+- Respect read-only mode: when `ST_READONLY=true`, delete tools are excluded at registration; write tools are registered but blocked at execution by middleware
 
 ## Commit Messages
 

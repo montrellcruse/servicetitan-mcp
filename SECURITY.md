@@ -4,9 +4,9 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 2.1.x   | ✅ Current              |
-| 2.0.x   | ⚠️ Security fixes only  |
-| < 2.0   | ❌ Not supported        |
+| 2.3.x   | ✅ Current              |
+| 2.2.x   | ⚠️ Security fixes only  |
+| < 2.2   | ❌ Not supported        |
 
 ## Reporting a Vulnerability
 
@@ -42,6 +42,7 @@ You should receive an acknowledgment within 48 hours.
 
 - Read-only mode is **enabled by default** (`ST_READONLY=true`) — all write and delete tools are suppressed until explicitly opted in
 - Write operations require explicit opt-in via `ST_READONLY=false`
-- Delete operations and write operations (when `ST_CONFIRM_WRITES=true`) require `confirm=true` in the tool call payload
+- Delete operations require `confirm: true` in the tool call payload
+- Write operations (when `ST_CONFIRM_WRITES=true`) require `_confirmed: true` in the tool call payload
 - Audit logging records all write/delete operations with sensitive fields (passwords, tokens, secrets, keys) sanitized
 - Tool responses never include raw credentials or tokens

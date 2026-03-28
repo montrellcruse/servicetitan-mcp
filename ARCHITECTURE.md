@@ -106,7 +106,7 @@ Endpoints:
 - `POST /mcp` — MCP request endpoint; initializes and reuses per-session transports
 - `GET /mcp` — SSE stream for server-initiated notifications
 - `DELETE /mcp` — closes the active session
-- `GET /health` — health check (no auth); returns tool count, environment, and readonly mode
+- `GET /health` — health check (no auth); returns basic status (tool count only on HTTP transports, auth/tenant connectivity via `st_health_check` MCP tool)
 - `GET /sse` — deprecated legacy route; returns `410 Gone`
 
 Security:
@@ -143,7 +143,7 @@ All configuration is loaded from environment variables. `loadConfig()` validates
 | `ST_TENANT_ID` | ✅ | — | ServiceTitan tenant ID |
 | `ST_ENVIRONMENT` | | `integration` | `integration` or `production` |
 | `ST_READONLY` | | `true` | Set `false` to enable write/delete tools |
-| `ST_CONFIRM_WRITES` | | `false` | Require `confirm=true` for write operations |
+| `ST_CONFIRM_WRITES` | | `false` | Require `_confirmed: true` for write operations |
 | `ST_MAX_RESPONSE_CHARS` | | `100000` | Max characters in a tool response |
 | `ST_DOMAINS` | | (all) | Comma-separated domain whitelist (e.g. `crm,jpm`) |
 | `ST_LOG_LEVEL` | | `info` | `debug`, `info`, `warn`, or `error` |
@@ -244,7 +244,7 @@ Domains are loaded dynamically at startup. `loadDomainModules()` scans `src/doma
 type DomainLoader = (client: ServiceTitanClient, registry: ToolRegistry) => void;
 ```
 
-Each domain module calls `registry.register()` for each tool it provides. The registry applies domain filtering (`ST_DOMAINS`) and readonly filtering (`ST_READONLY`) at registration time — tools that don't pass are counted as "skipped" but never registered with the MCP server.
+Each domain module calls `registry.register()` for each tool it provides. The registry applies domain filtering (`ST_DOMAINS`) at registration time. Delete tools are excluded when `ST_READONLY=true`. Write tools remain registered but are blocked at execution time by the write middleware, which returns a clear error message.
 
 Current domains (15 total, including `intelligence`):
 
@@ -317,10 +317,10 @@ Intelligence tools are the project's core differentiator. Rather than exposing r
 | `intel_technician_scorecard` | ST Reporting API | Per-technician performance: revenue, efficiency, tickets, callbacks |
 | `intel_membership_health` | Report 182 | Membership counts, renewals, expirations, health metrics |
 | `intel_campaign_performance` | Reports 172, 176 | Marketing ROI: spend, leads, revenue attributed per campaign |
-| `intel_operational_snapshot` | Multiple reports | Daily operational health: open jobs, dispatched techs, unbooked calls |
+| `intel_daily_snapshot` | Multiple reports | Daily operational health: open jobs, dispatched techs, unbooked calls |
 | `intel_csr_performance` | Call reports | CSR call handling metrics: booking rate, average handle time |
 | `intel_labor_cost` | Payroll + job reports | Labor efficiency, billable hours, cost per revenue dollar |
-| `intel_pipeline` | Estimates + jobs | Open estimate value, job pipeline by stage and age |
+| `intel_estimate_pipeline` | Estimates + jobs | Open estimate value, job pipeline by stage and age |
 | `intel_invoice_tracking` | Invoice reports | Invoice aging, outstanding balances, collection rates |
 | `intel_lookup` | Reference cache | Resolve technician/business unit names to IDs |
 

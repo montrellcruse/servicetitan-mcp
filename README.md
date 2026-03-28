@@ -3,10 +3,10 @@
 [![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
-[![Tools](https://img.shields.io/badge/tools-505-blue.svg)](#tool-catalog)
+[![Tools](https://img.shields.io/badge/tools-467-blue.svg)](#tool-catalog)
 [![Domains](https://img.shields.io/badge/domains-15-purple.svg)](#tool-catalog)
 
-The only MCP server for the ServiceTitan API — 505 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
+The only MCP server for the ServiceTitan API — 467 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
 
 <p align="center">
   <em>Connect any AI assistant to ServiceTitan's full API — CRM, dispatch, invoicing, payroll, and operational intelligence — through the Model Context Protocol.</em>
@@ -25,7 +25,7 @@ The only MCP server for the ServiceTitan API — 505 tools across 15 domains, pl
 
 ## Features
 
-- **505 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
+- **467 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
 - **10 intelligence tools** — composite analytics that aggregate multiple API calls into revenue summaries, ops snapshots, technician scorecards, and more
 - **Dashboard-accurate revenue** — `intel_revenue_summary` uses Report 175 to match ST's dashboard within 0.001%
 - **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
@@ -93,7 +93,8 @@ Deploy to Fly.io or any server, then connect via `mcp-remote`:
 
 ```bash
 # On the server
-ST_MCP_API_KEY=your-secret node build/streamable-http.js
+ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
+  ST_MCP_API_KEY=your-secret node build/streamable-http.js
 ```
 
 ```json
@@ -118,28 +119,28 @@ ST_MCP_API_KEY=your-secret node build/streamable-http.js
 
 ## Tool Catalog
 
-505 tools registered across 15 domains:
+467 tools registered across 15 domains:
 
 | Domain | Tools | Example Tools |
 |--------|------:|---------------|
-| `crm` | 87 | `crm_customers_list`, `crm_contacts_get`, `crm_bookings_create` |
 | `dispatch` | 74 | `dispatch_jobs_list`, `dispatch_appointments_get`, `dispatch_job_types_list` |
-| `marketing` | 38 | `crm_bookings_list`, `marketing_campaigns_list`, `marketing_calls_list` |
+| `crm` | 71 | `crm_customers_list`, `crm_contacts_get`, `crm_bookings_create` |
+| `export` | 49 | `export_invoices`, `export_customers`, `export_jobs` |
 | `inventory` | 37 | `inventory_purchase_orders_list`, `inventory_vendors_list`, `inventory_warehouses_list` |
+| `marketing` | 35 | `marketing_campaigns_list`, `marketing_calls_v3_list`, `marketing_reviews` |
 | `accounting` | 33 | `accounting_invoices_list`, `accounting_payments_list`, `accounting_gl_accounts_list` |
-| `pricebook` | 33 | `pricebook_services_list`, `pricebook_materials_list`, `pricebook_equipment_list` |
+| `pricebook` | 31 | `pricebook_services_list`, `pricebook_materials_list`, `pricebook_equipment_list` |
 | `payroll` | 27 | `payroll_timesheets_list`, `payroll_gross_pay_list`, `payroll_payrolls_list` |
+| `settings` | 23 | `settings_business_units_list`, `settings_tag_types_list`, `settings_user_roles_list` |
 | `people` | 22 | `people_technicians_list`, `people_employees_list`, `people_trucks_list` |
 | `memberships` | 21 | `memberships_list`, `memberships_types_list`, `memberships_recurring_services_list` |
-| `estimates` | 14 | `estimates_list`, `estimates_get`, `estimates_items_list` |
-| `scheduling` | 23 | `scheduling_teams_list`, `scheduling_zones_list`, `scheduling_shifts_list` |
-| `settings` | 23 | `settings_business_units_list`, `settings_tag_types_list`, `settings_user_roles_list` |
-| `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
-| `export` | 1 | `export_data` |
+| `scheduling` | 17 | `scheduling_teams_list`, `scheduling_zones_list`, `scheduling_capacity_calculate` |
+| `estimates` | 11 | `estimates_list`, `estimates_get`, `estimates_items_list` |
 | **`intelligence`** | **10** | `intel_revenue_summary`, `intel_daily_snapshot`, `intel_technician_scorecard` |
-| **Total** | **448** | *(+ 57 write/delete tools enabled when `ST_READONLY=false`)* |
+| `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
+| **Total** | **467** | *(includes read, write, and delete tools)* |
 
-> The full 505 count includes all read, write, and delete tools. With `ST_READONLY=true` (default), write and delete tools are skipped at registration time.
+> With `ST_READONLY=true`, delete tools are excluded at registration time. Write tools remain visible but are blocked at execution time with a clear error message. Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
 
 ---
 
@@ -227,7 +228,7 @@ Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
 The server is built as a layered system: **Config → OAuth Client → Domain Registry → MCP Server**.
 
 - **Domain module pattern** — each domain lives in `src/domains/<domain>/` and exports a loader that registers its tools
-- **Dynamic discovery** — `src/index.ts` scans `src/domains/*` and imports each domain at runtime
+- **Dynamic discovery** — `src/domains/loader.ts` scans `src/domains/*/index.ts` and imports each domain at runtime
 - **Central registry** — `ToolRegistry` handles domain filtering, read-only enforcement, confirmation wrapping, and audit logging
 - **OAuth client** — `ServiceTitanClient` manages client-credentials auth, token refresh, retry-on-401/429, and `{tenant}` path injection
 - **Response shaping** — transformer layer strips API noise and structures responses for LLM consumption
@@ -263,7 +264,7 @@ The CLI and this MCP server share the same design philosophy: push the business 
 |---------|------------|----------------------|
 | Revenue accuracy | ✅ 0.001% of dashboard | ❌ $17–21K off per period |
 | Intelligence tools | ✅ 10 tools | ❌ None |
-| Domain coverage | ✅ 505 tools, 15 domains | ⚠️ 10–50 tools |
+| Domain coverage | ✅ 467 tools, 15 domains | ⚠️ 10–50 tools |
 | Safety layer | ✅ Read-only default, audit log | ❌ None |
 | Response shaping | ✅ LLM-optimized | ❌ Raw API responses |
 | Name-based filtering | ✅ Resolve names to IDs automatically | ❌ Numeric IDs required |
@@ -286,7 +287,7 @@ npm run start      # run compiled server
 
 ## Safety
 
-- **Read-only mode** (`ST_READONLY=true` by default) — write and delete tools are skipped at registration
+- **Read-only mode** (`ST_READONLY=true` by default) — delete tools are excluded at registration; write tools remain visible but are blocked at execution time
 - **Confirmation workflow** — delete tools always require `confirm=true`; write tools optionally require it via `ST_CONFIRM_WRITES=true`; missing confirmation returns a preview payload instead of executing
 - **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
 
