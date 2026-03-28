@@ -21,6 +21,7 @@ COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 
-# Default: SSE server for remote access (Fly.io / Docker)
-# Override with CMD ["node", "build/index.js"] for stdio mode
-CMD ["node", "build/sse.js"]
+# Default: Streamable HTTP server for remote access (Fly.io / Docker)
+# Falls back to SSE: CMD ["node", "build/sse.js"]
+# For stdio mode: CMD ["node", "build/index.js"]
+CMD ["node", "build/streamable-http.js"]

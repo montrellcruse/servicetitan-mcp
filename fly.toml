@@ -1,5 +1,5 @@
-# Fly.io configuration for ServiceTitan MCP Server (SSE)
-# Deploy: fly launch / fly deploy
+# Fly.io configuration for ServiceTitan MCP Server (Streamable HTTP)
+# Deploy: fly deploy
 # Secrets: fly secrets set ST_CLIENT_ID=... ST_CLIENT_SECRET=... etc.
 
 app = "servicetitan-mcp"
@@ -25,8 +25,8 @@ primary_region = "iad"
 
   [http_service.concurrency]
     type = "connections"
-    hard_limit = 25
-    soft_limit = 20
+    hard_limit = 50
+    soft_limit = 40
 
 [[http_service.checks]]
   grace_period = "10s"
@@ -37,5 +37,5 @@ primary_region = "iad"
 
 [[vm]]
   memory = "512mb"
-  cpu_kind = "shared"
+  cpu_kind = "performance"
   cpus = 1
