@@ -33,6 +33,9 @@ import { Logger } from "./logger.js";
 import { type DomainLoader, ToolRegistry } from "./registry.js";
 import { setMaxResponseChars, toolResult } from "./utils.js";
 
+const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
+const SESSION_REAP_INTERVAL_MS = 60 * 1000;
+
 // Catch crashes
 process.on("uncaughtException", (err) => {
   process.stderr.write(`UNCAUGHT EXCEPTION: ${err.stack ?? err.message}\n`);
@@ -123,6 +126,14 @@ function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
 function supportsGzip(req: IncomingMessage): boolean {
   const accept = req.headers["accept-encoding"];
   return typeof accept === "string" && accept.includes("gzip");
+}
+
+function isInitializeRequest(body: unknown): boolean {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return false;
+  }
+
+  return (body as { method?: unknown }).method === "initialize";
 }
 
 // ── Main ──
@@ -217,8 +228,62 @@ async function main(): Promise<void> {
     return sessionMcpServer;
   }
 
+  type Session = {
+    transport: StreamableHTTPServerTransport;
+    server: McpServer;
+    lastSeen: number;
+    closing: boolean;
+  };
+
   // Track active sessions: transport + server
-  const sessions = new Map<string, { transport: StreamableHTTPServerTransport; server: McpServer }>();
+  const sessions = new Map<string, Session>();
+
+  async function closeSession(sessionId: string, session: Session, reason: string): Promise<void> {
+    if (session.closing) {
+      return;
+    }
+
+    session.closing = true;
+    logger.info("Closing session", { sessionId, reason });
+
+    try {
+      await session.transport.close();
+    } catch (error: unknown) {
+      logger.warn("Failed to close session transport", {
+        sessionId,
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    sessions.delete(sessionId);
+
+    try {
+      await session.server.close();
+    } catch (error: unknown) {
+      logger.warn("Failed to close session server", {
+        sessionId,
+        reason,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  const sessionReaper = setInterval(() => {
+    const now = Date.now();
+    const expiredSessions = Array.from(sessions.entries()).filter(
+      ([, session]) => !session.closing && now - session.lastSeen > SESSION_IDLE_TTL_MS,
+    );
+
+    if (expiredSessions.length === 0) {
+      return;
+    }
+
+    void Promise.allSettled(
+      expiredSessions.map(([sessionId, session]) => closeSession(sessionId, session, "idle-timeout")),
+    );
+  }, SESSION_REAP_INTERVAL_MS);
+  sessionReaper.unref();
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();
@@ -263,67 +328,102 @@ async function main(): Promise<void> {
 
     // Streamable HTTP MCP endpoint
     if (url.pathname === "/mcp") {
-      // Parse body for POST requests
-      let parsedBody: unknown = undefined;
-      if (req.method === "POST") {
-        const chunks: Buffer[] = [];
-        let totalSize = 0;
-        for await (const chunk of req) {
-          const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
-          totalSize += buf.length;
-          if (totalSize > 1_048_576) {
-            sendJson(res, 413, { error: "Payload too large", requestId });
+      try {
+        // Parse body for POST requests
+        let parsedBody: unknown = undefined;
+        if (req.method === "POST") {
+          const chunks: Buffer[] = [];
+          let totalSize = 0;
+          for await (const chunk of req) {
+            const buf = typeof chunk === "string" ? Buffer.from(chunk) : chunk;
+            totalSize += buf.length;
+            if (totalSize > 1_048_576) {
+              sendJson(res, 413, { error: "Payload too large", requestId });
+              return;
+            }
+            chunks.push(buf);
+          }
+          try {
+            parsedBody = JSON.parse(Buffer.concat(chunks).toString());
+          } catch {
+            sendJson(res, 400, { error: "Invalid JSON body", requestId });
             return;
           }
-          chunks.push(buf);
         }
-        try {
-          parsedBody = JSON.parse(Buffer.concat(chunks).toString());
-        } catch {
-          sendJson(res, 400, { error: "Invalid JSON body", requestId });
+
+        // Check for existing session
+        const sessionId = req.headers["mcp-session-id"] as string | undefined;
+
+        if (sessionId && sessions.has(sessionId)) {
+          // Reuse existing session
+          const session = sessions.get(sessionId)!;
+          if (session.closing) {
+            sendJson(res, 404, { error: "Session not found. Send initialize request without session ID.", requestId });
+            return;
+          }
+          session.lastSeen = Date.now();
+          await session.transport.handleRequest(req, res, parsedBody);
           return;
         }
-      }
 
-      // Check for existing session
-      const sessionId = req.headers["mcp-session-id"] as string | undefined;
-
-      if (sessionId && sessions.has(sessionId)) {
-        // Reuse existing session
-        const session = sessions.get(sessionId)!;
-        await session.transport.handleRequest(req, res, parsedBody);
-        return;
-      }
-
-      if (sessionId && !sessions.has(sessionId)) {
-        // Invalid/expired session
-        sendJson(res, 404, { error: "Session not found. Send initialize request without session ID.", requestId });
-        return;
-      }
-
-      // New session — create dedicated McpServer + transport
-      const sessionServer = await createSessionServer();
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => randomUUID(),
-        onsessioninitialized: (newSessionId: string) => {
-          logger.info("Session initialized", { sessionId: newSessionId, requestId });
-          sessions.set(newSessionId, { transport, server: sessionServer });
-        },
-      });
-
-      transport.onclose = () => {
-        if (transport.sessionId) {
-          const session = sessions.get(transport.sessionId);
-          if (session) {
-            session.server.close().catch(() => {});
-          }
-          sessions.delete(transport.sessionId);
+        if (sessionId && !sessions.has(sessionId)) {
+          // Invalid/expired session
+          sendJson(res, 404, { error: "Session not found. Send initialize request without session ID.", requestId });
+          return;
         }
-        logger.info("Session closed", { sessionId: transport.sessionId });
-      };
 
-      await sessionServer.connect(transport);
-      await transport.handleRequest(req, res, parsedBody);
+        if (req.method !== "POST") {
+          sendJson(res, 400, {
+            error: "Session ID required. Send initialize request via POST without session ID.",
+            requestId,
+          });
+          return;
+        }
+
+        if (!isInitializeRequest(parsedBody)) {
+          sendJson(res, 400, {
+            error: "New sessions must start with an initialize request.",
+            requestId,
+          });
+          return;
+        }
+
+        // New session — create dedicated McpServer + transport
+        const sessionServer = await createSessionServer();
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: () => randomUUID(),
+          onsessioninitialized: (newSessionId: string) => {
+            logger.info("Session initialized", { sessionId: newSessionId, requestId });
+            sessions.set(newSessionId, {
+              transport,
+              server: sessionServer,
+              lastSeen: Date.now(),
+              closing: false,
+            });
+          },
+        });
+
+        transport.onclose = () => {
+          const closedSessionId = transport.sessionId;
+          if (closedSessionId && sessions.delete(closedSessionId)) {
+            logger.info("Session closed", { sessionId: closedSessionId });
+          }
+        };
+
+        await sessionServer.connect(transport);
+        await transport.handleRequest(req, res, parsedBody);
+      } catch (error: unknown) {
+        logger.error("Unhandled /mcp request error", {
+          requestId,
+          error: error instanceof Error ? error.message : String(error),
+          stack: error instanceof Error ? error.stack : undefined,
+        });
+        if (!res.headersSent) {
+          sendJson(res, 500, { error: "Internal server error", requestId });
+        } else if (!res.writableEnded) {
+          res.end();
+        }
+      }
       return;
     }
 
@@ -339,16 +439,22 @@ async function main(): Promise<void> {
     logger.info(`MCP endpoint: http://localhost:${PORT}/mcp`);
   });
 
+  let shuttingDown = false;
   const shutdown = () => {
-    logger.info("Shutdown signal received, closing server...");
-    // Close all active sessions
-    for (const [, session] of sessions) {
-      session.transport.close().catch(() => {});
-      session.server.close().catch(() => {});
+    if (shuttingDown) {
+      return;
     }
-    httpServer.close(() => {
-      logger.info("HTTP server closed");
-      process.exit(0);
+
+    shuttingDown = true;
+    clearInterval(sessionReaper);
+    logger.info("Shutdown signal received, closing server...");
+    void Promise.allSettled(
+      Array.from(sessions.entries()).map(([sessionId, session]) => closeSession(sessionId, session, "shutdown")),
+    ).then(() => {
+      httpServer.close(() => {
+        logger.info("HTTP server closed");
+        process.exit(0);
+      });
     });
     setTimeout(() => process.exit(1), 10_000).unref();
   };
