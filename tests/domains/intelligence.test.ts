@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ServiceTitanClient } from "../../src/client.js";
 import type { ServiceTitanConfig } from "../../src/config.js";
 import { loadIntelligenceDomain } from "../../src/domains/intelligence/index.js";
-import { fetchAllPages } from "../../src/domains/intelligence/helpers.js";
+import { clearIntelCache, fetchAllPages } from "../../src/domains/intelligence/helpers.js";
 import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
 
@@ -109,6 +109,7 @@ const ZERO_TECHNICIAN_LEAD_SALES = {
 describe("intelligence domain", () => {
   beforeEach(() => {
     process.env.ST_RESPONSE_SHAPING = "false";
+    clearIntelCache();
   });
 
   afterEach(() => {
@@ -1427,11 +1428,13 @@ describe("intelligence domain", () => {
       },
     ]);
 
+    // Revenue now comes from Report 175 (row[8] = TotalRevenue per BU),
+    // not invoice pagination. Mock data: HVAC row[8]=1200 + Plumbing row[8]=300 = 1500
     expect(payload.totals).toEqual({
       calls: 8,
       bookings: 3,
       conversionRate: 0.375,
-      revenue: 2200,
+      revenue: 1500,
     });
     expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
 
@@ -1476,16 +1479,15 @@ describe("intelligence domain", () => {
         active: "Any",
       }),
     );
-    expect(getMock).toHaveBeenCalledWith(
-      "/tenant/{tenant}/invoices",
-      expect.objectContaining({
-        invoicedOnOrAfter: "2026-01-01T00:00:00.000Z",
-        invoicedOnBefore: "2026-01-31T23:59:59.999Z",
-      }),
-    );
-    expect(getMock).not.toHaveBeenCalledWith(
-      "/tenant/{tenant}/invoices",
-      expect.objectContaining({ campaignId: expect.anything() }),
+    // Revenue now comes from Report 175 (POST) instead of invoice pagination (GET)
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+      {
+        parameters: [
+          { name: "From", value: "2026-01-01" },
+          { name: "To", value: "2026-01-31" },
+        ],
+      },
     );
 
     expect(postMock).toHaveBeenCalledWith(
@@ -1550,7 +1552,8 @@ describe("intelligence domain", () => {
         conversionRate: 0,
       }),
     );
-    expect(payload.totals.revenue).toBe(500);
+    // Revenue now comes from Report 175 (empty mock = 0), not invoice pagination
+    expect(payload.totals.revenue).toBe(0);
     expect(payload._warnings).toEqual([
       "Booking data unavailable: bookings unavailable",
       PER_CAMPAIGN_REVENUE_WARNING,
@@ -1598,7 +1601,9 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(result);
 
     expect(payload.leadGeneration).toEqual([]);
+    // Both Report 175 (revenue) and 176 (lead gen) fail since postMock rejects all POSTs
     expect(payload._warnings).toEqual([
+      "Revenue report (Report 175) unavailable: lead report unavailable",
       "Lead generation report (Report 176) unavailable: lead report unavailable",
       PER_CAMPAIGN_REVENUE_WARNING,
     ]);
