@@ -15,17 +15,23 @@ export function setMaxResponseChars(value: number): void {
   maxResponseChars = value;
 }
 
-export function toolResult(data: unknown): ToolResponse {
-  const json = JSON.stringify(shapeResponse(data), null, 2);
+export function toolResult(data: unknown, options?: { shape?: boolean }): ToolResponse {
+  const payload = options?.shape ? shapeResponse(data) : data;
+  const json = JSON.stringify(payload, null, 2);
 
   if (json.length > maxResponseChars) {
+    // Return a valid JSON object with a truncation marker instead of slicing mid-JSON
+    const truncationNotice = {
+      _truncated: true,
+      _originalSize: json.length,
+      _message: `Response was ${json.length.toLocaleString()} characters (limit: ${maxResponseChars.toLocaleString()}). Use pagination (page/pageSize) to get smaller result sets.`,
+      _preview: json.slice(0, Math.min(maxResponseChars - 256, maxResponseChars)),
+    };
     return {
       content: [
         {
           type: "text",
-          text:
-            json.slice(0, maxResponseChars) +
-            `\n\n[TRUNCATED - Response was ${json.length.toLocaleString()} characters. Use pagination (page/pageSize) to get smaller result sets.]`,
+          text: JSON.stringify(truncationNotice, null, 2),
         },
       ],
     };
@@ -94,7 +100,7 @@ export function sortParam(fields: string[]) {
   return {
     sort: z
       .string()
-      .regex(/^[+-]?[A-Za-z][A-Za-z0-9_]*$/, "Sort must use +Field or -Field format")
+      .regex(/^[+-]?[A-Za-z][A-Za-z0-9_]*$/, "Sort must be Field, +Field (asc), or -Field (desc)")
       .refine(
         (value) => {
           const fieldName = value.replace(/^[+-]/, "");
@@ -106,7 +112,7 @@ export function sortParam(fields: string[]) {
       )
       .optional()
       .describe(
-        `Sort: +Field (asc) or -Field (desc). Fields: ${fields.join(", ")}`,
+        `Sort: Field (default), +Field (asc), or -Field (desc). Fields: ${fields.join(", ")}`,
       ),
   };
 }

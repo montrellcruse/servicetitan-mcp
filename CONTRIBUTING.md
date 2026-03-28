@@ -80,7 +80,7 @@ Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed 
 - Use `getErrorMessage()` for error formatting (do NOT define local copies)
 - Use Zod schemas for all tool input validation
 - Use `toolResult()` / `toolError()` for tool responses
-- Respect read-only mode: when `ST_READONLY=true`, delete tools are excluded at registration; write tools are registered but blocked at execution by middleware
+- Respect read-only mode: when `ST_READONLY=true`, all tools are registered but write and delete operations are blocked at execution time by the middleware
 
 ## Commit Messages
 

@@ -23,27 +23,33 @@ const SENSITIVE_SUBSTRINGS = [
   "accesstoken",
 ] as const;
 
-// PII fields that should be redacted from audit logs
-const PII_FIELDS = new Set<string>([
-  "name",
+// PII fields that should be redacted from audit logs.
+// Uses substring matching (lowercased) to catch compound variants like
+// contactNumbers, campaignPhoneNumbers, callerPhoneNumber, etc.
+const PII_SUBSTRINGS = [
+  "phone",
+  "email",
   "firstname",
   "lastname",
-  "email",
-  "phone",
-  "phonenumber",
   "address",
   "street",
-  "city",
-  "zip",
   "zipcode",
   "ssn",
   "socialsecurity",
-  "dob",
   "dateofbirth",
   "bankaccount",
   "routingnumber",
   "creditcard",
   "cardnumber",
+  "contactnumber",
+] as const;
+
+// Exact-match PII fields (common short names)
+const PII_EXACT = new Set<string>([
+  "name",
+  "city",
+  "zip",
+  "dob",
 ]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -78,7 +84,10 @@ function sanitizeObject(value: Record<string, unknown>): Record<string, unknown>
     }
 
     // Redact PII fields — keep the key but mask the value
-    if (PII_FIELDS.has(lowerKey)) {
+    if (
+      PII_EXACT.has(lowerKey) ||
+      PII_SUBSTRINGS.some((sub) => lowerKey.includes(sub))
+    ) {
       sanitized[key] = "[REDACTED]";
       continue;
     }

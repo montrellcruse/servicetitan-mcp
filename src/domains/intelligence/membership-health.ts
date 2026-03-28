@@ -276,7 +276,7 @@ export function registerIntelligenceMembershipHealthTool(
           result._warnings = warnings;
         }
 
-        return toolResult(result);
+        return toolResult(result, { shape: true });
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
       }

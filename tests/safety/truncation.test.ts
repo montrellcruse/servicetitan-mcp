@@ -14,18 +14,19 @@ describe("safety response truncation", () => {
     const text = result.content[0]?.text ?? "";
 
     expect(text).toContain('"message": "ok"');
-    expect(text).not.toContain("[TRUNCATED - Response was");
+    expect(JSON.parse(text)).not.toHaveProperty("_truncated");
   });
 
-  it("oversized responses are truncated with notice", () => {
+  it("oversized responses are truncated as valid JSON with notice", () => {
     setMaxResponseChars(120);
 
     const payload = { data: "x".repeat(1000) };
     const result = toolResult(payload);
     const text = result.content[0]?.text ?? "";
 
-    expect(text).toContain("[TRUNCATED - Response was");
-    expect(text).toContain("Use pagination (page/pageSize)");
+    const parsed = JSON.parse(text);
+    expect(parsed._truncated).toBe(true);
+    expect(parsed._message).toContain("Use pagination (page/pageSize)");
   });
 
   it("truncation notice includes original size", () => {
@@ -34,8 +35,9 @@ describe("safety response truncation", () => {
     const payload = { data: "x".repeat(800) };
     const result = toolResult(payload);
     const text = result.content[0]?.text ?? "";
-    const originalLength = JSON.stringify(payload, null, 2).length;
+    const parsed = JSON.parse(text);
 
-    expect(text).toContain(`${originalLength.toLocaleString()} characters`);
+    const originalLength = JSON.stringify(payload, null, 2).length;
+    expect(parsed._originalSize).toBe(originalLength);
   });
 });

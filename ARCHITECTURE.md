@@ -244,7 +244,7 @@ Domains are loaded dynamically at startup. `loadDomainModules()` scans `src/doma
 type DomainLoader = (client: ServiceTitanClient, registry: ToolRegistry) => void;
 ```
 
-Each domain module calls `registry.register()` for each tool it provides. The registry applies domain filtering (`ST_DOMAINS`) at registration time. Delete tools are excluded when `ST_READONLY=true`. Write tools remain registered but are blocked at execution time by the write middleware, which returns a clear error message.
+Each domain module calls `registry.register()` for each tool it provides. The registry applies domain filtering (`ST_DOMAINS`) at registration time. When `ST_READONLY=true` (default), all tools are still registered and visible to MCP clients, but write and delete operations are blocked at execution time by the middleware, which returns `Readonly mode: operation not permitted`.
 
 Current domains (15 total, including `intelligence`):
 
@@ -277,7 +277,7 @@ Every tool goes through `ToolRegistry.register()`, which acts as a gatekeeper an
 ### Filtering (registration time)
 
 1. **Domain filter:** If `ST_DOMAINS` is set, only tools whose `domain` matches are registered. The `_system` domain (health check) is always registered.
-2. **Readonly enforcement:** If `ST_READONLY=true` (the default), delete tools are excluded at registration time. Write tools remain registered but are blocked at execution time with a clear error message ("Readonly mode: operation not permitted").
+2. **Readonly enforcement:** If `ST_READONLY=true` (the default), all tools remain registered. Write and delete operations are blocked at execution time with `Readonly mode: operation not permitted`.
 
 ### Confirmation wrapper (execution time)
 
@@ -346,25 +346,25 @@ All date inputs (`YYYY-MM-DD` strings) are converted to UTC ISO boundaries using
 
 **File:** `src/response-shaping.ts`
 
-Response shaping is a middleware layer applied to all tool responses (enabled by default, disable with `ST_RESPONSE_SHAPING=false`). It reduces LLM token consumption by transforming ServiceTitan API responses before they reach the model.
+Response shaping is applied **only to intelligence (`intel_*`) tool responses** (enabled by default, disable with `ST_RESPONSE_SHAPING=false`). Non-intelligence domain tools (CRM, dispatch, accounting, etc.) return raw ServiceTitan API responses without any transformation.
 
-### What it does
+### What it does (intelligence tools only)
 
-1. **Excludes low-signal fields** — A hardcoded `EXCLUDED_FIELDS` set removes metadata fields (`requestId`, `paginationToken`), redundant identifiers, low-value breakdowns (e.g. `regularHours`/`overtimeHours` when `totalHours` is present), and blocks that are too verbose to be useful at the summary level (e.g. `byBusinessUnit`, `productivity`, `membershipTypes`).
+1. **Excludes low-signal fields** — A hardcoded `EXCLUDED_FIELDS` set removes metadata fields (`requestId`, `paginationToken`), redundant breakdowns (e.g. `regularHours`/`overtimeHours` when `totalHours` is present), and blocks that are too verbose at the summary level (e.g. `byBusinessUnit`, `productivity`, `membershipTypes`).
 
 2. **Abbreviates field names** — Common verbose keys are replaced with shorter aliases (e.g. `customerName` → `customer`, `businessUnit` → `bu`, `technician` → `tech`, `averageTicket` → `avgTicket`).
 
-3. **Rounds numbers** — Keys containing currency tokens (`revenue`, `amount`, `ticket`, etc.) are rounded to 0 decimal places. Keys containing ratio tokens (`efficiency`, `rate`, `percent`, etc.) are rounded to 1 decimal place. Other numbers are passed through.
+3. **Rounds numbers** — Currency tokens (`revenue`, `amount`, `ticket`, etc.) are rounded to 2 decimal places. Ratio tokens (`efficiency`, `rate`, `percent`, etc.) are rounded to 1 decimal place.
 
-4. **Compacts ISO timestamps** — Full ISO datetime strings (`2025-02-01T05:00:00.000Z`) are reduced to date-only strings (`2025-02-01`) when the time component isn't meaningful.
+4. **Compacts date-only fields** — Explicit date-only fields (`date`, `scheduledDate`, `dueDate`, `expirationDate`) are compacted to `YYYY-MM-DD`. All other timestamps preserve full precision including seconds and timezone offset.
 
-5. **Limits array lengths** — Specific arrays are truncated to prevent response bloat (e.g. `byTechnician` → 4 items, `campaigns` → 3 items, `staleEstimates` → 3 items).
+5. **Limits array lengths** — Intelligence-specific arrays are truncated to prevent response bloat (e.g. `byTechnician` → 4 items, `campaigns` → 3 items, `staleEstimates` → 3 items). Generic field names like `items` are **never** truncated.
 
 6. **Preserves zero values** — Fields with value `0` are kept (zero is meaningful for financial and operational metrics).
 
 ### Why it exists
 
-The autoresearch evaluation framework showed that raw ServiceTitan API responses contain significant token overhead from metadata, redundant fields, and excessive precision. Shaping reduces response size by 40–60% on typical intelligence tool payloads without losing information that matters for business analysis.
+The autoresearch evaluation framework showed that raw ServiceTitan API responses contain significant token overhead from metadata, redundant fields, and excessive precision. Shaping reduces response size by 40–60% on typical intelligence tool payloads without losing information that matters for business analysis. It is scoped to intelligence tools because non-intelligence responses are raw API passthrough and must preserve the ServiceTitan schema exactly.
 
 ---
 

@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Total tools: 460
+Total tools: 467
 
 ## accounting
 
@@ -87,6 +87,7 @@ Total tools: 460
 | `crm_customers_notes_create` | `crm` | `write` | Create a note for a customer |
 | `crm_customers_notes_delete` | `crm` | `delete` | Delete a customer note |
 | `crm_customers_notes_list` | `crm` | `read` | List notes for a customer |
+| `crm_customers_tags_create` | `crm` | `write` | Create a tag for a customer |
 | `crm_customers_tags_delete` | `crm` | `delete` | Delete a tag assignment from a customer |
 | `crm_customers_update` | `crm` | `write` | Patch a customer |
 | `crm_leads_create` | `crm` | `write` | Create a lead |
@@ -103,6 +104,7 @@ Total tools: 460
 | `crm_locations_contacts_delete` | `crm` | `delete` | Delete a location contact |
 | `crm_locations_contacts_list` | `crm` | `read` | List contacts for a location |
 | `crm_locations_contacts_modified_list` | `crm` | `read` | List location contacts modified in a time range |
+| `crm_locations_contacts_update` | `crm` | `write` | Update a contact on a location |
 | `crm_locations_create` | `crm` | `write` | Create a location |
 | `crm_locations_custom_field_types_list` | `crm` | `read` | List location custom field types |
 | `crm_locations_get` | `crm` | `read` | Get a location by ID |
@@ -157,11 +159,13 @@ Total tools: 460
 | `dispatch_job_types_list` | `dispatch` | `read` | List job types |
 | `dispatch_job_types_update` | `dispatch` | `write` | Update a job type |
 | `dispatch_jobs_booked_log_get` | `dispatch` | `read` | Get booked log details for a job |
+| `dispatch_jobs_cancel` | `dispatch` | `write` | Cancel a job |
 | `dispatch_jobs_cancel_reasons_list` | `dispatch` | `read` | List cancel reasons available for jobs |
 | `dispatch_jobs_canceled_logs_list` | `dispatch` | `read` | List canceled log entries for a job |
 | `dispatch_jobs_complete` | `dispatch` | `write` | Complete a job |
 | `dispatch_jobs_create` | `dispatch` | `write` | Create a job |
 | `dispatch_jobs_create_attachment` | `dispatch` | `write` | Attach a file to a job |
+| `dispatch_jobs_custom_field_types_list` | `dispatch` | `read` | List job custom field types |
 | `dispatch_jobs_get` | `dispatch` | `read` | Get a job by ID |
 | `dispatch_jobs_get_attachment` | `dispatch` | `read` | Get a job attachment by ID |
 | `dispatch_jobs_history_get` | `dispatch` | `read` | Get history for a job |
@@ -181,6 +185,7 @@ Total tools: 460
 | `dispatch_project_types_list` | `dispatch` | `read` | List project types |
 | `dispatch_projects_attach_job` | `dispatch` | `write` | Attach a job to a project |
 | `dispatch_projects_create` | `dispatch` | `write` | Create a project |
+| `dispatch_projects_custom_field_types_list` | `dispatch` | `read` | List project custom field types |
 | `dispatch_projects_delete` | `dispatch` | `delete` | Delete a project |
 | `dispatch_projects_detach_job` | `dispatch` | `write` | Detach a job from a project |
 | `dispatch_projects_get` | `dispatch` | `read` | Get a project by ID |
@@ -410,6 +415,7 @@ Total tools: 460
 | `payroll_timesheets_job_update` | `payroll` | `write` | Update a job timesheet |
 | `payroll_timesheets_jobs_list` | `payroll` | `read` | List job timesheets across multiple jobs |
 | `payroll_timesheets_non_job_create` | `payroll` | `write` | Create a non-job timesheet |
+| `payroll_timesheets_non_job_delete` | `payroll` | `delete` | Delete a non-job timesheet |
 | `payroll_timesheets_non_job_get` | `payroll` | `read` | Get a non-job timesheet by ID |
 | `payroll_timesheets_non_job_list` | `payroll` | `read` | List non-job timesheets |
 | `payroll_timesheets_non_job_update` | `payroll` | `write` | Update a non-job timesheet |
@@ -432,6 +438,7 @@ Total tools: 460
 | `people_technician_shifts_delete` | `people` | `delete` | Delete a technician shift |
 | `people_technician_shifts_get` | `people` | `read` | Get a technician shift by ID |
 | `people_technician_shifts_list` | `people` | `read` | List technician shifts |
+| `people_technician_shifts_update` | `people` | `write` | Update a technician shift |
 | `people_technicians_accountactions` | `people` | `write` | Run account actions for a technician |
 | `people_technicians_create` | `people` | `write` | Create a technician |
 | `people_technicians_get` | `people` | `read` | Get a technician by ID |

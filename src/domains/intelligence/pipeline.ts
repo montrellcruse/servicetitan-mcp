@@ -228,7 +228,7 @@ export function registerIntelligenceEstimatePipelineTool(
             const created = estimateCreatedOn(estimate);
             const sold = estimateSoldOn(estimate);
             if (created && sold) {
-              daysToClose.push(dayDiff(created, sold));
+              daysToClose.push(dayDiff(created, sold, tz));
             }
             continue;
           }
@@ -238,7 +238,7 @@ export function registerIntelligenceEstimatePipelineTool(
           }
 
           const created = estimateCreatedOn(estimate);
-          const daysOld = created ? dayDiff(created, referenceDate) : 0;
+          const daysOld = created ? dayDiff(created, referenceDate, tz) : 0;
 
           let bucketKey: "0-7" | "8-14" | "15-30" | "30+" = "30+";
           if (daysOld <= 7) {
@@ -359,7 +359,7 @@ export function registerIntelligenceEstimatePipelineTool(
           result._warnings = warnings;
         }
 
-        return toolResult(result);
+        return toolResult(result, { shape: true });
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
       }

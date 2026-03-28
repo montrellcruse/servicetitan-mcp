@@ -31,14 +31,17 @@ describe("toolResult", () => {
     });
   });
 
-  it("truncates oversized responses with pagination hint", () => {
+  it("truncates oversized responses as valid JSON with pagination hint", () => {
     setMaxResponseChars(80);
     const payload = { data: "x".repeat(500) };
     const result = toolResult(payload);
     const text = result.content[0]?.text ?? "";
 
-    expect(text).toContain("[TRUNCATED - Response was");
-    expect(text).toContain("Use pagination (page/pageSize)");
+    // Must be valid JSON
+    const parsed = JSON.parse(text);
+    expect(parsed._truncated).toBe(true);
+    expect(parsed._originalSize).toBeGreaterThan(80);
+    expect(parsed._message).toContain("Use pagination (page/pageSize)");
   });
 
   it("can disable response shaping via env", () => {

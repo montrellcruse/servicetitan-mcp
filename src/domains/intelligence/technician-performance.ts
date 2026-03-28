@@ -655,7 +655,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
       try {
         const input = technicianScorecardSchema.parse(params);
         const { start, end } = toDateRange(input.startDate, input.endDate, registry.timezone);
-        const workingDays = countWeekdaysInclusive(start, end);
+        const workingDays = countWeekdaysInclusive(start, end, registry.timezone);
         const warnings: string[] = [];
         const maxTechnicians = input.limit ?? 25;
 
@@ -990,7 +990,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
           result._warnings = warnings;
         }
 
-        return toolResult(result);
+        return toolResult(result, { shape: true });
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
       }

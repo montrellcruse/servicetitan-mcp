@@ -173,24 +173,14 @@ export async function fetchAllPagesWithTotal<T>(
       break;
     }
 
-    page += 1;
-  }
-
-  // Warn if pagination was truncated at max page limit
-  if (page === maxPages) {
-    const response = await client.get(
-      path,
-      buildParams({
-        ...params,
-        page: maxPages,
-        pageSize: 1,
-      }),
-    );
-    const stillHasMore = isRecord(response) && response.hasMore === true;
-    if (stillHasMore) {
-      console.warn(`Pagination truncated at ${maxPages} pages. Set higher ST_INTEL_MAX_PAGES if you need deeper pagination.`);
+    if (page === maxPages) {
+      // We're at the last allowed page and there are more results
+      console.warn(`Pagination truncated at ${maxPages} pages (${allData.length} items fetched). Increase ST_INTEL_MAX_PAGES for full coverage.`);
       truncated = true;
+      break;
     }
+
+    page += 1;
   }
 
   return { data: allData, totalCount, ...(truncated && { _truncated: true }) };
@@ -544,16 +534,42 @@ export function normalizeStatus(source: unknown, extraPaths: string[] = []): str
   return statusText ? statusText.toLowerCase() : "";
 }
 
-export function countWeekdaysInclusive(start: Date, end: Date): number {
+/**
+ * Extract the local calendar date (YYYY-MM-DD) for a given instant in a timezone.
+ * Falls back to UTC if timezone is not provided or invalid.
+ */
+function toLocalDateParts(date: Date, timezone?: string): { year: number; month: number; day: number } {
+  if (timezone && timezone !== "UTC") {
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).formatToParts(date);
+      const year = Number(parts.find((p) => p.type === "year")?.value ?? date.getUTCFullYear());
+      const month = Number(parts.find((p) => p.type === "month")?.value ?? date.getUTCMonth() + 1) - 1;
+      const day = Number(parts.find((p) => p.type === "day")?.value ?? date.getUTCDate());
+      return { year, month, day };
+    } catch {
+      // Invalid timezone — fall through to UTC
+    }
+  }
+  return { year: date.getUTCFullYear(), month: date.getUTCMonth(), day: date.getUTCDate() };
+}
+
+export function countWeekdaysInclusive(start: Date, end: Date, timezone?: string): number {
   if (end.getTime() < start.getTime()) {
     return 0;
   }
 
-  let cursor = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate());
-  const endUtc = Date.UTC(end.getUTCFullYear(), end.getUTCMonth(), end.getUTCDate());
+  const startParts = toLocalDateParts(start, timezone);
+  const endParts = toLocalDateParts(end, timezone);
+  let cursor = Date.UTC(startParts.year, startParts.month, startParts.day);
+  const endMs = Date.UTC(endParts.year, endParts.month, endParts.day);
   let weekdays = 0;
 
-  while (cursor <= endUtc) {
+  while (cursor <= endMs) {
     const day = new Date(cursor).getUTCDay();
     if (day !== 0 && day !== 6) {
       weekdays += 1;
@@ -564,10 +580,12 @@ export function countWeekdaysInclusive(start: Date, end: Date): number {
   return weekdays;
 }
 
-export function dayDiff(from: Date, to: Date): number {
-  const fromUtc = Date.UTC(from.getUTCFullYear(), from.getUTCMonth(), from.getUTCDate());
-  const toUtc = Date.UTC(to.getUTCFullYear(), to.getUTCMonth(), to.getUTCDate());
-  return Math.max(0, Math.floor((toUtc - fromUtc) / DAY_MS));
+export function dayDiff(from: Date, to: Date, timezone?: string): number {
+  const fromParts = toLocalDateParts(from, timezone);
+  const toParts = toLocalDateParts(to, timezone);
+  const fromMs = Date.UTC(fromParts.year, fromParts.month, fromParts.day);
+  const toMs = Date.UTC(toParts.year, toParts.month, toParts.day);
+  return Math.max(0, Math.floor((toMs - fromMs) / DAY_MS));
 }
 
 export function formatCurrency(value: number): string {

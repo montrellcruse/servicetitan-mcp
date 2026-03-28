@@ -130,7 +130,7 @@ ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
 | `marketing` | 35 | `marketing_campaigns_list`, `marketing_calls_v3_list`, `marketing_reviews` |
 | `accounting` | 33 | `accounting_invoices_list`, `accounting_payments_list`, `accounting_gl_accounts_list` |
 | `pricebook` | 31 | `pricebook_services_list`, `pricebook_materials_list`, `pricebook_equipment_list` |
-| `payroll` | 27 | `payroll_timesheets_list`, `payroll_gross_pay_list`, `payroll_payrolls_list` |
+| `payroll` | 27 | `payroll_payrolls_list`, `payroll_timesheets_job_list`, `payroll_gross_pay_items_list` |
 | `settings` | 23 | `settings_business_units_list`, `settings_tag_types_list`, `settings_user_roles_list` |
 | `people` | 22 | `people_technicians_list`, `people_employees_list`, `people_trucks_list` |
 | `memberships` | 21 | `memberships_list`, `memberships_types_list`, `memberships_recurring_services_list` |
@@ -140,7 +140,7 @@ ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
 | `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
 | **Total** | **467** | *(includes read, write, and delete tools)* |
 
-> With `ST_READONLY=true`, delete tools are excluded at registration time. Write tools remain visible but are blocked at execution time with a clear error message. Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
+> With `ST_READONLY=true` (default), all tools are registered but write and delete operations are blocked at execution time with a clear error message (`Readonly mode: operation not permitted`). Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
 
 ---
 
@@ -208,14 +208,18 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `ST_ENVIRONMENT` | `integration` | ServiceTitan environment: `integration` or `production` |
-| `ST_READONLY` | `true` | Skip write and delete tools at registration time |
+| `ST_READONLY` | `true` | Block write and delete operations at execution time |
 | `ST_CONFIRM_WRITES` | `false` | Require `_confirmed: true` to execute write tools |
 | `ST_MAX_RESPONSE_CHARS` | `100000` | Cap tool response size |
 | `ST_DOMAINS` | *(all)* | Comma-separated domain allowlist (e.g. `crm,dispatch,reporting`) |
 | `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
 | `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — critical for date-bound intelligence tools |
-| `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable response transformation and return raw API data |
-| `ST_CORS_ORIGIN` | _(none)_ | Allowed CORS origin for the Streamable HTTP server. Required for browser access. |
+| `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable intelligence response transformation |
+| `ST_CORS_ORIGIN` | _(none)_ | Allowed CORS origin for Streamable HTTP / SSE. Required for browser access. |
+| `ST_ALLOWED_CALLERS` | _(none)_ | Comma-separated caller identity allowlist (e.g. `alice@example.com,svc-user`) |
+| `ST_INTEL_CACHE_TTL_MS` | `300000` | Intelligence result cache TTL in milliseconds (default: 5 minutes) |
+| `ST_MCP_PORT` / `PORT` | `3100` | HTTP server port for Streamable HTTP and SSE transports |
+| `ST_MCP_API_KEY` | _(none)_ | API key for authenticating remote MCP clients (required for HTTP transports) |
 
 > **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants.
 
@@ -287,7 +291,7 @@ npm run start      # run compiled server
 
 ## Safety
 
-- **Read-only mode** (`ST_READONLY=true` by default) — delete tools are excluded at registration; write tools remain visible but are blocked at execution time
+- **Read-only mode** (`ST_READONLY=true` by default) — all tools are registered but write and delete operations are blocked at execution time
 - **Confirmation workflow** — delete tools require `confirm: true` (returns preview payload when missing); write tools optionally require `_confirmed: true` via `ST_CONFIRM_WRITES=true` (returns error when missing)
 - **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
 

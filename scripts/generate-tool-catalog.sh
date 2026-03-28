@@ -126,6 +126,15 @@ echo "marketing	marketing_opt_in_outs_lookup_create	write	Lookup and create opt-
 echo "marketing	marketing_suppressions_list	read	List marketing suppressions" >> "${tmp_entries}"
 echo "marketing	marketing_campaign_costs_list	read	List campaign costs" >> "${tmp_entries}"
 
+# Additional tools missed by the awk scraper (inline register patterns)
+echo "crm	crm_customers_tags_create	write	Create a tag for a customer" >> "${tmp_entries}"
+echo "crm	crm_locations_contacts_update	write	Update a contact on a location" >> "${tmp_entries}"
+echo "dispatch	dispatch_jobs_cancel	write	Cancel a job" >> "${tmp_entries}"
+echo "dispatch	dispatch_jobs_custom_field_types_list	read	List job custom field types" >> "${tmp_entries}"
+echo "dispatch	dispatch_projects_custom_field_types_list	read	List project custom field types" >> "${tmp_entries}"
+echo "payroll	payroll_timesheets_non_job_delete	delete	Delete a non-job timesheet" >> "${tmp_entries}"
+echo "people	people_technician_shifts_update	write	Update a technician shift" >> "${tmp_entries}"
+
 sort -t $'\t' -k1,1 -k2,2 "${tmp_entries}" | uniq > "${tmp_sorted}"
 total_tools="$(wc -l < "${tmp_sorted}" | tr -d '[:space:]')"
 
