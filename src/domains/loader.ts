@@ -21,12 +21,20 @@ export async function loadDomainModules(
     try {
       module = (await import(fileUrl)) as typeof module;
     } catch (error: unknown) {
-      // Distinguish "file not found" (expected) from real import errors (bugs)
+      // Distinguish "index.js doesn't exist" (expected) from real import errors (bugs).
+      // ERR_MODULE_NOT_FOUND can mean either:
+      //   1. The domain's index.js doesn't exist (expected, skip silently)
+      //   2. index.js exists but one of ITS imports is broken (bug, must surface)
+      // We differentiate by checking if the error message references our exact file URL.
       const isModuleNotFound =
         error instanceof Error &&
         "code" in error &&
         (error as NodeJS.ErrnoException).code === "ERR_MODULE_NOT_FOUND";
-      if (isModuleNotFound) {
+      const isDirectMissing =
+        isModuleNotFound &&
+        error instanceof Error &&
+        error.message.includes(`./${dirName}/index.js`);
+      if (isDirectMissing) {
         logger.debug("No index.js in domain directory", { domain: dirName });
       } else {
         logger.error("Failed to load domain module", {

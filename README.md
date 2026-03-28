@@ -138,7 +138,7 @@ ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
 | `estimates` | 11 | `estimates_list`, `estimates_get`, `estimates_items_list` |
 | **`intelligence`** | **10** | `intel_revenue_summary`, `intel_daily_snapshot`, `intel_technician_scorecard` |
 | `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
-| **Total** | **467** | *(includes read, write, and delete tools)* |
+| **Total** | **466** | *(+ 1 system tool: `st_health_check` = **467** total)* |
 
 > With `ST_READONLY=true` (default), all tools are registered but write and delete operations are blocked at execution time with a clear error message (`Readonly mode: operation not permitted`). Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
 

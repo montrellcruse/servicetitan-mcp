@@ -135,7 +135,9 @@ async function main(): Promise<void> {
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();
-    sendCorsHeaders(res, config.corsOrigin);
+    if (config.corsOrigin) {
+      sendCorsHeaders(res, config.corsOrigin);
+    }
     try {
       // Handle CORS preflight
       if (req.method === "OPTIONS") {
@@ -197,7 +199,6 @@ async function main(): Promise<void> {
 
         // Wrap res.write to auto-flush after each SSE event
         const origWrite = res.write.bind(res) as typeof res.write;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (res as any).write = function (chunk: any, encodingOrCb?: any, cb?: any) {
           const result = origWrite(chunk, encodingOrCb, cb);
           // Force flush the socket after each write

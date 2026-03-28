@@ -4,7 +4,7 @@ import type { ServiceTitanClient } from "../../client.js";
 import { buildParams } from "../../utils.js";
 
 const DEFAULT_PAGE_SIZE = 500;
-const DEFAULT_MAX_PAGES = 20;
+const DEFAULT_MAX_PAGES = Number(process.env.ST_INTEL_MAX_PAGES) || 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_INTELLIGENCE_TIMEZONE = process.env.ST_TIMEZONE || "UTC";
@@ -419,7 +419,6 @@ function parseDateInput(value: string, endOfDay: boolean, timezone = "UTC"): Dat
   }
 
   // For date-only values (YYYY-MM-DD), interpret as local midnight in the configured timezone.
-  // First parse as UTC midnight, then shift by the timezone offset.
   const utcMidnight = new Date(
     `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`,
   );
@@ -432,9 +431,21 @@ function parseDateInput(value: string, endOfDay: boolean, timezone = "UTC"): Dat
     return utcMidnight;
   }
 
-  // Shift: "Feb 1 00:00 EST" = "Feb 1 05:00 UTC" (offset = +5h for EST)
-  const offsetMs = getTimezoneOffsetMs(timezone, utcMidnight);
-  return new Date(utcMidnight.getTime() - offsetMs);
+  // Use start-of-day for offset calculation to avoid millisecond precision loss.
+  // getTimezoneOffsetMs reconstructs local time with second precision only,
+  // so computing the offset from the start-of-day instant avoids the 999ms drift
+  // that occurs when reconstructing from 23:59:59.999.
+  const startOfDay = new Date(`${value}T00:00:00.000Z`);
+  const offsetMs = getTimezoneOffsetMs(timezone, startOfDay);
+
+  // For end-of-day: compute start-of-next-day and subtract 1ms.
+  // This guarantees the boundary is exactly 23:59:59.999 in local time.
+  if (endOfDay) {
+    const nextDayUtc = new Date(startOfDay.getTime() + DAY_MS);
+    return new Date(nextDayUtc.getTime() - offsetMs - 1);
+  }
+
+  return new Date(startOfDay.getTime() - offsetMs);
 }
 
 function incrementDateString(value: string): string {
