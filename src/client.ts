@@ -266,6 +266,7 @@ export class ServiceTitanClient {
     this.authUrl = environment.authUrl;
     this.http = axios.create({
       baseURL: environment.apiUrl,
+      timeout: 60_000, // 60s default for all API requests
     });
 
     this.setupInterceptors();
@@ -481,6 +482,7 @@ export class ServiceTitanClient {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        timeout: 15_000, // 15s timeout for auth — fail fast if ST auth is stalled
       },
     );
 
@@ -499,9 +501,19 @@ export class ServiceTitanClient {
 
   private parseRetryAfter(value: unknown): number {
     if (typeof value === "string") {
+      // Try integer seconds first (most common)
       const parsed = Number.parseInt(value, 10);
       if (Number.isFinite(parsed) && parsed > 0) {
         return parsed;
+      }
+
+      // Try HTTP-date format (e.g. "Sat, 28 Mar 2026 17:00:00 GMT")
+      const dateMs = Date.parse(value);
+      if (Number.isFinite(dateMs)) {
+        const delaySeconds = Math.ceil((dateMs - Date.now()) / 1000);
+        if (delaySeconds > 0) {
+          return Math.min(delaySeconds, 300); // Cap at 5 minutes
+        }
       }
     }
 
