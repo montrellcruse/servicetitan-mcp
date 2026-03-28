@@ -108,6 +108,13 @@ const customFieldTypesSchema = dateFilterParams(
   ),
 );
 
+const paymentCreateSchema = z.object({
+  payload: z.object({}).passthrough().describe("Payment create payload"),
+});
+
+const paymentStatusUpdateSchema = z.object({
+  payload: z.object({}).passthrough().describe("Payment status update payload"),
+});
 
 export function registerPaymentTools(
   client: ServiceTitanClient,
@@ -118,10 +125,12 @@ export function registerPaymentTools(
     domain: "accounting",
     operation: "write",
     description: "Create a payment",
-    schema: {},
-    handler: async () => {
+    schema: paymentCreateSchema.shape,
+    handler: async (params) => {
+      const input = paymentCreateSchema.parse(params);
+
       try {
-        const data = await client.post("/tenant/{tenant}/payments");
+        const data = await client.post("/tenant/{tenant}/payments", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
@@ -230,10 +239,12 @@ export function registerPaymentTools(
     domain: "accounting",
     operation: "write",
     description: "Update payment statuses",
-    schema: {},
-    handler: async () => {
+    schema: paymentStatusUpdateSchema.shape,
+    handler: async (params) => {
+      const input = paymentStatusUpdateSchema.parse(params);
+
       try {
-        const data = await client.post("/tenant/{tenant}/payments/status");
+        const data = await client.post("/tenant/{tenant}/payments/status", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

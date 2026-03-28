@@ -15,8 +15,6 @@ const purchaseOrderMarkupPayloadSchema = z.object({
   from: z.number().optional().describe("Starting value for this markup range"),
   to: z.number().optional().describe("Ending value for this markup range"),
   percent: z.number().optional().describe("Markup percentage for this range"),
-  createdOn: z.string().optional().describe("Created timestamp for this markup"),
-  modifiedOn: z.string().optional().describe("Modified timestamp for this markup"),
 });
 
 const purchaseOrderMarkupIdSchema = z.object({

@@ -9,7 +9,7 @@
  *  - crm_customers_get: surfaces API errors as tool errors
  *  - crm_customers_create: creates a new customer and returns the result
  *  - crm_customers_notes_list: returns paginated notes for a customer
- *  - crm_customers_list: available in readonly mode; write tools are not
+ *  - crm_customers_list: available in readonly mode; write tools are blocked at execution
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -43,6 +43,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     enabledDomains: null,
     logLevel: "error",
     timezone: "UTC",
+    corsOrigin: "",
     ...overrides,
   };
 }
@@ -268,15 +269,21 @@ describe("crm domain", () => {
 
   // ── readonly mode enforcement ──
 
-  it("crm_customers_list is available in readonly mode; write tools are not", () => {
+  it("crm_customers_list is available in readonly mode and write tools are blocked", async () => {
     const { handlers } = createContext({ readonlyMode: true });
     // Read tools should be registered
     expect(handlers.has("crm_customers_list")).toBe(true);
     expect(handlers.has("crm_customers_get")).toBe(true);
-    // Write tools should not be registered
-    expect(handlers.has("crm_customers_create")).toBe(false);
-    expect(handlers.has("crm_customers_update")).toBe(false);
+    // Write tools stay registered and are blocked by middleware
+    expect(handlers.has("crm_customers_create")).toBe(true);
+    expect(handlers.has("crm_customers_update")).toBe(true);
     // Delete tools should not be registered
     expect(handlers.has("crm_customers_notes_delete")).toBe(false);
+
+    const createResult = await getHandler(handlers, "crm_customers_create")({
+      name: "Read Only Customer",
+    });
+    expect(createResult.isError).toBe(true);
+    expect(createResult.content[0]?.text).toContain("Write operations are disabled in readonly mode");
   });
 });

@@ -36,7 +36,6 @@ const locationExternalDataSchema = z.object({
 });
 
 const locationContactSchema = z.object({
-  id: z.number().int().optional().describe("Contact ID"),
   type: z.string().optional().describe("Contact type"),
   value: z.string().optional().describe("Contact value"),
   memo: z.string().optional().describe("Contact memo"),
@@ -67,16 +66,11 @@ const locationTagSchema = z.object({
 });
 
 const locationUpdatePayloadSchema = z.object({
-  id: z.number().int().optional().describe("Location ID"),
   customerId: z.number().int().optional().describe("Customer ID"),
   active: z.boolean().optional().describe("Active flag"),
   name: z.string().optional().describe("Location name"),
   address: locationAddressSchema.optional().describe("Address"),
   customFields: z.array(locationCustomFieldSchema).optional().describe("Custom fields"),
-  createdOn: z.string().optional().describe("Created timestamp"),
-  createdById: z.number().int().optional().describe("Created by user ID"),
-  modifiedOn: z.string().optional().describe("Modified timestamp"),
-  mergedToId: z.number().int().optional().describe("Merged-to location ID"),
   zoneId: z.number().int().optional().describe("Zone ID"),
   tagTypeIds: z.array(z.number().int()).optional().describe("Tag type IDs"),
   externalData: z.array(locationExternalDataSchema).optional().describe("External data entries"),

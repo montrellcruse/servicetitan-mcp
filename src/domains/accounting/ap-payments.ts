@@ -17,6 +17,12 @@ const apPaymentsListSchema = dateFilterParams(
   ),
 );
 
+const apPaymentsMarkAsExportedSchema = z.object({
+  ids: z
+    .array(z.number().int().describe("AP payment ID"))
+    .min(1)
+    .describe("AP payment IDs to mark as exported"),
+});
 
 export function registerApPaymentTools(
   client: ServiceTitanClient,
@@ -27,10 +33,14 @@ export function registerApPaymentTools(
     domain: "accounting",
     operation: "write",
     description: "Mark AP payments as exported",
-    schema: {},
-    handler: async () => {
+    schema: apPaymentsMarkAsExportedSchema.shape,
+    handler: async (params) => {
+      const input = apPaymentsMarkAsExportedSchema.parse(params);
+
       try {
-        const data = await client.post("/tenant/{tenant}/ap-payments/markasexported");
+        const data = await client.post("/tenant/{tenant}/ap-payments/markasexported", {
+          ids: input.ids,
+        });
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

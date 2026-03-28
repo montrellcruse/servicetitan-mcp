@@ -56,13 +56,11 @@ export const discountAndFeePayloadSchema = z.object({
 });
 
 const vendorSubAccountSchema = z.object({
-  id: z.number().int().optional().describe("Vendor subaccount ID"),
   cost: z.number().optional().describe("Vendor subaccount cost"),
   accountName: z.string().optional().describe("Vendor subaccount name"),
 });
 
 const vendorSchema = z.object({
-  id: z.number().int().optional().describe("Vendor relation ID"),
   vendorName: z.string().optional().describe("Vendor name"),
   vendorId: z.number().int().optional().describe("Vendor ID"),
   memo: z.string().optional().describe("Vendor memo"),

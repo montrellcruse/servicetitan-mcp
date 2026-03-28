@@ -154,6 +154,16 @@ const invoiceCustomFieldTypesSchema = dateFilterParams(
   ),
 );
 
+const invoiceAdjustmentCreateSchema = z.object({
+  payload: z.object({}).passthrough().describe("Invoice adjustment payload"),
+});
+
+const invoiceMarkAsExportedSchema = z.object({
+  ids: z
+    .array(z.number().int().describe("Invoice ID"))
+    .min(1)
+    .describe("Invoice IDs to mark as exported"),
+});
 
 export function registerInvoiceTools(
   client: ServiceTitanClient,
@@ -164,10 +174,12 @@ export function registerInvoiceTools(
     domain: "accounting",
     operation: "write",
     description: "Create an adjustment invoice",
-    schema: {},
-    handler: async () => {
+    schema: invoiceAdjustmentCreateSchema.shape,
+    handler: async (params) => {
+      const input = invoiceAdjustmentCreateSchema.parse(params);
+
       try {
-        const data = await client.post("/tenant/{tenant}/invoices");
+        const data = await client.post("/tenant/{tenant}/invoices", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
@@ -351,10 +363,14 @@ export function registerInvoiceTools(
     domain: "accounting",
     operation: "write",
     description: "Mark invoices as exported",
-    schema: {},
-    handler: async () => {
+    schema: invoiceMarkAsExportedSchema.shape,
+    handler: async (params) => {
+      const input = invoiceMarkAsExportedSchema.parse(params);
+
       try {
-        const data = await client.post("/tenant/{tenant}/invoices/markasexported");
+        const data = await client.post("/tenant/{tenant}/invoices/markasexported", {
+          ids: input.ids,
+        });
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

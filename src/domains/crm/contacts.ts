@@ -17,16 +17,11 @@ const contactIdSchema = z.object({
 });
 
 const contactPayloadSchema = z.object({
-  id: z.string().uuid().optional().describe("Contact ID"),
   referenceId: z.string().optional().describe("External reference ID"),
   name: z.string().optional().describe("Contact name"),
   title: z.string().optional().describe("Contact title"),
   isArchived: z.boolean().optional().describe("Archived flag"),
-  createdOn: z.string().datetime().optional().describe("Created timestamp"),
-  createdBy: z.number().int().optional().describe("Created by user ID"),
-  modifiedOn: z.string().datetime().optional().describe("Modified timestamp"),
-  modifiedBy: z.number().int().optional().describe("Modified by user ID"),
-}).passthrough();
+});
 
 const contactReplaceSchema = z.object({
   id: z.string().uuid().describe("Contact ID"),
@@ -186,15 +181,10 @@ export function registerContactTools(
         const data = await client.post(
           "/tenant/{tenant}/contacts",
           buildParams({
-            id: input.id,
             referenceId: input.referenceId,
             name: input.name,
             title: input.title,
             isArchived: input.isArchived,
-            createdOn: input.createdOn,
-            createdBy: input.createdBy,
-            modifiedOn: input.modifiedOn,
-            modifiedBy: input.modifiedBy,
           }),
         );
         return toolResult(data);

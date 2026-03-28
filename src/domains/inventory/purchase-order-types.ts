@@ -17,8 +17,6 @@ const purchaseOrderTypePayloadSchema = z.object({
   active: z.boolean().optional().describe("Whether the purchase order type is active"),
   color: z.string().optional().describe("Color code used for this purchase order type"),
   memo: z.string().optional().describe("Internal note for this purchase order type"),
-  createdOn: z.string().optional().describe("Created timestamp for this purchase order type"),
-  modifiedOn: z.string().optional().describe("Modified timestamp for this purchase order type"),
 });
 
 const purchaseOrderTypeIdSchema = z.object({

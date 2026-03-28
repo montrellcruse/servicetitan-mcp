@@ -18,6 +18,8 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
     maxResponseChars: 100000,
     enabledDomains: null,
     logLevel: "error",
+    timezone: "UTC",
+    corsOrigin: "",
     ...overrides,
   };
 }
@@ -96,7 +98,7 @@ describe("safety confirmation wrapper", () => {
     expect(handler).toHaveBeenCalledWith({ id: 55 });
   });
 
-  it("write tools require confirm=true when ST_CONFIRM_WRITES=true", async () => {
+  it("write tools require _confirmed=true when ST_CONFIRM_WRITES=true", async () => {
     const handler = vi.fn().mockResolvedValue({ content: [{ type: "text", text: "updated" }] });
     const { registry, server } = registryWithConfig({ confirmWrites: true });
 
@@ -109,10 +111,12 @@ describe("safety confirmation wrapper", () => {
     );
 
     const [, , wrapped] = server.tool.mock.calls[0] ?? [];
-    await wrapped({ id: 55 });
+    const blocked = await wrapped({ id: 55 });
+    expect(blocked.isError).toBe(true);
+    expect(blocked.content[0]?.text).toContain("Write confirmation required");
     expect(handler).not.toHaveBeenCalled();
 
-    await wrapped({ id: 55, confirm: true });
+    await wrapped({ id: 55, _confirmed: true });
     expect(handler).toHaveBeenCalledWith({ id: 55 });
   });
 

@@ -20,6 +20,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     enabledDomains: null,
     logLevel: "info",
     timezone: "UTC",
+    corsOrigin: "",
     ...overrides,
   };
 }
@@ -108,6 +109,22 @@ describe("ToolRegistry", () => {
     expect(tools).toHaveLength(2);
     expect(tools[0]?.name).toBe("crm_customers_list");
     expect(tools[1]?.name).toBe("crm_customers_get");
+  });
+
+  it("throws when attempting to register the same tool name twice", () => {
+    const { registry } = createRegistry({
+      config: { readonlyMode: false },
+    });
+
+    registry.register(createTool({ name: "crm_customers_get" }));
+
+    expect(() =>
+      registry.register(
+        createTool({
+          name: "crm_customers_get",
+          description: "Duplicate tool name",
+        }),
+      )).toThrow('Tool "crm_customers_get" is already registered');
   });
 
   it("always enables _system domain even when ST_DOMAINS is filtered", () => {
@@ -211,15 +228,15 @@ describe("ToolRegistry", () => {
     );
 
     const [, schema, wrappedHandler] = server.tool.mock.calls[0] ?? [];
-    expect((schema as Record<string, z.ZodTypeAny>).confirm).toBeDefined();
+    expect((schema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
 
     const preview = await wrappedHandler({ id: 42 });
-    const payload = JSON.parse(preview.content[0].text);
 
-    expect(payload.action).toBe("WRITE");
+    expect(preview.isError).toBe(true);
+    expect(preview.content[0]?.text).toContain("Write confirmation required");
     expect(handlerSpy).not.toHaveBeenCalled();
 
-    await wrappedHandler({ id: 42, confirm: true });
+    await wrappedHandler({ id: 42, _confirmed: true });
     expect(handlerSpy).toHaveBeenCalledTimes(1);
   });
 
@@ -243,12 +260,41 @@ describe("ToolRegistry", () => {
     );
 
     const [, schema, wrappedHandler] = server.tool.mock.calls[0] ?? [];
-    expect((schema as Record<string, z.ZodTypeAny>).confirm).toBeUndefined();
+    expect((schema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
 
     await wrappedHandler({ id: 42 });
 
     expect(handlerSpy).toHaveBeenCalledWith({ id: 42 });
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
+  });
+
+  it("registers write tools in readonly mode and blocks execution in middleware", async () => {
+    const handlerSpy = vi.fn().mockResolvedValue({
+      content: [{ type: "text", text: "updated" }],
+    });
+    const { registry, server, auditLogger } = createRegistry({
+      config: {
+        readonlyMode: true,
+      },
+    });
+
+    registry.register(
+      createTool({
+        name: "crm_customers_update",
+        operation: "write",
+        handler: handlerSpy,
+      }),
+    );
+
+    expect(server.tool).toHaveBeenCalledTimes(1);
+
+    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const result = await wrappedHandler({ id: 42 });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(handlerSpy).not.toHaveBeenCalled();
+    expect(auditLogger.log).not.toHaveBeenCalled();
   });
 
   it("does not audit read operations", async () => {

@@ -11,24 +11,10 @@ const contactMethodPathSchema = z.object({
 });
 
 const contactMethodPayloadSchema = z.object({
-  id: z.string().uuid().optional().describe("Contact method ID"),
-  contactId: z.string().uuid().optional().describe("Contact ID"),
   referenceId: z.string().optional().describe("External reference ID"),
   type: z.string().optional().describe("Contact method type"),
   value: z.string().optional().describe("Contact method value"),
   memo: z.string().optional().describe("Contact method memo"),
-  createdOn: z
-    .string()
-    .datetime()
-    .optional()
-    .describe("Contact method created timestamp"),
-  createdBy: z.number().int().optional().describe("Creator user ID"),
-  modifiedOn: z
-    .string()
-    .datetime()
-    .optional()
-    .describe("Contact method modified timestamp"),
-  modifiedBy: z.number().int().optional().describe("Modifier user ID"),
 });
 
 const createContactMethodSchema = z.object({

@@ -41,7 +41,6 @@ const phoneSettingsSchema = z.object({
 });
 
 const customerContactSchema = z.object({
-  id: z.number().int().optional().describe("Contact ID"),
   type: z.string().optional().describe("Contact type"),
   value: z.string().optional().describe("Contact value"),
   memo: z.string().optional().describe("Contact memo"),
@@ -50,8 +49,6 @@ const customerContactSchema = z.object({
 
 const customerLocationSchema = z.object({
   taxZoneId: z.number().int().optional().describe("Tax zone ID"),
-  id: z.number().int().optional().describe("Location ID"),
-  customerId: z.number().int().optional().describe("Customer ID"),
   active: z.boolean().optional().describe("Active flag"),
   name: z.string().optional().describe("Location name"),
   address: customerAddressSchema.optional().describe("Location address"),
@@ -91,7 +88,6 @@ const customerUpdatePayloadSchema = z.object({
   tagTypeIds: z.array(z.number().int()).optional().describe("Tag type IDs"),
   doNotMail: z.boolean().optional().describe("Do not mail flag"),
   doNotService: z.boolean().optional().describe("Do not service flag"),
-  mergedToId: z.number().int().optional().describe("Merged-to customer ID"),
   externalData: z.array(externalDataSchema).optional().describe("External data entries"),
 });
 
@@ -390,27 +386,6 @@ export function registerCustomerTools(
   });
 
   registry.register({
-    name: "crm_customers_delete_note",
-    domain: "crm",
-    operation: "delete",
-    description: "Delete a customer note (legacy naming)",
-    schema: customerNoteIdSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof customerNoteIdSchema>;
-
-      try {
-        await client.delete(`/tenant/{tenant}/customers/${input.id}/notes/${input.noteId}`);
-        return toolResult({
-          success: true,
-          message: "Customer note deleted successfully",
-        });
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
     name: "crm_customers_contacts_list",
     domain: "crm",
     operation: "read",
@@ -545,27 +520,6 @@ export function registerCustomerTools(
     domain: "crm",
     operation: "delete",
     description: "Delete a tag assignment from a customer",
-    schema: customerTagSchema.shape,
-    handler: async (params) => {
-      const input = params as z.infer<typeof customerTagSchema>;
-
-      try {
-        await client.delete(`/tenant/{tenant}/customers/${input.id}/tags/${input.tagTypeId}`);
-        return toolResult({
-          success: true,
-          message: "Customer tag deleted successfully",
-        });
-      } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
-      }
-    },
-  });
-
-  registry.register({
-    name: "crm_customers_delete_tag",
-    domain: "crm",
-    operation: "delete",
-    description: "Delete a tag assignment from a customer (legacy naming)",
     schema: customerTagSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerTagSchema>;

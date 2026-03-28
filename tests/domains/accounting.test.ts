@@ -36,6 +36,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     enabledDomains: null,
     logLevel: "error",
     timezone: "UTC",
+    corsOrigin: "",
     ...overrides,
   };
 }
@@ -187,8 +188,7 @@ describe("accounting domain", () => {
     const updatedInvoice = { id: 55, total: 1200, status: "Exported", memo: "Q1 service" };
     patchMock.mockResolvedValue(updatedInvoice);
 
-    // confirm=true because it's a write operation and confirmWrites=false in config,
-    // but the registry wraps writes — no confirm needed when confirmWrites=false
+    // confirmWrites=false in config, so the middleware allows the write immediately.
     const result = await handler({ id: 55, payload: { memo: "Q1 service", total: 1200 } });
     const payload = parsePayload(result);
 
@@ -237,10 +237,19 @@ describe("accounting domain", () => {
   // ── accounting_invoices_list: readonly mode ──
 
   it("accounting_invoices_list is available in readonly mode", async () => {
-    const { handlers } = createContext({ readonlyMode: true });
-    // In readonly mode only read-operation tools register; list is a read op
+    const { handlers, patchMock } = createContext({ readonlyMode: true });
+    // Read tools stay available in readonly mode.
     expect(handlers.has("accounting_invoices_list")).toBe(true);
-    // Write-operation tools should not be registered
-    expect(handlers.has("accounting_invoices_update")).toBe(false);
+    // Write-operation tools stay registered and are blocked by middleware.
+    expect(handlers.has("accounting_invoices_update")).toBe(true);
+
+    const result = await getHandler(handlers, "accounting_invoices_update")({
+      id: 55,
+      payload: { memo: "should not patch" },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("Write operations are disabled in readonly mode");
+    expect(patchMock).not.toHaveBeenCalled();
   });
 });

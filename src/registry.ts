@@ -7,7 +7,7 @@ import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
-import { toolResult } from "./utils.js";
+import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
 
@@ -18,6 +18,7 @@ export interface ToolDefinition {
   schema: Record<string, ZodType>;
   handler: (params: unknown) => Promise<ToolResponse>;
   description?: string;
+  cacheTtlMs?: number;
 }
 
 export type DomainLoader = (
@@ -32,6 +33,7 @@ export class ToolRegistry {
   private domainFiltered = 0;
   private readonly byDomain: Record<string, number> = {};
   private readonly registeredTools: ToolDefinition[] = [];
+  private readonly registeredToolNames = new Set<string>();
   private client: ServiceTitanClient | null = null;
 
   constructor(
@@ -70,7 +72,7 @@ export class ToolRegistry {
       return;
     }
 
-    if (this.config.readonlyMode && tool.operation !== "read") {
+    if (this.config.readonlyMode && tool.operation === "delete") {
       this.skipped += 1;
       this.readonlyFiltered += 1;
       this.logger.info("Skipped tool in readonly mode", {
@@ -86,10 +88,15 @@ export class ToolRegistry {
       domain,
     });
 
+    if (this.registeredToolNames.has(wrappedTool.name)) {
+      throw new Error(`Tool "${wrappedTool.name}" is already registered`);
+    }
+
     this.server.tool(wrappedTool.name, wrappedTool.schema, wrappedTool.handler);
 
     this.registered += 1;
     this.byDomain[domain] = (this.byDomain[domain] ?? 0) + 1;
+    this.registeredToolNames.add(wrappedTool.name);
     this.registeredTools.push(wrappedTool);
   }
 
@@ -138,12 +145,11 @@ export class ToolRegistry {
   }
 
   private wrapTool(tool: ToolDefinition): ToolDefinition {
-    const requiresConfirmation =
-      tool.operation === "delete" ||
-      (tool.operation === "write" && this.config.confirmWrites);
+    const isWrite = tool.operation === "write";
+    const requiresDeleteConfirmation = tool.operation === "delete";
     const shouldAudit = tool.operation === "write" || tool.operation === "delete";
 
-    const schema: Record<string, ZodType> = requiresConfirmation
+    const schema: Record<string, ZodType> = requiresDeleteConfirmation
       ? {
           ...tool.schema,
           confirm:
@@ -154,18 +160,40 @@ export class ToolRegistry {
               .default(false)
               .describe("Set to true to confirm this potentially destructive action"),
         }
-      : tool.schema;
+      : isWrite
+        ? {
+            ...tool.schema,
+            _confirmed:
+              tool.schema._confirmed ??
+              z
+                .boolean()
+                .optional()
+                .describe("Set to true to confirm this write operation"),
+          }
+        : tool.schema;
 
     const originalHandler = tool.handler;
 
     const wrappedHandler = async (params: unknown): Promise<ToolResponse> => {
       const paramRecord = this.toRecord(params);
-      const shouldExecute = !requiresConfirmation || paramRecord.confirm === true;
-      const executionParams = requiresConfirmation
-        ? this.withoutConfirm(paramRecord)
-        : paramRecord;
+      const shouldExecuteDelete = !requiresDeleteConfirmation || paramRecord.confirm === true;
+      const executionParams = isWrite
+        ? this.withoutWriteConfirmation(paramRecord)
+        : requiresDeleteConfirmation
+          ? this.withoutConfirm(paramRecord)
+          : paramRecord;
 
-      if (!shouldExecute) {
+      if (isWrite && this.config.readonlyMode) {
+        return toolError("Write operations are disabled in readonly mode");
+      }
+
+      if (isWrite && this.config.confirmWrites && paramRecord._confirmed !== true) {
+        return toolError(
+          "Write confirmation required. Re-call with _confirmed: true to proceed.",
+        );
+      }
+
+      if (!shouldExecuteDelete) {
         return toolResult(this.buildConfirmationPreview(tool, paramRecord));
       }
 
@@ -213,6 +241,11 @@ export class ToolRegistry {
 
   private withoutConfirm(params: Record<string, unknown>): Record<string, unknown> {
     const { confirm: _confirm, ...rest } = params;
+    return rest;
+  }
+
+  private withoutWriteConfirmation(params: Record<string, unknown>): Record<string, unknown> {
+    const { _confirmed: __confirmed, confirm: _confirm, ...rest } = params;
     return rest;
   }
 

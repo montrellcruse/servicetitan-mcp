@@ -94,10 +94,6 @@ const taskCreateSchema = z.object({
   customerName: z.string().optional().describe("Customer name"),
   jobNumber: z.string().optional().describe("Job number"),
   refundIssued: z.number().optional().describe("Refund issued amount"),
-  descriptionModifiedOn: z.string().optional().describe("Description modified timestamp"),
-  descriptionModifiedBy: z.string().optional().describe("User who modified description"),
-  createdOn: z.string().optional().describe("Task created timestamp"),
-  modifiedOn: z.string().optional().describe("Task modified timestamp"),
 });
 
 const taskCreateSubtaskSchema = z.object({
