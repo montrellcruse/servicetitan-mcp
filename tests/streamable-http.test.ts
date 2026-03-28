@@ -24,8 +24,14 @@ const TEST_API_KEY = "test-secret-key-abc123";
 const MOCK_TOOL_COUNT = 505;
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
+type MockTransportInstance = {
+  sessionId: string | undefined;
+  onclose: (() => void) | undefined;
+  emitClose: () => void;
+};
 
 let capturedHandler: Handler | undefined;
+const transportInstances: MockTransportInstance[] = [];
 
 class MockResponse {
   statusCode = 200;
@@ -128,6 +134,8 @@ async function dispatch(options: {
 
 beforeAll(async () => {
   vi.resetModules();
+  capturedHandler = undefined;
+  transportInstances.length = 0;
   vi.stubEnv("ST_MCP_API_KEY", TEST_API_KEY);
   vi.stubEnv("ST_CLIENT_ID", "test-client-id");
   vi.stubEnv("ST_CLIENT_SECRET", "test-client-secret");
@@ -170,7 +178,8 @@ beforeAll(async () => {
   }));
 
   vi.doMock("@modelcontextprotocol/sdk/server/streamableHttp.js", () => ({
-    StreamableHTTPServerTransport: class MockStreamableHTTPServerTransport {
+    StreamableHTTPServerTransport: class MockStreamableHTTPServerTransport
+      implements MockTransportInstance {
       sessionId: string | undefined;
       onclose: (() => void) | undefined;
 
@@ -179,7 +188,9 @@ beforeAll(async () => {
           sessionIdGenerator?: () => string;
           onsessioninitialized?: (sessionId: string) => void;
         } = {},
-      ) {}
+      ) {
+        transportInstances.push(this);
+      }
 
       async handleRequest(
         _req: IncomingMessage,
@@ -215,9 +226,11 @@ beforeAll(async () => {
         res.end(JSON.stringify({ ok: true }));
       }
 
-      async close(): Promise<void> {
+      emitClose(): void {
         this.onclose?.();
       }
+
+      async close(): Promise<void> {}
     },
   }));
 
@@ -363,6 +376,59 @@ describe("Streamable HTTP transport HTTP handler", () => {
       body: JSON.stringify({
         jsonrpc: "2.0",
         id: 2,
+        method: "notifications/initialized",
+        params: {},
+      }),
+    });
+
+    expect(res.statusCode).toBe(404);
+    expect(res.json<{ error: string }>().error).toContain("Session not found");
+  });
+
+  it("cleans up the session when the transport disconnects", async () => {
+    const initializeRes = await dispatch({
+      method: "POST",
+      url: "/mcp",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+        "mcp-protocol-version": LATEST_PROTOCOL_VERSION,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 3,
+        method: "initialize",
+        params: {
+          protocolVersion: LATEST_PROTOCOL_VERSION,
+          capabilities: {},
+          clientInfo: {
+            name: "vitest",
+            version: "1.0.0",
+          },
+        },
+      }),
+    });
+
+    const sessionId = initializeRes.headers["mcp-session-id"];
+    expect(typeof sessionId).toBe("string");
+
+    const transport = transportInstances.find((instance) => instance.sessionId === sessionId);
+    expect(transport).toBeDefined();
+
+    transport!.emitClose();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const res = await dispatch({
+      method: "POST",
+      url: "/mcp",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
+        "mcp-session-id": sessionId as string,
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 4,
         method: "notifications/initialized",
         params: {},
       }),

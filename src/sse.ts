@@ -233,9 +233,19 @@ async function main(): Promise<void> {
       const transport = new SSEServerTransport("/messages", res);
       transports.set(transport.sessionId, transport);
 
+      const closeSseServer = (): void => {
+        void server.close().catch((err) => {
+          logger.warn("Failed to close SSE server on disconnect", {
+            sessionId: transport.sessionId,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        });
+      };
+
       transport.onclose = () => {
         transports.delete(transport.sessionId);
         logger.info("SSE client disconnected", { sessionId: transport.sessionId });
+        closeSseServer();
       };
 
       logger.info("SSE client connected", { sessionId: transport.sessionId, requestId });
@@ -249,6 +259,7 @@ async function main(): Promise<void> {
 
       res.on("close", () => {
         clearInterval(keepAlive);
+        closeSseServer();
       });
 
       await server.connect(transport);

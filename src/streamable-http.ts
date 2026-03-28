@@ -405,8 +405,9 @@ async function main(): Promise<void> {
 
         transport.onclose = () => {
           const closedSessionId = transport.sessionId;
-          if (closedSessionId && sessions.delete(closedSessionId)) {
-            logger.info("Session closed", { sessionId: closedSessionId });
+          const session = closedSessionId ? sessions.get(closedSessionId) : undefined;
+          if (closedSessionId && session) {
+            void closeSession(closedSessionId, session, "client-disconnect");
           }
         };
 

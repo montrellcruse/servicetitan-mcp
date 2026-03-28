@@ -3,10 +3,9 @@
  *
  * The SSE entrypoint (src/sse.ts) is structured as a self-contained script
  * (calls process.exit when missing API key, owns its own main()). We therefore
- * test the HTTP-layer behaviour by extracting the handler logic here and wiring
- * it up to a real node:http server in each test, making actual HTTP requests
- * so we exercise the full request/response cycle without importing the module
- * entry-point directly.
+ * test the HTTP-layer behaviour by extracting the handler logic here and
+ * dispatching request/response doubles directly, which keeps the suite
+ * hermetic and avoids binding a real socket in restricted environments.
  *
  * Tested behaviour:
  *  - /health returns 200 without auth
@@ -27,11 +26,10 @@
  *  - CORS origin is configurable
  */
 
-import { timingSafeEqual } from "node:crypto";
-import { randomUUID } from "node:crypto";
-import { type IncomingMessage, type ServerResponse, createServer } from "node:http";
-import { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { randomUUID, timingSafeEqual } from "node:crypto";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+import { beforeAll, describe, expect, it } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Re-implement the minimal HTTP handler logic from sse.ts so we can test it
@@ -117,17 +115,13 @@ function buildHandler(apiKey: string, corsOrigin = "*"): FakeHandler {
 
     // ── SSE endpoint ──
     if (url.pathname === "/sse" && req.method === "GET") {
-      // In production this upgrades to SSE; here we just verify the headers
+      // In production this upgrades to SSE; here we just verify the headers.
       res.writeHead(200, {
         "Content-Type": "text/event-stream",
         "Cache-Control": "no-cache",
         Connection: "keep-alive",
       });
-      // Flush headers to the client by writing an empty chunk. Without this,
-      // the HTTP client's `response` event won't fire until the socket is closed.
       res.write("");
-      // Leave the response open to simulate a live SSE stream; the test closes
-      // the socket from the client side.
       return;
     }
 
@@ -166,7 +160,7 @@ function buildHandler(apiKey: string, corsOrigin = "*"): FakeHandler {
         return;
       }
 
-      // In production this calls transport.handlePostMessage; here we just ack
+      // In production this calls transport.handlePostMessage; here we just ack.
       sendJson(res, 200, { ok: true });
       return;
     }
@@ -176,58 +170,101 @@ function buildHandler(apiKey: string, corsOrigin = "*"): FakeHandler {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP helper utilities
+// Request/response helper utilities
 // ---------------------------------------------------------------------------
 
-interface HttpResponse {
-  status: number;
-  headers: Record<string, string | string[] | undefined>;
-  body: string;
-  json<T = unknown>(): T;
+class MockResponse {
+  statusCode = 200;
+  headers: Record<string, string | string[] | number | undefined> = {};
+  body = "";
+
+  get status(): number {
+    return this.statusCode;
+  }
+
+  setHeader(name: string, value: string | string[] | number): void {
+    this.headers[name.toLowerCase()] = value;
+  }
+
+  writeHead(
+    statusCode: number,
+    headers?: Record<string, string | string[] | number>,
+  ): MockResponse {
+    this.statusCode = statusCode;
+    for (const [name, value] of Object.entries(headers ?? {})) {
+      this.setHeader(name, value);
+    }
+    return this;
+  }
+
+  write(chunk?: string | Buffer): boolean {
+    if (chunk !== undefined) {
+      this.body += chunk.toString();
+    }
+    return true;
+  }
+
+  end(chunk?: string | Buffer): MockResponse {
+    if (chunk !== undefined) {
+      this.body += chunk.toString();
+    }
+    return this;
+  }
+
+  json<T = unknown>(): T {
+    return JSON.parse(this.body || "{}") as T;
+  }
 }
 
-function httpRequest(
-  url: string,
+function createRequest(options: {
+  method?: string;
+  url: string;
+  headers?: Record<string, string>;
+  body?: string | Buffer;
+}): IncomingMessage {
+  const {
+    method = "GET",
+    url,
+    headers = {},
+    body,
+  } = options;
+
+  const normalizedHeaders = Object.fromEntries(
+    Object.entries({
+      host: "localhost",
+      ...headers,
+    }).map(([name, value]) => [name.toLowerCase(), value]),
+  );
+
+  const chunks = body === undefined
+    ? []
+    : [Buffer.isBuffer(body) ? body : Buffer.from(body)];
+
+  return {
+    method,
+    url,
+    headers: normalizedHeaders,
+    async *[Symbol.asyncIterator](): AsyncIterableIterator<Buffer> {
+      for (const chunk of chunks) {
+        yield chunk;
+      }
+    },
+  } as IncomingMessage;
+}
+
+async function dispatch(
+  handler: FakeHandler,
   options: {
     method?: string;
+    url: string;
     headers?: Record<string, string>;
     body?: string | Buffer;
-  } = {},
-): Promise<HttpResponse> {
-  const { method = "GET", headers = {}, body } = options;
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const req = require("node:http").request(
-      {
-        hostname: parsed.hostname,
-        port: Number(parsed.port),
-        path: parsed.pathname + parsed.search,
-        method,
-        headers,
-      },
-      (res: IncomingMessage) => {
-        const chunks: Buffer[] = [];
-        res.on("data", (chunk: Buffer) => chunks.push(chunk));
-        res.on("end", () => {
-          const bodyText = Buffer.concat(chunks).toString();
-          resolve({
-            status: res.statusCode ?? 0,
-            headers: res.headers as Record<string, string | string[] | undefined>,
-            body: bodyText,
-            json<T>() {
-              return JSON.parse(bodyText) as T;
-            },
-          });
-        });
-        res.on("error", reject);
-      },
-    );
-    req.on("error", reject);
-    if (body !== undefined) {
-      req.write(body);
-    }
-    req.end();
-  });
+  },
+): Promise<MockResponse> {
+  const req = createRequest(options);
+  const res = new MockResponse();
+  await handler(req, res as unknown as ServerResponse);
+  return res;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,51 +272,21 @@ function httpRequest(
 // ---------------------------------------------------------------------------
 
 describe("SSE transport HTTP handler", () => {
-  let baseUrl: string;
-  let server: ReturnType<typeof createServer>;
+  let handler: FakeHandler;
 
-  beforeAll(
-    () =>
-      new Promise<void>((resolve) => {
-        const handler = buildHandler(TEST_API_KEY);
-        server = createServer((req, res) => {
-          handler(req, res).catch((err: unknown) => {
-            res.writeHead(500);
-            res.end(String(err));
-          });
-        });
-        server.listen(0, "127.0.0.1", () => {
-          const { port } = server.address() as AddressInfo;
-          baseUrl = `http://127.0.0.1:${port}`;
-          resolve();
-        });
-      }),
-  );
-
-  afterAll(
-    () =>
-      new Promise<void>((resolve) => {
-        // closeAllConnections() was added in Node 18.2 — use if available
-        if (typeof (server as any).closeAllConnections === "function") {
-          (server as any).closeAllConnections();
-        }
-        // Resolve regardless of close errors (e.g. already-destroyed sockets)
-        server.close(() => resolve());
-        // Safety: force resolve after 2 s to avoid hanging vitest
-        setTimeout(resolve, 2_000).unref?.();
-      }),
-    15_000,
-  );
+  beforeAll(() => {
+    handler = buildHandler(TEST_API_KEY);
+  });
 
   // ── Health ──
 
   it("GET /health returns 200 without any auth", async () => {
-    const res = await httpRequest(`${baseUrl}/health`);
+    const res = await dispatch(handler, { url: "/health" });
     expect(res.status).toBe(200);
   });
 
   it("GET /health returns expected body shape", async () => {
-    const res = await httpRequest(`${baseUrl}/health`);
+    const res = await dispatch(handler, { url: "/health" });
     const body = res.json<Record<string, unknown>>();
     expect(body).toMatchObject({ status: "ok" });
     expect(typeof body.tools).toBe("number");
@@ -289,7 +296,7 @@ describe("SSE transport HTTP handler", () => {
   // ── CORS ──
 
   it("OPTIONS preflight returns 204 with CORS headers", async () => {
-    const res = await httpRequest(`${baseUrl}/health`, { method: "OPTIONS" });
+    const res = await dispatch(handler, { method: "OPTIONS", url: "/health" });
     expect(res.status).toBe(204);
     expect(res.headers["access-control-allow-origin"]).toBe("*");
     expect(res.headers["access-control-allow-methods"]).toContain("GET");
@@ -299,7 +306,7 @@ describe("SSE transport HTTP handler", () => {
   // ── Auth: 401 cases ──
 
   it("GET /sse returns 401 with no auth headers", async () => {
-    const res = await httpRequest(`${baseUrl}/sse`);
+    const res = await dispatch(handler, { url: "/sse" });
     expect(res.status).toBe(401);
     const body = res.json<{ error: string; requestId: string }>();
     expect(body.error).toBe("Unauthorized");
@@ -310,120 +317,66 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("GET /sse returns 401 with wrong x-api-key header", async () => {
-    const res = await httpRequest(`${baseUrl}/sse`, {
+    const res = await dispatch(handler, {
+      url: "/sse",
       headers: { "x-api-key": "wrong-key" },
     });
     expect(res.status).toBe(401);
   });
 
   it("GET /sse returns 401 with wrong Bearer token", async () => {
-    const res = await httpRequest(`${baseUrl}/sse`, {
+    const res = await dispatch(handler, {
+      url: "/sse",
       headers: { authorization: "Bearer wrong-token" },
     });
     expect(res.status).toBe(401);
   });
 
   it("POST /messages returns 401 with no auth", async () => {
-    const res = await httpRequest(
-      `${baseUrl}/messages?sessionId=valid-session-id`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
-      },
-    );
+    const res = await dispatch(handler, {
+      method: "POST",
+      url: "/messages?sessionId=valid-session-id",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+    });
     expect(res.status).toBe(401);
   });
 
   // ── Auth: accepted cases ──
 
   it("GET /sse returns SSE headers with valid x-api-key header", async () => {
-    // The handler leaves the SSE response open (streaming). We check headers
-    // as soon as the response event fires, then immediately socket-destroy to
-    // avoid hanging the test. ECONNRESET on the client side is expected.
-    await new Promise<void>((resolve, reject) => {
-      const http = require("node:http") as typeof import("node:http");
-      const parsed = new URL(`${baseUrl}/sse`);
-      let resolved = false;
-      const done = (err?: Error) => {
-        if (resolved) return;
-        resolved = true;
-        if (err && (err as NodeJS.ErrnoException).code !== "ECONNRESET") {
-          reject(err);
-        } else {
-          resolve();
-        }
-      };
-      const req = http.request(
-        {
-          hostname: parsed.hostname,
-          port: Number(parsed.port),
-          path: "/sse",
-          method: "GET",
-          headers: { "x-api-key": TEST_API_KEY },
-        },
-        (res) => {
-          // Headers are available immediately
-          expect(res.statusCode).toBe(200);
-          expect(res.headers["content-type"]).toContain("text/event-stream");
-          expect(res.headers.connection).toContain("keep-alive");
-          // Destroy socket to unblock afterAll server.close()
-          res.socket?.destroy();
-          done();
-        },
-      );
-      req.on("error", done);
-      req.end();
+    const res = await dispatch(handler, {
+      url: "/sse",
+      headers: { "x-api-key": TEST_API_KEY },
     });
-  }, 10_000);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/event-stream");
+    expect(res.headers.connection).toContain("keep-alive");
+  });
 
   it("GET /sse returns SSE headers with valid Bearer token", async () => {
-    await new Promise<void>((resolve, reject) => {
-      const http = require("node:http") as typeof import("node:http");
-      let resolved = false;
-      const done = (err?: Error) => {
-        if (resolved) return;
-        resolved = true;
-        if (err && (err as NodeJS.ErrnoException).code !== "ECONNRESET") {
-          reject(err);
-        } else {
-          resolve();
-        }
-      };
-      const req = http.request(
-        {
-          hostname: "127.0.0.1",
-          port: Number((server.address() as AddressInfo).port),
-          path: "/sse",
-          method: "GET",
-          headers: { authorization: `Bearer ${TEST_API_KEY}` },
-        },
-        (res) => {
-          expect(res.statusCode).toBe(200);
-          expect(res.headers["content-type"]).toContain("text/event-stream");
-          res.socket?.destroy();
-          done();
-        },
-      );
-      req.on("error", done);
-      req.end();
+    const res = await dispatch(handler, {
+      url: "/sse",
+      headers: { authorization: `Bearer ${TEST_API_KEY}` },
     });
-  }, 10_000);
+
+    expect(res.status).toBe(200);
+    expect(res.headers["content-type"]).toContain("text/event-stream");
+  });
 
   // ── /messages edge cases ──
 
   it("POST /messages returns 400 for malformed JSON body", async () => {
-    const res = await httpRequest(
-      `${baseUrl}/messages?sessionId=valid-session-id`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": TEST_API_KEY,
-        },
-        body: "this is not json {{{{",
+    const res = await dispatch(handler, {
+      method: "POST",
+      url: "/messages?sessionId=valid-session-id",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
       },
-    );
+      body: "this is not json {{{{",
+    });
     expect(res.status).toBe(400);
     const body = res.json<{ error: string; requestId: string }>();
     expect(body.error).toBe("Invalid JSON body");
@@ -431,19 +384,16 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("POST /messages returns 413 when body exceeds 1 MB", async () => {
-    // 1 MB + 1 byte
     const bigBody = Buffer.alloc(1_048_577, "x");
-    const res = await httpRequest(
-      `${baseUrl}/messages?sessionId=valid-session-id`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/octet-stream",
-          "x-api-key": TEST_API_KEY,
-        },
-        body: bigBody,
+    const res = await dispatch(handler, {
+      method: "POST",
+      url: "/messages?sessionId=valid-session-id",
+      headers: {
+        "content-type": "application/octet-stream",
+        "x-api-key": TEST_API_KEY,
       },
-    );
+      body: bigBody,
+    });
     expect(res.status).toBe(413);
     const body = res.json<{ error: string; requestId: string }>();
     expect(body.error).toBe("Payload too large");
@@ -451,8 +401,9 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("POST /messages returns 400 when sessionId query param is missing", async () => {
-    const res = await httpRequest(`${baseUrl}/messages`, {
+    const res = await dispatch(handler, {
       method: "POST",
+      url: "/messages",
       headers: {
         "content-type": "application/json",
         "x-api-key": TEST_API_KEY,
@@ -464,40 +415,37 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("POST /messages returns 404 for unknown sessionId", async () => {
-    const res = await httpRequest(
-      `${baseUrl}/messages?sessionId=no-such-session`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": TEST_API_KEY,
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+    const res = await dispatch(handler, {
+      method: "POST",
+      url: "/messages?sessionId=no-such-session",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
       },
-    );
+      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+    });
     expect(res.status).toBe(404);
     expect(res.json<{ error: string }>().error).toBe("Unknown session");
   });
 
   it("POST /messages returns 200 for valid request with known sessionId", async () => {
-    const res = await httpRequest(
-      `${baseUrl}/messages?sessionId=valid-session-id`,
-      {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          "x-api-key": TEST_API_KEY,
-        },
-        body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+    const res = await dispatch(handler, {
+      method: "POST",
+      url: "/messages?sessionId=valid-session-id",
+      headers: {
+        "content-type": "application/json",
+        "x-api-key": TEST_API_KEY,
       },
-    );
+      body: JSON.stringify({ jsonrpc: "2.0", method: "ping", id: 1 }),
+    });
     expect(res.status).toBe(200);
   });
 
   // ── 404 fallthrough ──
 
   it("unknown paths return 404", async () => {
-    const res = await httpRequest(`${baseUrl}/unknown-path`, {
+    const res = await dispatch(handler, {
+      url: "/unknown-path",
       headers: { "x-api-key": TEST_API_KEY },
     });
     expect(res.status).toBe(404);
@@ -506,7 +454,7 @@ describe("SSE transport HTTP handler", () => {
   // ── requestId in error responses ──
 
   it("401 response includes a requestId UUID", async () => {
-    const res = await httpRequest(`${baseUrl}/sse`);
+    const res = await dispatch(handler, { url: "/sse" });
     expect(res.status).toBe(401);
     const body = res.json<{ error: string; requestId: string }>();
     expect(body.requestId).toMatch(
@@ -516,8 +464,8 @@ describe("SSE transport HTTP handler", () => {
 
   it("each request gets a unique requestId", async () => {
     const [r1, r2] = await Promise.all([
-      httpRequest(`${baseUrl}/sse`),
-      httpRequest(`${baseUrl}/sse`),
+      dispatch(handler, { url: "/sse" }),
+      dispatch(handler, { url: "/sse" }),
     ]);
     const id1 = r1.json<{ requestId: string }>().requestId;
     const id2 = r2.json<{ requestId: string }>().requestId;
@@ -528,47 +476,20 @@ describe("SSE transport HTTP handler", () => {
 // ── CORS origin configuration ──
 
 describe("SSE transport CORS origin configuration", () => {
-  let baseUrl: string;
-  let server: ReturnType<typeof createServer>;
+  let handler: FakeHandler;
 
-  beforeAll(
-    () =>
-      new Promise<void>((resolve) => {
-        const handler = buildHandler(TEST_API_KEY, "https://app.example.com");
-        server = createServer((req, res) => {
-          handler(req, res).catch((err: unknown) => {
-            res.writeHead(500);
-            res.end(String(err));
-          });
-        });
-        server.listen(0, "127.0.0.1", () => {
-          const { port } = server.address() as AddressInfo;
-          baseUrl = `http://127.0.0.1:${port}`;
-          resolve();
-        });
-      }),
-  );
-
-  afterAll(
-    () =>
-      new Promise<void>((resolve) => {
-        if (typeof (server as any).closeAllConnections === "function") {
-          (server as any).closeAllConnections();
-        }
-        server.close(() => resolve());
-        setTimeout(resolve, 2_000).unref?.();
-      }),
-    15_000,
-  );
+  beforeAll(() => {
+    handler = buildHandler(TEST_API_KEY, "https://app.example.com");
+  });
 
   it("OPTIONS preflight returns configured CORS origin", async () => {
-    const res = await httpRequest(`${baseUrl}/health`, { method: "OPTIONS" });
+    const res = await dispatch(handler, { method: "OPTIONS", url: "/health" });
     expect(res.status).toBe(204);
     expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
   });
 
   it("non-preflight requests include configured CORS origin header", async () => {
-    const res = await httpRequest(`${baseUrl}/health`);
+    const res = await dispatch(handler, { url: "/health" });
     expect(res.status).toBe(200);
     expect(res.headers["access-control-allow-origin"]).toBe("https://app.example.com");
   });
