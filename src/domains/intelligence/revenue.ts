@@ -5,6 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
+  fetchAllPagesParallel,
   fetchWithWarning,
   getErrorMessage,
   isRecord,
@@ -317,38 +318,57 @@ export function registerIntelligenceRevenueTool(
           });
         }
 
-        const reportResponse = await fetchWithWarning(
-          warnings,
-          "Revenue report (Report 175)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
-              { parameters: reportParams },
-            ),
-          null,
-        );
+        // Compute date range for payments (needed alongside reports)
+        const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
 
-        const productivityReportResponse = await fetchWithWarning(
-          warnings,
-          "Productivity report (Report 177)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
-              { parameters: reportParams },
+        // Parallelize ALL fetches — 3 reports + payments are independent
+        const [reportResponse, productivityReportResponse, salesReportResponse, payments] =
+          await Promise.all([
+            fetchWithWarning(
+              warnings,
+              "Revenue report (Report 175)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+                  { parameters: reportParams },
+                ),
+              null,
             ),
-          null,
-        );
-
-        const salesReportResponse = await fetchWithWarning(
-          warnings,
-          "Sales report (Report 179)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
-              { parameters: reportParams },
+            fetchWithWarning(
+              warnings,
+              "Productivity report (Report 177)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
+                  { parameters: reportParams },
+                ),
+              null,
             ),
-          null,
-        );
+            fetchWithWarning(
+              warnings,
+              "Sales report (Report 179)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
+                  { parameters: reportParams },
+                ),
+              null,
+            ),
+            fetchWithWarning(
+              warnings,
+              "Payment data",
+              () =>
+                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/payments", {
+                  paidOnAfter: startIso,
+                  paidOnBefore: endIso,
+                  businessUnitIds:
+                    effectiveBuId === undefined
+                      ? undefined
+                      : String(effectiveBuId),
+                }),
+              [],
+            ),
+          ]);
 
         const revenueRows = reportResponse ? parseReportRows(reportResponse) : [];
         const productivityRows = productivityReportResponse
@@ -370,24 +390,6 @@ export function registerIntelligenceRevenueTool(
         );
         const productivityByBU = byBU.filter(hasProductivity);
         const salesByBU = byBU.filter(hasSales);
-
-        // ── Payments for collections data ──
-        const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
-
-        const payments = await fetchWithWarning(
-          warnings,
-          "Payment data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/payments", {
-              paidOnAfter: startIso,
-              paidOnBefore: endIso,
-              businessUnitIds:
-                effectiveBuId === undefined
-                  ? undefined
-                  : String(effectiveBuId),
-            }),
-          [],
-        );
 
         const totalCollected = round(sumBy(payments, paymentAmount), 2);
         const outstanding = round(totalRevenue - totalCollected, 2);

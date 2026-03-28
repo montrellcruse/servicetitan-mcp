@@ -594,81 +594,86 @@ export function registerIntelligenceTechnicianPerformanceTool(
           );
         }
 
-        const revenueReport = await fetchWithWarning(
-          warnings,
-          "Technician revenue report (Report 168)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
-              { parameters: revenueParams },
-            ),
-          null,
-        );
-
-        const productivityReport = await fetchWithWarning(
-          warnings,
-          "Technician productivity report (Report 170)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
-              { parameters: productivityParams },
-            ),
-          null,
-        );
-
-        const leadGenerationReport = await fetchWithWarning(
-          warnings,
-          "Technician lead generation report (Report 169)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data",
-              { parameters: leadGenerationParams },
-            ),
-          null,
-        );
-
-        const membershipsReport = await fetchWithWarning(
-          warnings,
-          "Technician memberships report (Report 171)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
-              { parameters: membershipsParams },
-            ),
-          null,
-        );
-
-        const salesFromTechLeadsReport = await fetchWithWarning(
-          warnings,
-          "Technician sales from tech leads report (Report 173)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
-              { parameters: salesFromTechLeadsParams },
-            ),
-          null,
-        );
-
-        const salesFromMarketingLeadsReport = await fetchWithWarning(
-          warnings,
-          "Technician sales from marketing leads report (Report 174)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
-              { parameters: salesFromMarketingLeadsParams },
-            ),
-          null,
-        );
-
-        const completedJobsReport = await fetchWithWarning(
-          warnings,
-          "Completed jobs detail report (Report 165)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/operations/reports/165/data", {
-              parameters: completedJobsParams,
-            }),
-          null,
-        );
+        // Parallelize all 7 report fetches — independent API calls
+        const [
+          revenueReport,
+          productivityReport,
+          leadGenerationReport,
+          membershipsReport,
+          salesFromTechLeadsReport,
+          salesFromMarketingLeadsReport,
+          completedJobsReport,
+        ] = await Promise.all([
+          fetchWithWarning(
+            warnings,
+            "Technician revenue report (Report 168)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
+                { parameters: revenueParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician productivity report (Report 170)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
+                { parameters: productivityParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician lead generation report (Report 169)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data",
+                { parameters: leadGenerationParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician memberships report (Report 171)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
+                { parameters: membershipsParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician sales from tech leads report (Report 173)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
+                { parameters: salesFromTechLeadsParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician sales from marketing leads report (Report 174)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
+                { parameters: salesFromMarketingLeadsParams },
+              ),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Completed jobs detail report (Report 165)",
+            () =>
+              client.post("/tenant/{tenant}/report-category/operations/reports/165/data", {
+                parameters: completedJobsParams,
+              }),
+            null,
+          ),
+        ]);
 
         let revenueRows = parseRevenueReport(revenueReport);
         let productivityRows = parseProductivityReport(productivityReport);

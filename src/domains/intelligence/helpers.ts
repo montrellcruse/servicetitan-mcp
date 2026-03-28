@@ -34,14 +34,30 @@ export async function fetchWithWarning<T>(
   }
 }
 
+export interface PagedResult<T> {
+  data: T[];
+  totalCount?: number;
+}
+
 export async function fetchAllPages<T>(
   client: ServiceTitanClient,
   path: string,
   params: Record<string, unknown>,
   maxPages: number = DEFAULT_MAX_PAGES,
 ): Promise<T[]> {
+  const result = await fetchAllPagesWithTotal<T>(client, path, params, maxPages);
+  return result.data;
+}
+
+export async function fetchAllPagesWithTotal<T>(
+  client: ServiceTitanClient,
+  path: string,
+  params: Record<string, unknown>,
+  maxPages: number = DEFAULT_MAX_PAGES,
+): Promise<PagedResult<T>> {
   const allData: T[] = [];
   let page = 1;
+  let totalCount: number | undefined;
 
   while (page <= maxPages) {
     const response = await client.get(
@@ -54,6 +70,11 @@ export async function fetchAllPages<T>(
       }),
     );
 
+    // Capture totalCount from the first page response
+    if (page === 1 && isRecord(response) && typeof response.totalCount === "number") {
+      totalCount = response.totalCount as number;
+    }
+
     const items = extractItems<T>(response);
     allData.push(...items);
 
@@ -65,7 +86,72 @@ export async function fetchAllPages<T>(
     page += 1;
   }
 
-  return allData;
+  return { data: allData, totalCount };
+}
+
+/**
+ * Fetch all pages in parallel by first probing page 1 for totalCount,
+ * then fetching remaining pages concurrently.
+ * Falls back to sequential if totalCount isn't available.
+ */
+export async function fetchAllPagesParallel<T>(
+  client: ServiceTitanClient,
+  path: string,
+  params: Record<string, unknown>,
+  maxPages: number = DEFAULT_MAX_PAGES,
+): Promise<T[]> {
+  // Fetch page 1 to get totalCount
+  const firstResponse = await client.get(
+    path,
+    buildParams({
+      ...params,
+      page: 1,
+      pageSize: DEFAULT_PAGE_SIZE,
+      includeTotal: true,
+    }),
+  );
+
+  const firstItems = extractItems<T>(firstResponse);
+  if (firstItems.length === 0) return [];
+
+  const hasMore = isRecord(firstResponse) && firstResponse.hasMore === true;
+  if (!hasMore) return firstItems;
+
+  // Calculate remaining pages
+  const totalCount = isRecord(firstResponse) && typeof firstResponse.totalCount === "number"
+    ? (firstResponse.totalCount as number)
+    : undefined;
+
+  let totalPages: number;
+  if (totalCount !== undefined) {
+    totalPages = Math.min(Math.ceil(totalCount / DEFAULT_PAGE_SIZE), maxPages);
+  } else {
+    // Fallback to sequential
+    return fetchAllPages<T>(client, path, params, maxPages);
+  }
+
+  if (totalPages <= 1) return firstItems;
+
+  // Fetch pages 2..N in parallel
+  const pagePromises: Promise<T[]>[] = [];
+  for (let page = 2; page <= totalPages; page++) {
+    pagePromises.push(
+      client
+        .get(
+          path,
+          buildParams({
+            ...params,
+            page,
+            pageSize: DEFAULT_PAGE_SIZE,
+          }),
+        )
+        .then((response) => extractItems<T>(response))
+        .catch(() => [] as T[]),
+    );
+  }
+
+  const remainingPages = await Promise.all(pagePromises);
+  return [firstItems, ...remainingPages].flat();
 }
 
 function extractItems<T>(response: unknown): T[] {

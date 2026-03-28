@@ -5,6 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
+  fetchAllPagesParallel,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -73,9 +74,7 @@ function campaignName(campaign: GenericRecord, id: number): string {
   return toText(firstValue(campaign, ["name", "campaignName"])) ?? `Campaign ${id}`;
 }
 
-function invoiceRevenue(invoice: GenericRecord): number {
-  return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
-}
+// Revenue now comes from Report 175, not invoice pagination
 
 function recordCampaignId(source: GenericRecord): number {
   return Math.round(toNumber(firstValue(source, ["campaignId", "campaign.id", "leadCall.campaign.id"])));
@@ -172,16 +171,73 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         const maxCampaigns = input.limit ?? 20;
 
-        const fetchedCampaigns = await fetchWithWarning(
-          warnings,
-          "Campaign data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/campaigns", {
-              ids: input.campaignId === undefined ? undefined : String(input.campaignId),
-              active: input.campaignId === undefined ? "True" : "Any",
-            }),
-          [],
-        );
+        // Parallelize all data fetches — these are independent API calls
+        // Use Report 175 for revenue instead of paginating all invoices (much faster)
+        // Parallel page fetching: probe page 1 for totalCount, then fetch remaining pages concurrently
+        const [fetchedCampaigns, calls, bookings, revenueReport, leadGenerationReport] =
+          await Promise.all([
+            fetchWithWarning(
+              warnings,
+              "Campaign data",
+              () =>
+                fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/campaigns", {
+                  ids: input.campaignId === undefined ? undefined : String(input.campaignId),
+                  active: input.campaignId === undefined ? "True" : "Any",
+                }),
+              [],
+            ),
+            fetchWithWarning(
+              warnings,
+              "Call data",
+              () =>
+                fetchAllPagesParallel<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
+                  createdOnOrAfter: startIso,
+                  createdBefore: endIso,
+                  active: "Any",
+                }),
+              [],
+            ),
+            fetchWithWarning(
+              warnings,
+              "Booking data",
+              () =>
+                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/bookings", {
+                  createdOnOrAfter: startIso,
+                  createdBefore: endIso,
+                }),
+              [],
+            ),
+            fetchWithWarning(
+              warnings,
+              "Revenue report (Report 175)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
+                  {
+                    parameters: [
+                      { name: "From", value: input.startDate },
+                      { name: "To", value: input.endDate },
+                    ],
+                  },
+                ),
+              null,
+            ),
+            fetchWithWarning(
+              warnings,
+              "Lead generation report (Report 176)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data",
+                  {
+                    parameters: [
+                      { name: "From", value: input.startDate },
+                      { name: "To", value: input.endDate },
+                    ],
+                  },
+                ),
+              null,
+            ),
+          ]);
 
         let campaigns =
           fetchedCampaigns.length > 0
@@ -189,53 +245,6 @@ export function registerIntelligenceCampaignPerformanceTool(
             : input.campaignId === undefined
               ? []
               : [{ id: input.campaignId, name: `Campaign ${input.campaignId}` }];
-
-        const calls = await fetchWithWarning(
-          warnings,
-          "Call data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
-              createdOnOrAfter: startIso,
-              createdBefore: endIso,
-              active: "Any",
-            }),
-          [],
-        );
-
-        const bookings = await fetchWithWarning(
-          warnings,
-          "Booking data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/bookings", {
-              createdOnOrAfter: startIso,
-              createdBefore: endIso,
-            }),
-          [],
-        );
-
-        const invoices = await fetchWithWarning(
-          warnings,
-          "Revenue data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-              invoicedOnOrAfter: startIso,
-              invoicedOnBefore: endIso,
-            }),
-          [],
-        );
-
-        const leadGenerationReport = await fetchWithWarning(
-          warnings,
-          "Lead generation report (Report 176)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data", {
-              parameters: [
-                { name: "From", value: input.startDate },
-                { name: "To", value: input.endDate },
-              ],
-            }),
-          null,
-        );
 
         const callsByCampaignId = countByCampaign(calls);
         const bookingsByCampaignId = countByCampaign(bookings);
@@ -288,9 +297,20 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         warnings.push(PER_CAMPAIGN_REVENUE_WARNING);
 
+        // Sum calls attributed to campaigns (not all calls — totalCount includes non-campaign)
         const totalsCalls = limitedCampaignRows.reduce((total, row) => total + row.calls, 0);
         const totalsBookings = limitedCampaignRows.reduce((total, row) => total + row.bookings, 0);
-        const totalsRevenue = round(sumBy(invoices, invoiceRevenue), 2);
+
+        // Extract total revenue from Report 175 instead of paginating all invoices
+        let totalsRevenue = 0;
+        if (revenueReport && isRecord(revenueReport) && Array.isArray(revenueReport.data)) {
+          for (const row of revenueReport.data) {
+            if (Array.isArray(row) && row.length > 8) {
+              totalsRevenue += toNumber(row[8]); // TotalRevenue is at index 8
+            }
+          }
+        }
+        totalsRevenue = round(totalsRevenue, 2);
 
         const result: Record<string, unknown> = {
           period: {

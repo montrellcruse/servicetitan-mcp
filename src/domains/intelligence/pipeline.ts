@@ -158,30 +158,32 @@ export function registerIntelligenceEstimatePipelineTool(
         const createdBefore =
           input.endDate === undefined ? undefined : toBoundaryIso(input.endDate, true, tz);
 
-        const estimates = await fetchWithWarning(
-          warnings,
-          "Estimate data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/estimates", {
-              createdOnOrAfter,
-              createdBefore,
-              soldById: input.soldById,
-            }),
-          [],
-        );
-
-        const salesReport = await fetchWithWarning(
-          warnings,
-          "Technician sales report (Report 172)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/technician-dashboard/reports/172/data", {
-              parameters: [
-                { name: "From", value: input.startDate ?? "" },
-                { name: "To", value: input.endDate ?? "" },
-              ],
-            }),
-          null,
-        );
+        // Parallelize estimate fetch and sales report — independent calls
+        const [estimates, salesReport] = await Promise.all([
+          fetchWithWarning(
+            warnings,
+            "Estimate data",
+            () =>
+              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/estimates", {
+                createdOnOrAfter,
+                createdBefore,
+                soldById: input.soldById,
+              }),
+            [],
+          ),
+          fetchWithWarning(
+            warnings,
+            "Technician sales report (Report 172)",
+            () =>
+              client.post("/tenant/{tenant}/report-category/technician-dashboard/reports/172/data", {
+                parameters: [
+                  { name: "From", value: input.startDate ?? "" },
+                  { name: "To", value: input.endDate ?? "" },
+                ],
+              }),
+            null,
+          ),
+        ]);
 
         const allSalesByTechnician = parseSalesReport(salesReport);
         const salesByTechnician =

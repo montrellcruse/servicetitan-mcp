@@ -5,6 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
+  fetchAllPagesParallel,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -167,28 +168,41 @@ export function registerIntelligenceMembershipHealthTool(
           { name: "To", value: input.endDate },
         ];
 
-        const membershipSummaryReport = await fetchWithWarning(
-          warnings,
-          "Membership summary report (Report 182)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
-              parameters: reportParams,
-            }),
-          null,
-        );
-
-        const membershipConversionReport = await fetchWithWarning(
-          warnings,
-          "Business unit memberships report (Report 178)",
-          () =>
-            client.post(
-              "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
-              {
-                parameters: reportParams,
-              },
+        // Parallelize all data fetches — independent API calls
+        const [membershipSummaryReport, membershipConversionReport, invoices] =
+          await Promise.all([
+            fetchWithWarning(
+              warnings,
+              "Membership summary report (Report 182)",
+              () =>
+                client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
+                  parameters: reportParams,
+                }),
+              null,
             ),
-          null,
-        );
+            fetchWithWarning(
+              warnings,
+              "Business unit memberships report (Report 178)",
+              () =>
+                client.post(
+                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
+                  {
+                    parameters: reportParams,
+                  },
+                ),
+              null,
+            ),
+            fetchWithWarning(
+              warnings,
+              "Invoice data",
+              () =>
+                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/invoices", {
+                  invoicedOnOrAfter: startIso,
+                  invoicedOnBefore: endIso,
+                }),
+              [],
+            ),
+          ]);
 
         const membershipTypeStats = membershipSummaryReport
           ? parseMembershipSummaryReport(membershipSummaryReport)
@@ -196,17 +210,6 @@ export function registerIntelligenceMembershipHealthTool(
         const conversionByBusinessUnit = membershipConversionReport
           ? parseMembershipConversionReport(membershipConversionReport)
           : [];
-
-        const invoices = await fetchWithWarning(
-          warnings,
-          "Invoice data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-              invoicedOnOrAfter: startIso,
-              invoicedOnBefore: endIso,
-            }),
-          [],
-        );
         const totalRevenue = round(sumBy(invoices, invoiceTotal), 2);
 
         const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));

@@ -213,6 +213,23 @@ async function main(): Promise<void> {
         transports.delete(id);
       }
 
+      // Disable Nagle's algorithm and proxy buffering for SSE
+      // This ensures chunked responses are flushed immediately
+      req.socket.setNoDelay(true);
+      res.setHeader("X-Accel-Buffering", "no"); // nginx/Fly proxy hint
+
+      // Wrap res.write to auto-flush after each SSE event
+      const origWrite = res.write.bind(res) as typeof res.write;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (res as any).write = function (chunk: any, encodingOrCb?: any, cb?: any) {
+        const result = origWrite(chunk, encodingOrCb, cb);
+        // Force flush the socket after each write
+        if (res.socket && !res.socket.destroyed) {
+          (res.socket as any).uncork?.();
+        }
+        return result;
+      };
+
       const transport = new SSEServerTransport("/messages", res);
       transports.set(transport.sessionId, transport);
 

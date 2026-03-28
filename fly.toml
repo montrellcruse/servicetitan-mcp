@@ -12,6 +12,7 @@ primary_region = "iad"
   ST_READONLY = "true"
   ST_TIMEZONE = "America/New_York"
   ST_LOG_LEVEL = "info"
+  ST_RESPONSE_SHAPING = "true"
   PORT = "8080"
 
 [http_service]
