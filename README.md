@@ -1,7 +1,7 @@
 # ServiceTitan MCP Server
 
 [![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/servicetitan-mcp-server.svg)](https://www.npmjs.com/package/servicetitan-mcp-server)
+[![npm version](https://img.shields.io/npm/v/@rowvyn/servicetitan-mcp.svg)](https://www.npmjs.com/package/@rowvyn/servicetitan-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 [![Tools](https://img.shields.io/badge/tools-467-blue.svg)](#tool-catalog)
@@ -55,7 +55,7 @@ No install needed — runs directly:
   "mcpServers": {
     "servicetitan": {
       "command": "npx",
-      "args": ["-y", "servicetitan-mcp-server"],
+      "args": ["-y", "@rowvyn/servicetitan-mcp"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -70,8 +70,8 @@ No install needed — runs directly:
 ### Install globally
 
 ```bash
-npm install -g servicetitan-mcp-server
-servicetitan-mcp-server  # stdio transport (for Claude Desktop)
+npm install -g @rowvyn/servicetitan-mcp
+servicetitan-mcp       # stdio transport (for Claude Desktop)
 servicetitan-mcp-sse     # SSE transport (legacy remote)
 servicetitan-mcp-http    # Streamable HTTP transport (recommended remote)
 ```
@@ -94,7 +94,7 @@ Add to your `claude_desktop_config.json`:
   "mcpServers": {
     "servicetitan": {
       "command": "node",
-      "args": ["/absolute/path/to/servicetitan-mcp-server/build/index.js"],
+      "args": ["/absolute/path/to/servicetitan-mcp/build/index.js"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -117,7 +117,7 @@ ST_CLIENT_SECRET=your-client-secret \
 ST_APP_KEY=your-app-key \
 ST_TENANT_ID=your-tenant-id \
 ST_TIMEZONE=America/New_York \
-node /absolute/path/to/servicetitan-mcp-server/build/index.js
+node /absolute/path/to/servicetitan-mcp/build/index.js
 ```
 
 ### Remote Deployment (Streamable HTTP)

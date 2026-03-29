@@ -1,5 +1,5 @@
 {
-  "name": "servicetitan-mcp-server",
+  "name": "@rowvyn/servicetitan-mcp",
   "version": "2.4.0",
   "description": "MCP server for the ServiceTitan API — 467 tools across 15 domains with 10 intelligence tools for business analytics",
   "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
@@ -32,7 +32,7 @@
   "type": "module",
   "main": "build/index.js",
   "bin": {
-    "servicetitan-mcp-server": "./build/index.js",
+    "servicetitan-mcp": "./build/index.js",
     "servicetitan-mcp-sse": "./build/sse.js",
     "servicetitan-mcp-http": "./build/streamable-http.js"
   },
