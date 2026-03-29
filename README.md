@@ -20,7 +20,7 @@ The only MCP server for the ServiceTitan API — 467 tools across 15 domains, pl
 - **ServiceTitan has no official MCP server** or developer tooling beyond REST docs
 - **Raw API access is friction-heavy** — OAuth token management, module-prefix routing, pagination, and response parsing all fall on you
 - **This server handles all of that** and adds 10 intelligence tools that aggregate multiple endpoints into operational insights
-- **Dashboard-matched revenue** — verified on production data using Report 175 (the same source ST's internal engine uses)
+- **Dashboard-matched revenue** — verified on production data using the same Reporting API source that powers ST's own dashboard
 
 ---
 
@@ -28,7 +28,7 @@ The only MCP server for the ServiceTitan API — 467 tools across 15 domains, pl
 
 - **467 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
 - **10 intelligence tools** — composite analytics that aggregate multiple API calls into revenue summaries, ops snapshots, technician scorecards, and more
-- **Dashboard-matched revenue** — `intel_revenue_summary` uses Report 175 for numbers that match ST's own dashboard
+- **Dashboard-matched revenue** — `intel_revenue_summary` pulls from the same source as ST's own dashboard
 - **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
 - **Safety layer** — confirmation workflow for writes/deletes, audit logging with sensitive field redaction
 - **Domain filtering** — expose only the tool groups you need via `ST_DOMAINS`
@@ -183,7 +183,7 @@ The real differentiator. These 10 tools aggregate multiple API calls and report 
 
 | Tool | What It Returns |
 |------|----------------|
-| `intel_revenue_summary` | Dashboard-matched revenue by business unit using Report 175. Includes completed revenue, non-job revenue, adjustments, collections, and BU productivity rollups. |
+| `intel_revenue_summary` | Dashboard-matched revenue by business unit. Includes completed revenue, non-job revenue, adjustments, collections, and BU productivity rollups. |
 | `intel_daily_snapshot` | 6-metric same-day ops briefing: revenue-to-date, jobs in progress, call outcomes, bookings, open estimates, and upcoming next-day jobs. |
 | `intel_technician_scorecard` | Per-tech jobs, revenue, avg ticket, productivity, lead gen, membership close rate, and sales from both tech and marketing leads — with team averages. |
 | `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, invoiced revenue, and conversion by business unit. |
@@ -198,7 +198,7 @@ These tools are why this server exists. Raw CRUD tools are table stakes. Intelli
 
 ### Revenue Accuracy
 
-`intel_revenue_summary` uses ServiceTitan's **Reporting API** (Report 175: "Revenue") to calculate totals. This is the same source ST's own dashboard uses — which means it includes:
+`intel_revenue_summary` uses ServiceTitan's **Reporting API** to calculate totals. This is the same source ST's own dashboard uses — which means it includes:
 
 - **Completed Revenue** — revenue from completed jobs
 - **Non-Job Revenue** — membership fees, add-ons, and other income not tied to a specific job
@@ -299,7 +299,7 @@ The CLI and this MCP server share the same design philosophy: push the business 
 
 | Feature | This Server | Community MCP Servers |
 |---------|------------|----------------------|
-| Revenue accuracy | ✅ Dashboard-matched via Report 175 | ❌ $17–21K off per period |
+| Revenue accuracy | ✅ Dashboard-matched | ❌ $17–21K off per period |
 | Intelligence tools | ✅ 10 tools | ❌ None |
 | Domain coverage | ✅ 467 tools, 15 domains | ⚠️ 10–50 tools |
 | Safety layer | ✅ Read-only default, audit log | ❌ None |
