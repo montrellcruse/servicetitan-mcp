@@ -1,6 +1,7 @@
 # ServiceTitan MCP Server
 
 [![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/servicetitan-mcp-server.svg)](https://www.npmjs.com/package/servicetitan-mcp-server)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
 [![Tools](https://img.shields.io/badge/tools-467-blue.svg)](#tool-catalog)
@@ -45,7 +46,37 @@ The only MCP server for the ServiceTitan API — 467 tools across 15 domains, pl
 - Node.js 22 or newer
 - ServiceTitan API credentials: Client ID, Client Secret, App Key, Tenant ID
 
-### Install & Build
+### npx (recommended)
+
+No install needed — runs directly:
+
+```json
+{
+  "mcpServers": {
+    "servicetitan": {
+      "command": "npx",
+      "args": ["-y", "servicetitan-mcp-server"],
+      "env": {
+        "ST_CLIENT_ID": "your-client-id",
+        "ST_CLIENT_SECRET": "your-client-secret",
+        "ST_APP_KEY": "your-app-key",
+        "ST_TENANT_ID": "your-tenant-id"
+      }
+    }
+  }
+}
+```
+
+### Install globally
+
+```bash
+npm install -g servicetitan-mcp-server
+servicetitan-mcp-server  # stdio transport (for Claude Desktop)
+servicetitan-mcp-sse     # SSE transport (legacy remote)
+servicetitan-mcp-http    # Streamable HTTP transport (recommended remote)
+```
+
+### From source
 
 ```bash
 npm install
@@ -53,6 +84,8 @@ npm run build
 ```
 
 ### Claude Desktop
+
+For a local checkout, point Claude Desktop at the built stdio entrypoint:
 
 Add to your `claude_desktop_config.json`:
 

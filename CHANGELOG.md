@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.0] - 2026-03-28
+
+### Added
+- **npm distribution metadata** — package description, author, repository, homepage, bugs, keywords, and Node.js engine requirements are now declared for npm publishing.
+- **CLI bin entries** — `servicetitan-mcp-server`, `servicetitan-mcp-sse`, and `servicetitan-mcp-http` now map to the stdio, SSE, and Streamable HTTP entrypoints.
+
+### Changed
+- **Files whitelist** — npm packages now ship only `build/`, `LICENSE`, `README.md`, `CHANGELOG.md`, `.env.example`, and `package.json`.
+- **`prepublishOnly` validation** — `npm publish` now runs typecheck, lint, tests, and build before packaging.
+- **README quick start restructure** — npm `npx` usage is now documented first, followed by global install and source-build instructions.
+- **Entry-point shebangs** — all three transport entrypoints now compile to directly executable Node.js bin scripts.
+
 ## [2.3.1] - 2026-03-28
 
 ### Fixed
@@ -199,6 +211,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - `.env.example` with all environment variables documented
 
 [2.3.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.0...v2.3.1
+[2.4.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.1...v2.4.0
 [2.3.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.0...v2.1.1

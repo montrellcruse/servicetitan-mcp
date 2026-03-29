@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * SSE transport entrypoint for remote MCP access.
  *

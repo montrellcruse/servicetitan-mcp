@@ -1,56 +1,45 @@
-import { readdir } from "node:fs/promises";
-import { fileURLToPath } from "node:url";
+import loadAccountingDomain from "./accounting/index.js";
+import loadCrmDomain from "./crm/index.js";
+import loadDispatchDomain from "./dispatch/index.js";
+import loadEstimatesDomain from "./estimates/index.js";
+import loadExportDomain from "./export/index.js";
+import loadIntelligenceDomain from "./intelligence/index.js";
+import loadInventoryDomain from "./inventory/index.js";
+import loadMarketingDomain from "./marketing/index.js";
+import loadMembershipsDomain from "./memberships/index.js";
+import loadPayrollDomain from "./payroll/index.js";
+import loadPeopleDomain from "./people/index.js";
+import loadPricebookDomain from "./pricebook/index.js";
+import loadReportingDomain from "./reporting/index.js";
+import loadSchedulingDomain from "./scheduling/index.js";
+import loadSettingsDomain from "./settings/index.js";
 
 import type { Logger } from "../logger.js";
 import { type DomainLoader, type ToolRegistry } from "../registry.js";
 
+const DOMAIN_LOADERS = [
+  ["accounting", loadAccountingDomain],
+  ["crm", loadCrmDomain],
+  ["dispatch", loadDispatchDomain],
+  ["estimates", loadEstimatesDomain],
+  ["export", loadExportDomain],
+  ["intelligence", loadIntelligenceDomain],
+  ["inventory", loadInventoryDomain],
+  ["marketing", loadMarketingDomain],
+  ["memberships", loadMembershipsDomain],
+  ["payroll", loadPayrollDomain],
+  ["people", loadPeopleDomain],
+  ["pricebook", loadPricebookDomain],
+  ["reporting", loadReportingDomain],
+  ["scheduling", loadSchedulingDomain],
+  ["settings", loadSettingsDomain],
+] as const satisfies ReadonlyArray<readonly [string, DomainLoader]>;
+
 export async function loadDomainModules(
   registry: ToolRegistry,
-  logger: Logger,
+  _logger: Logger,
 ): Promise<void> {
-  const domainsDirectory = fileURLToPath(new URL(".", import.meta.url));
-  const entries = await readdir(domainsDirectory, { withFileTypes: true });
-  const domainDirs = entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name);
-
-  for (const dirName of domainDirs) {
-    const fileUrl = new URL(`./${dirName}/index.js`, import.meta.url).href;
-
-    let module: { default?: DomainLoader; loadDomain?: DomainLoader };
-    try {
-      module = (await import(fileUrl)) as typeof module;
-    } catch (error: unknown) {
-      // Distinguish "index.js doesn't exist" (expected) from real import errors (bugs).
-      // ERR_MODULE_NOT_FOUND can mean either:
-      //   1. The domain's index.js doesn't exist (expected, skip silently)
-      //   2. index.js exists but one of ITS imports is broken (bug, must surface)
-      // We differentiate by checking if the error message references our exact file URL.
-      const isModuleNotFound =
-        error instanceof Error &&
-        "code" in error &&
-        (error as NodeJS.ErrnoException).code === "ERR_MODULE_NOT_FOUND";
-      const isDirectMissing =
-        isModuleNotFound &&
-        error instanceof Error &&
-        error.message.includes(`./${dirName}/index.js`);
-      if (isDirectMissing) {
-        logger.debug("No index.js in domain directory", { domain: dirName });
-      } else {
-        logger.error("Failed to load domain module", {
-          domain: dirName,
-          error: error instanceof Error ? error.message : String(error),
-        });
-      }
-      continue;
-    }
-
-    const loader = module.default ?? module.loadDomain;
-    if (!loader) {
-      logger.warn("Domain module missing loader export", { domain: dirName });
-      continue;
-    }
-
-    registry.registerDomain(dirName, loader);
+  for (const [domainName, loader] of DOMAIN_LOADERS) {
+    registry.registerDomain(domainName, loader);
   }
 }

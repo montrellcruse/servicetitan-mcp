@@ -1,13 +1,54 @@
 {
   "name": "servicetitan-mcp-server",
-  "version": "2.3.1",
+  "version": "2.4.0",
+  "description": "MCP server for the ServiceTitan API — 467 tools across 15 domains with 10 intelligence tools for business analytics",
+  "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/montrellcruse/servicetitan-mcp.git"
+  },
+  "homepage": "https://github.com/montrellcruse/servicetitan-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/montrellcruse/servicetitan-mcp/issues"
+  },
+  "keywords": [
+    "servicetitan",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "llm",
+    "hvac",
+    "field-service",
+    "home-service",
+    "api",
+    "claude",
+    "business-intelligence",
+    "analytics"
+  ],
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "type": "module",
   "main": "build/index.js",
+  "bin": {
+    "servicetitan-mcp-server": "./build/index.js",
+    "servicetitan-mcp-sse": "./build/sse.js",
+    "servicetitan-mcp-http": "./build/streamable-http.js"
+  },
+  "files": [
+    "build/",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    ".env.example"
+  ],
   "scripts": {
-    "build": "tsc",
+    "build": "node ./scripts/build.mjs",
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "lint": "eslint src/",
+    "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -26,6 +67,7 @@
     "@typescript-eslint/eslint-plugin": "^8.0.0",
     "@typescript-eslint/parser": "^8.0.0",
     "@vitest/coverage-v8": "^3.0.0",
+    "esbuild": "^0.27.3",
     "eslint": "^9.0.0",
     "typescript": "^5.8.3",
     "vitest": "^3.0.0"

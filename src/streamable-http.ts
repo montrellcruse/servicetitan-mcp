@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 /**
  * Streamable HTTP transport entrypoint for remote MCP access.
  *
