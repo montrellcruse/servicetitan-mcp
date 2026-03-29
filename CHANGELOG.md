@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.4.2] - 2026-03-29
+
+### Fixed
+- **README cleanup** — removed misleading "0.001% revenue accuracy" stat (replaced with "Dashboard-matched revenue"), stripped internal "Report 175" jargon throughout. No code changes.
+
 ## [2.4.0] - 2026-03-28
 
 ### Added
