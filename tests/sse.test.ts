@@ -273,6 +273,7 @@ beforeAll(async () => {
   }));
 
   vi.doMock("../src/utils.js", () => ({
+    setDisplayTimezone: vi.fn(),
     setMaxResponseChars: vi.fn(),
     toolResult: (value: unknown) => value,
   }));

@@ -8,12 +8,13 @@ import { loadConfig } from "./config.js";
 import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
 import { ToolRegistry } from "./registry.js";
-import { setMaxResponseChars, toolResult } from "./utils.js";
+import { setDisplayTimezone, setMaxResponseChars, toolResult } from "./utils.js";
 
 async function main(): Promise<void> {
   // 1. Load and validate config (throws on missing vars)
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
+  setDisplayTimezone(config.timezone);
 
   // 2. Read version from package.json
   const { createRequire } = await import("node:module");

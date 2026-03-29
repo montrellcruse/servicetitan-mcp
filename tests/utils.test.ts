@@ -5,6 +5,7 @@ import {
   buildParams,
   paginationParams,
   sanitizeParams,
+  setDisplayTimezone,
   setMaxResponseChars,
   sortParam,
   toolError,
@@ -12,6 +13,7 @@ import {
 } from "../src/utils.js";
 
 beforeEach(() => {
+  setDisplayTimezone("UTC");
   setMaxResponseChars(100000);
   delete process.env.ST_RESPONSE_SHAPING;
 });

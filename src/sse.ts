@@ -29,7 +29,7 @@ import { loadConfig } from "./config.js";
 import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
 import { ToolRegistry } from "./registry.js";
-import { setMaxResponseChars, toolResult } from "./utils.js";
+import { setDisplayTimezone, setMaxResponseChars, toolResult } from "./utils.js";
 
 // Catch crashes that would otherwise exit silently
 process.on("uncaughtException", (err) => {
@@ -85,6 +85,7 @@ function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
 async function main(): Promise<void> {
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
+  setDisplayTimezone(config.timezone);
 
   // Read version from package.json
   const _require = createRequire(import.meta.url);

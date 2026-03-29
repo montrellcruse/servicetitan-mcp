@@ -246,7 +246,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | `ST_MAX_RESPONSE_CHARS` | `100000` | Cap tool response size |
 | `ST_DOMAINS` | *(all)* | Comma-separated domain allowlist (e.g. `crm,dispatch,reporting`) |
 | `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
-| `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — critical for date-bound intelligence tools |
+| `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — used for date-bound intelligence queries and local-time display conversion in all tool responses |
 | `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable intelligence response transformation |
 | `ST_CORS_ORIGIN` | _(none)_ | Allowed CORS origin for Streamable HTTP / SSE. Required for browser access. |
 | `ST_ALLOWED_CALLERS` | _(none)_ | Comma-separated caller identity allowlist (e.g. `alice@example.com,svc-user`) |
@@ -254,7 +254,7 @@ Copy `.env.example` to `.env` and fill in your credentials.
 | `ST_MCP_PORT` / `PORT` | `3100` | HTTP server port for Streamable HTTP and SSE transports |
 | `ST_MCP_API_KEY` | _(none)_ | API key for authenticating remote MCP clients (required for HTTP transports) |
 
-> **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants.
+> **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants, and tool responses will keep timestamps in UTC instead of your local display timezone.
 
 Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
 

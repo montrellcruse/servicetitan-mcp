@@ -123,9 +123,10 @@ function parseLogLevel(value: string | undefined): LogLevel {
  * Parse and validate an IANA timezone string (e.g. "America/New_York", "US/Eastern").
  * Defaults to "UTC" if not set.
  *
- * ServiceTitan stores timestamps in the tenant's local timezone.
+ * ServiceTitan stores timestamps in UTC while the business operates in the tenant's local timezone.
  * Setting ST_TIMEZONE ensures intelligence tools convert YYYY-MM-DD date inputs
- * to the correct UTC boundaries for API queries (e.g. Feb 1 midnight EST = Feb 1 05:00 UTC).
+ * to the correct UTC boundaries for API queries (e.g. Feb 1 midnight EST = Feb 1 05:00 UTC),
+ * and lets tool responses render timestamps in the tenant's display timezone.
  */
 function parseTimezone(value: string | undefined): string {
   if (value === undefined || value.trim() === "") {

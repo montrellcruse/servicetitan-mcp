@@ -31,7 +31,7 @@ import { loadConfig } from "./config.js";
 import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
 import { ToolRegistry } from "./registry.js";
-import { setMaxResponseChars, toolResult } from "./utils.js";
+import { setDisplayTimezone, setMaxResponseChars, toolResult } from "./utils.js";
 
 const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
 const SESSION_REAP_INTERVAL_MS = 60 * 1000;
@@ -105,6 +105,7 @@ function isInitializeRequest(body: unknown): boolean {
 async function main(): Promise<void> {
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
+  setDisplayTimezone(config.timezone);
 
   const _require = createRequire(import.meta.url);
   const pkg = _require("../package.json") as { version: string };

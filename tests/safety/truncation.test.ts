@@ -1,8 +1,9 @@
 import { afterEach, describe, expect, it } from "vitest";
 
-import { setMaxResponseChars, toolResult } from "../../src/utils.js";
+import { setDisplayTimezone, setMaxResponseChars, toolResult } from "../../src/utils.js";
 
 afterEach(() => {
+  setDisplayTimezone("UTC");
   setMaxResponseChars(100000);
 });
 
