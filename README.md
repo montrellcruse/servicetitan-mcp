@@ -185,7 +185,7 @@ intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnit
 intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC")
 ```
 
-Name matching uses exact → prefix → contains fallback. If no match is found, the tool returns all data with a warning.
+Business unit name matching uses exact → prefix → contains fallback. Technician name matching uses case-insensitive substring search. If no match is found, the tool returns all data with a warning.
 
 ---
 

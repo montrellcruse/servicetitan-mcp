@@ -50,7 +50,7 @@ This document describes the internal design of the ServiceTitan MCP Server.
          ┌─────────────────────────────────────┐
          │           ToolRegistry               │  src/registry.ts
          │  Domain filter (ST_DOMAINS)          │
-         │  Readonly filter (ST_READONLY)       │
+         │  Readonly guard (ST_READONLY)         │
          │  Confirmation wrapper (deletes/      │
          │    writes when ST_CONFIRM_WRITES)    │
          │  Audit logging (write/delete)        │
@@ -106,7 +106,7 @@ Endpoints:
 - `POST /mcp` — MCP request endpoint; initializes and reuses per-session transports
 - `GET /mcp` — SSE stream for server-initiated notifications
 - `DELETE /mcp` — closes the active session
-- `GET /health` — health check (no auth); returns basic status (tool count only on HTTP transports, auth/tenant connectivity via `st_health_check` MCP tool)
+- `GET /health` — health check (no auth); returns status, tool count, environment, and readonly mode. Auth/tenant connectivity available via the `st_health_check` MCP tool.
 - `GET /sse` — deprecated legacy route; returns `410 Gone`
 
 Security:
@@ -224,9 +224,9 @@ The route table maps resource path segments to API modules:
 | `telecom` | calls, call-reasons |
 | `inventory` | purchase-orders, vendors, warehouses, adjustments, transfers |
 | `reporting` | report-categories, dynamic-value-sets, data |
-| `settings` | business-units, technicians, employees, tag-types |
-| `task-management` | tasks |
-| `forms` | forms |
+| `settings` | business-units, tag-types, activities, activity-categories, activity-types, user-roles |
+| `people` | technicians, technician-shifts, employees, trucks, gps-provider |
+| `scheduling` | appointment-assignments, business-hours, capacity, non-job-appointments, teams, zones |
 
 **Export routes** (`/tenant/{id}/export/{resource}`) have a separate `EXPORT_ROUTE_TABLE` since export endpoints live under their parent domain module.
 
@@ -252,19 +252,19 @@ Current domains (15 total, including `intelligence`):
 |---|---|
 | `accounting` | Invoices, payments, AP credits/payments, GL accounts, journal entries, tax zones |
 | `crm` | Customers, contacts, leads, locations, bookings, booking provider tags |
-| `dispatch` | Appointment assignments, arrival windows, capacity, teams, zones |
+| `dispatch` | Appointments, jobs, job types, projects, images, installed equipment, forms, arrival windows |
 | `estimates` | Estimate CRUD and line items |
 | `export` | Bulk export endpoints for major resources |
 | `intelligence` | 10 composite business intelligence tools (see below) |
 | `inventory` | Purchase orders, vendors, warehouses, adjustments, transfers, receipts, returns |
-| `marketing` | Campaigns, costs, attributed leads, opt-in/out, submissions |
+| `marketing` | Campaigns, costs, attributed leads, opt-in/out, suppressions, calls |
 | `memberships` | Memberships, membership types, recurring services and service types |
 | `payroll` | Payrolls, adjustments, gross pay items, timesheets, non-job timesheets, splits |
-| `people` | Employees, user roles |
+| `people` | Employees, technicians, trucks, GPS |
 | `pricebook` | Services, materials, equipment, categories, discounts |
 | `reporting` | Report categories, dynamic value sets, raw report data |
-| `scheduling` | Appointments, job types, job cancel/hold reasons, job hold reasons |
-| `settings` | Business units, technicians, tag types, activity categories, business hours |
+| `scheduling` | Appointment assignments, business hours, capacity, non-job appointments, teams, zones |
+| `settings` | Business units, tag types, activities, tasks, user roles |
 
 ---
 
@@ -389,7 +389,7 @@ The `ReferenceDataCache` uses a `Map<string, Promise<T>>` to track in-flight req
 
 ### Name-based filtering
 
-`findTechniciansByName()` normalizes and searches across all available name fields (`name`, `displayName`, `fullName`, `firstName + lastName`, `nickname`). The search is case-insensitive substring matching, so `"gonzalo"` matches `"Alex Ruiz"`.
+`findTechniciansByName()` normalizes and searches across all available name fields (`name`, `displayName`, `fullName`, `firstName + lastName`, `nickname`). The search is case-insensitive substring matching, so `"alex"` matches `"Alex Ramirez"`.
 
 ### `TtlCache<T>`
 
