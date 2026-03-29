@@ -85,8 +85,13 @@ async function main(): Promise<void> {
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
 
+  // Read version from package.json
+  const _require = createRequire(import.meta.url);
+  const pkg = _require("../package.json") as { version: string };
+  const version = pkg.version;
+
   const logger = new Logger(config.logLevel);
-  const server = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
+  const server = new McpServer({ name: "ServiceTitan", version });
   const client = new ServiceTitanClient(config);
   const auditLogger = new AuditLogger(logger);
   const registry = new ToolRegistry(server, config, logger, auditLogger);
@@ -124,10 +129,6 @@ async function main(): Promise<void> {
   const stats = registry.getStats();
 
   // ── Startup banner ──
-  // Read version from package.json
-  const _require = createRequire(import.meta.url);
-  const pkg = _require("../package.json") as { version: string };
-  const version = pkg.version;
 
   // Track active SSE transports by session ID
   const transports = new Map<string, SSEServerTransport>();

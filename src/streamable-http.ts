@@ -105,12 +105,16 @@ async function main(): Promise<void> {
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
 
+  const _require = createRequire(import.meta.url);
+  const pkg = _require("../package.json") as { version: string };
+  const version = pkg.version;
+
   const logger = new Logger(config.logLevel);
   const client = new ServiceTitanClient(config);
   const auditLogger = new AuditLogger(logger);
 
   // Create a "template" McpServer + registry to register tools once, then log stats
-  const templateServer = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
+  const templateServer = new McpServer({ name: "ServiceTitan", version });
   const templateRegistry = new ToolRegistry(templateServer, config, logger, auditLogger);
   templateRegistry.attachClient(client);
 
@@ -143,13 +147,9 @@ async function main(): Promise<void> {
   templateRegistry.logSummary();
   const stats = templateRegistry.getStats();
 
-  const _require = createRequire(import.meta.url);
-  const pkg = _require("../package.json") as { version: string };
-  const version = pkg.version;
-
   /** Create a fresh McpServer + ToolRegistry per session */
   async function createSessionServer(): Promise<McpServer> {
-    const sessionMcpServer = new McpServer({ name: "ServiceTitan", version: "2.3.0" });
+    const sessionMcpServer = new McpServer({ name: "ServiceTitan", version });
     const sessionRegistry = new ToolRegistry(sessionMcpServer, config, logger, auditLogger);
     sessionRegistry.attachClient(client);
 

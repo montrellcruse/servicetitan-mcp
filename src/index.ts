@@ -14,13 +14,18 @@ async function main(): Promise<void> {
   const config = loadConfig();
   setMaxResponseChars(config.maxResponseChars);
 
-  // 2. Initialize logger
+  // 2. Read version from package.json
+  const { createRequire } = await import("node:module");
+  const _require = createRequire(import.meta.url);
+  const pkg = _require("../package.json") as { version: string };
+
+  // 3. Initialize logger
   const logger = new Logger(config.logLevel);
 
-  // 3. Create MCP server
+  // 4. Create MCP server
   const server = new McpServer({
     name: "ServiceTitan",
-    version: "2.3.0",
+    version: pkg.version,
   });
 
   // 4. Create API client
