@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.1] - 2026-03-28
+
+### Fixed
+- **Pagination truncation surfaced** — `fetchAllPages()` and `fetchAllPagesParallel()` now push truncation and page-failure warnings to callers via optional `warnings[]` parameter. Intelligence tools surface these as `_warnings` in responses instead of silently undercounting.
+- **GPS provider path injection** — `people_gps_create` now validates `gpsProvider` with `^[A-Za-z0-9_-]+$` regex, preventing path traversal in outbound ST API calls.
+- **Truncation guard edge case** — `Math.min` → `Math.max(0, ...)` prevents negative slice index when `ST_MAX_RESPONSE_CHARS` < 256.
+- **Response shaping scoped to intelligence only** — removed from `toolResult()` baseline; added `shape: true` parameter to 9 intelligence domain handlers. Non-intelligence tools now return unmodified ServiceTitan schemas.
+- **UTC day math** — `countWeekdaysInclusive()` and `dayDiff()` accept timezone parameter, normalize to tenant-local calendar dates. Fixes jobsPerDay inflation for non-UTC tenants.
+- **Pagination off-by-one** — page increment no longer skips `maxPages` detection; `_truncated` marker properly surfaced.
+- **JSON truncation format** — truncated responses now produce valid parseable JSON.
+- **Phone number PII redaction** — expanded `sanitizeParams()` to catch `contactNumbers`, `campaignPhoneNumbers`, `phoneNumberCalled`, `callerPhoneNumber` variants.
+- **Cross-domain import** — CRM customers no longer imports `getErrorMessage` from intelligence helpers.
+- **SSE CORS consistency** — `sendCorsHeaders()` skips header emission when `corsOrigin` is empty, matching Streamable HTTP behavior.
+- **Domain loader error masking** — distinguishes transitive import failures (throw) from missing `index.js` (skip gracefully).
+- **Non-UTC end-of-day 999ms off-by-one** — `parseDateInput()` computes local date via `Intl.DateTimeFormat` without offset reconstruction.
+- **`ST_INTEL_MAX_PAGES` configurable** — pagination cap now reads from env var (default 20 pages × 500 rows).
+- **`sortParam()` validation** — accepts bare field names alongside signed `+Field`/`-Field` format.
+
+### Changed
+- **Version read from package.json** — removed hardcoded version strings from all 3 entry points (stdio, SSE, Streamable HTTP). Single source of truth.
+- **TOOLS.md regenerated** — 467 tools (was 460), catalog script corrected.
+- **Documentation alignment** — ARCHITECTURE.md domain tables, health check description, readonly semantics, name matching examples, route table entries all corrected to match implementation. README env vars complete. CONTRIBUTING.md getErrorMessage guidance updated.
+
+### Added
+- 249 tests across 18 test files (up from 245 / 17).
+- 7-round audit trail in `audit/` directory with full findings and remediation evidence.
+
 ## [2.3.0] - 2026-03-28
 
 ### Security
@@ -171,6 +198,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.3.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.0...v2.3.1
 [2.3.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.1...v2.2.0
 [2.1.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.1.0...v2.1.1
