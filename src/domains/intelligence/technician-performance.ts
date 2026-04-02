@@ -30,6 +30,7 @@ const technicianScorecardSchema = z.object({
     .max(50)
     .optional()
     .describe("Max technicians to analyze (default 25, max 50)"),
+  includeExtendedMetrics: z.boolean().optional().default(false).describe("Include memberships sold, sales from tech leads, and sales from marketing leads (Reports 171/173/174). Adds ~0.5-1s latency. Default: false."),
 });
 
 const REVENUE_FIELD = {
@@ -648,7 +649,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages" +
+      "Technician performance scorecard with completed jobs, revenue, opportunities, conversion rates, productivity, and lead generation. Set includeExtendedMetrics=true for memberships sold and sales from tech/marketing leads (adds ~0.5-1s)." +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
@@ -766,36 +767,42 @@ export function registerIntelligenceTechnicianPerformanceTool(
               ),
             null,
           ),
-          fetchWithWarning(
-            warnings,
-            "Technician memberships report (Report 171)",
-            () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
-                { parameters: membershipsParams },
-              ),
-            null,
-          ),
-          fetchWithWarning(
-            warnings,
-            "Technician sales from tech leads report (Report 173)",
-            () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
-                { parameters: salesFromTechLeadsParams },
-              ),
-            null,
-          ),
-          fetchWithWarning(
-            warnings,
-            "Technician sales from marketing leads report (Report 174)",
-            () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
-                { parameters: salesFromMarketingLeadsParams },
-              ),
-            null,
-          ),
+          input.includeExtendedMetrics
+            ? fetchWithWarning(
+                warnings,
+                "Technician memberships report (Report 171)",
+                () =>
+                  client.post(
+                    "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
+                    { parameters: membershipsParams },
+                  ),
+                null,
+              )
+            : Promise.resolve(null),
+          input.includeExtendedMetrics
+            ? fetchWithWarning(
+                warnings,
+                "Technician sales from tech leads report (Report 173)",
+                () =>
+                  client.post(
+                    "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
+                    { parameters: salesFromTechLeadsParams },
+                  ),
+                null,
+              )
+            : Promise.resolve(null),
+          input.includeExtendedMetrics
+            ? fetchWithWarning(
+                warnings,
+                "Technician sales from marketing leads report (Report 174)",
+                () =>
+                  client.post(
+                    "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
+                    { parameters: salesFromMarketingLeadsParams },
+                  ),
+                null,
+              )
+            : Promise.resolve(null),
         ]);
 
         let revenueRows = parseRevenueReport(revenueReport);
