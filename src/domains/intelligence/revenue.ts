@@ -22,6 +22,7 @@ const revenueSummarySchema = z.object({
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
   includeCollections: z.boolean().optional().default(false).describe("Include payment/collections data (totalCollected, outstanding). Adds ~20s latency due to payment pagination. Default: false."),
+  includeProductivityMetrics: z.boolean().optional().default(false).describe("Include BU-level productivity metrics (Report 177: rev/hr, billable efficiency, upsold, tasks/opp, recalls). Adds ~0.5-1s latency. Default: false."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -536,7 +537,7 @@ export function registerIntelligenceRevenueTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, plus BU-level productivity and sales metrics. Set includeCollections=true for payment/collections data (adds ~20s latency)." +
+      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, and sales metrics. Set includeProductivityMetrics=true for BU-level productivity metrics (adds ~0.5-1s). Set includeCollections=true for payment/collections data (adds ~20s)." +
       '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC"\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: revenueSummarySchema.shape,
     handler: async (params) => {
@@ -572,7 +573,8 @@ export function registerIntelligenceRevenueTool(
         // Compute date range (needed for payments if requested)
         const { startIso, endIso } = toDateRange(input.startDate, input.endDate, registry.timezone);
 
-        // Core fetches: 3 reports (always). Payments only when includeCollections=true.
+        // Core: Report 175 (always). Reports 177 + 179 only when includeDetailedMetrics=true.
+        // Payments only when includeCollections=true.
         const reportFetches: [
           Promise<unknown>,
           Promise<unknown>,
@@ -589,16 +591,18 @@ export function registerIntelligenceRevenueTool(
               ),
             createEmptyReportResponse(),
           ),
-          fetchWithWarning(
-            warnings,
-            "Productivity report (Report 177)",
-            () =>
-              client.post(
-                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
-                { parameters: reportParams },
-              ),
-            createEmptyReportResponse(),
-          ),
+          input.includeProductivityMetrics
+            ? fetchWithWarning(
+                warnings,
+                "Productivity report (Report 177)",
+                () =>
+                  client.post(
+                    "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
+                    { parameters: reportParams },
+                  ),
+                createEmptyReportResponse(),
+              )
+            : Promise.resolve(createEmptyReportResponse()),
           fetchWithWarning(
             warnings,
             "Sales report (Report 179)",
