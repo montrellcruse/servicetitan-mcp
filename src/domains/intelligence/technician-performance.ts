@@ -708,12 +708,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
           { name: "To", value: input.endDate },
         ];
 
-        const completedJobsParams: Array<{ name: string; value: string }> = [
-          { name: "DateType", value: "1" },
-          { name: "From", value: input.startDate },
-          { name: "To", value: input.endDate },
-        ];
-
         if (effectiveBuId !== undefined) {
           revenueParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
           productivityParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
@@ -730,13 +724,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
             name: "BusinessUnitIds",
             value: String(effectiveBuId),
           });
-          completedJobsParams.push({
-            name: "BusinessUnitId",
-            value: String(effectiveBuId),
-          });
         }
 
-        // Parallelize all 7 report fetches — independent API calls
+        // Parallelize all 6 report fetches — independent API calls
+        // Note: jobsCompleted is derived from ConvertedJobs in Report 168 (eliminates Report 165 fetch)
         const [
           revenueReport,
           productivityReport,
@@ -744,7 +735,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
           membershipsReport,
           salesFromTechLeadsReport,
           salesFromMarketingLeadsReport,
-          completedJobsReport,
         ] = await Promise.all([
           fetchWithWarning(
             warnings,
@@ -806,15 +796,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
               ),
             null,
           ),
-          fetchWithWarning(
-            warnings,
-            "Completed jobs detail report (Report 165)",
-            () =>
-              client.post("/tenant/{tenant}/report-category/operations/reports/165/data", {
-                parameters: completedJobsParams,
-              }),
-            null,
-          ),
         ]);
 
         let revenueRows = parseRevenueReport(revenueReport);
@@ -847,19 +828,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
         const salesFromMarketingLeadById = new Map(
           salesFromMarketingLeadRows.map((tech) => [tech.id, tech]),
         );
-        const nameToTechIds = buildNameToTechIds(
-          revenueRows,
-          productivityRows,
-          leadGenerationRows,
-          membershipsRows,
-          salesFromTechLeadRows,
-          salesFromMarketingLeadRows,
-        );
-        const completedJobAttribution = countCompletedJobsByTech(completedJobsReport, nameToTechIds);
-        warnings.push(...completedJobAttribution.warnings);
-
-        const completedJobsByTechId = completedJobAttribution.countsByTechId;
-        const completedJobNamesByTechId = completedJobAttribution.namesByTechId;
 
         const scorecards: TechnicianScorecard[] = [];
         const technicianIds = new Set<number>([
@@ -869,7 +837,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
           ...membershipsById.keys(),
           ...salesFromTechLeadById.keys(),
           ...salesFromMarketingLeadById.keys(),
-          ...completedJobAttribution.technicianIds,
         ]);
 
         if (effectiveTechId !== undefined) {
@@ -887,7 +854,8 @@ export function registerIntelligenceTechnicianPerformanceTool(
           const memberships = membershipsById.get(id);
           const salesFromTechLeads = salesFromTechLeadById.get(id);
           const salesFromMarketingLeads = salesFromMarketingLeadById.get(id);
-          const jobsCompleted = completedJobsByTechId.get(id) ?? 0;
+          // Use ConvertedJobs from Report 168 as proxy for jobsCompleted (eliminates Report 165 fetch)
+          const jobsCompleted = revenue?.convertedJobs ?? 0;
           const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
 
           const scorecard: TechnicianScorecard = {
@@ -899,7 +867,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
               memberships?.name ??
               salesFromTechLeads?.name ??
               salesFromMarketingLeads?.name ??
-              completedJobNamesByTechId.get(id) ??
               `Technician ${id}`,
             jobsCompleted,
             revenue: revenue?.revenue ?? 0,
