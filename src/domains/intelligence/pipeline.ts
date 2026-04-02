@@ -6,6 +6,7 @@ import { toolError, toolResult } from "../../utils.js";
 import {
   dayDiff,
   fetchAllPages,
+  fetchAllPagesParallel,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -164,7 +165,7 @@ export function registerIntelligenceEstimatePipelineTool(
             warnings,
             "Estimate data",
             () =>
-              fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/estimates", {
+              fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/estimates", {
                 createdOnOrAfter,
                 createdBefore,
                 soldById: input.soldById,
