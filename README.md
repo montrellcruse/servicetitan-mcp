@@ -60,12 +60,15 @@ No install needed — runs directly:
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
         "ST_APP_KEY": "your-app-key",
-        "ST_TENANT_ID": "your-tenant-id"
+        "ST_TENANT_ID": "your-tenant-id",
+        "ST_ENVIRONMENT": "production"
       }
     }
   }
 }
 ```
+
+> ⚠️ **`ST_ENVIRONMENT` defaults to `integration`.** If you're connecting to a live ServiceTitan account, you **must** set `ST_ENVIRONMENT` to `production` or you'll get silent auth failures and empty results.
 
 ### Install globally
 
@@ -327,6 +330,53 @@ npm run start      # run compiled server
 - **Read-only mode** (`ST_READONLY=true` by default) — all tools are registered but write and delete operations are blocked at execution time
 - **Confirmation workflow** — delete tools require `confirm: true` (returns preview payload when missing); write tools optionally require `_confirmed: true` via `ST_CONFIRM_WRITES=true` (returns error when missing)
 - **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
+
+---
+
+## Troubleshooting
+
+### npm permission errors (EACCES)
+
+If you see `EACCES: permission denied` errors when Claude Desktop tries to start the server, your npm cache directory is likely owned by root (common when Node was installed with `sudo`).
+
+**Fix:**
+
+```bash
+sudo chown -R $(whoami) ~/.npm
+```
+
+Then restart Claude Desktop.
+
+### Server won't start / "Could not connect to MCP server"
+
+1. **Test outside Claude Desktop first:**
+   ```bash
+   npx -y @rowvyn/servicetitan-mcp
+   ```
+   If this fails, the issue is with Node, npm, or your environment — not Claude Desktop.
+
+2. **Check Node version:** `node -v` — requires Node 22 or newer.
+
+3. **Check for conflicting MCP installs:** If you previously installed a different ServiceTitan MCP server, remove it:
+   ```bash
+   npm ls -g --depth=0 | grep -i servicetitan
+   npm uninstall -g <old-package-name>
+   npx clear-npx-cache
+   ```
+
+4. **Verify your `claude_desktop_config.json`** has no leftover entries from a previous MCP server. Only one `servicetitan` entry should exist under `mcpServers`.
+
+### Auth failures / $0 revenue / empty results
+
+- **Set `ST_ENVIRONMENT` to `production`.** This is the #1 cause. The default is `integration`, which authenticates against ServiceTitan's sandbox — not your live account. You'll get valid auth tokens that return zero data.
+- **Verify credentials match:** `ST_CLIENT_ID` and `ST_CLIENT_SECRET` must be from the same ServiceTitan app. You can't mix credentials from different apps.
+- **Check `ST_TENANT_ID`:** Must match the tenant associated with your app in the ServiceTitan developer portal.
+
+### Claude Desktop logs
+
+Claude Desktop writes MCP server logs to:
+- **macOS:** `~/Library/Logs/Claude/mcp*.log`
+- **Windows:** `%APPDATA%\Claude\logs\mcp*.log`
 
 ---
 
