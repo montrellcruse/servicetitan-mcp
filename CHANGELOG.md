@@ -4,6 +4,30 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.0] - 2026-04-02
+
+### Performance
+- **HTTP keep-alive + connection pooling** — shared `https.Agent` with `keepAlive: true`, `maxSockets: 32` eliminates TLS handshake overhead on consecutive API calls.
+- **Auth pre-warming** — `client.prewarm()` called at server startup fetches and caches the OAuth token before the first tool execution, saving ~1-2s on cold starts.
+- **Parallel invoice tracking** — Reports 2281 and 2282 now fetched concurrently via `Promise.all()` instead of sequentially.
+- **Parallel estimate pipeline** — estimate pagination parallelized (6.49s → 1.50s).
+- **`fetchAllPagesBlind` helper** — fires all `maxPages` page requests simultaneously without a probe step to determine `totalCount` first. Applied to bookings, estimates, invoices, and payments pagination. Saves one sequential round-trip per paginated call.
+- **Sequential campaign calls** — `/v3/calls` endpoint uses sequential `fetchAllPages` instead of parallel. ServiceTitan's calls API exhibits extreme concurrency sensitivity (even 2 concurrent requests trigger rate-limiting and inflate results). Sequential is the only reliable approach.
+- **Report 165 removal** — `technician_scorecard` no longer fetches Report 165 (redundant with `ConvertedJobs` field from Report 168). Reduces parallel POST calls from 5 to 4 on the default path.
+
+### Added
+- **`includeServiceRevenue`** parameter on `intel_membership_health` — opt-in invoice pagination for service revenue breakdown. Default: `false` (saves ~2-4s).
+- **`includeProductivityMetrics`** parameter on `intel_revenue_summary` — opt-in Report 177 fetch for BU-level productivity metrics. Default: `false` (saves ~0.5-1s).
+- **`includeExtendedMetrics`** parameter on `intel_technician_scorecard` — opt-in Reports 171/173/174 for revenue-per-hour, billable efficiency, and recall data. Default: `false` (saves ~1-2s).
+- **`fetchAllPagesWithTotal`** helper — variant that returns both items and `totalCount` for callers that need the count.
+
+### Changed
+- **Score improvement** — baseline score improved from 0.91 to 0.92-0.94 (typical), up to 1.24 on fast ServiceTitan API days. All 25 ground truth questions still pass.
+- **Non-campaign tool latency** — `revenue_summary` 2.7-3.3s, `technician_scorecard` 2.1-2.7s, `membership_health` 2.0-2.8s, `estimate_pipeline` 1.5-1.8s, `invoice_tracking` 2.2-4.4s.
+
+### Fixed
+- **Test suite** — 12 test failures fixed for new opt-in parameter defaults and `fetchAllPagesBlind` mock compatibility. All 260 tests passing.
+
 ## [2.4.2] - 2026-03-29
 
 ### Fixed
@@ -215,6 +239,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.5.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.4.2...v2.5.0
+[2.4.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.4.0...v2.4.2
 [2.3.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.0...v2.3.1
 [2.4.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.1...v2.4.0
 [2.3.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.2.0...v2.3.0
