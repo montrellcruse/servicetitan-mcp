@@ -274,9 +274,11 @@ export async function fetchAllPagesParallel<T>(
 }
 
 /**
- * Fetch all pages blindly in parallel with limited concurrency (default 5).
- * Fires pages in batches to avoid triggering global ServiceTitan rate limits
- * while still maintaining parallel speed for small datasets.
+ * Fetch all pages blindly in parallel — fires pages 1..maxPages simultaneously
+ * without a probe step to determine totalCount first.
+ * Pages that return empty results are ignored.
+ * Saves 1 sequential round-trip vs fetchAllPagesParallel.
+ * Use only when you know roughly how many pages to expect.
  */
 export async function fetchAllPagesBlind<T>(
   client: ServiceTitanClient,
@@ -284,42 +286,26 @@ export async function fetchAllPagesBlind<T>(
   params: Record<string, unknown>,
   maxPages: number = DEFAULT_MAX_PAGES,
   warnings?: string[],
-  concurrency: number = 5,
 ): Promise<T[]> {
-  const allItems: T[] = [];
-  const results: Array<{ items: T[]; error?: Error }> = [];
-  
-  // Fire all maxPages pages in batches to respect concurrency
-  for (let i = 0; i < maxPages; i += concurrency) {
-    const batchSize = Math.min(concurrency, maxPages - i);
-    const batchPromises: Promise<{ items: T[]; error?: Error }>[] = [];
-    
-    for (let j = 0; j < batchSize; j++) {
-      const page = i + j + 1;
-      batchPromises.push(
-        client
-          .get(
-            path,
-            buildParams({
-              ...params,
-              page,
-              pageSize: DEFAULT_PAGE_SIZE,
-            }),
-          )
-          .then((response) => ({ items: extractItems<T>(response) }))
-          .catch((error) => ({ items: [] as T[], error: error as Error })),
-      );
-    }
-    
-    const batchResults = await Promise.all(batchPromises);
-    results.push(...batchResults);
-    
-    // Optimization: if any page in the batch was empty, we've likely hit the end.
-    // However, for "blind" fetching we typically finish the batch.
-    if (batchResults.some(r => r.items.length === 0)) {
-      break;
-    }
+  // Fire all maxPages pages simultaneously
+  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    pagePromises.push(
+      client
+        .get(
+          path,
+          buildParams({
+            ...params,
+            page,
+            pageSize: DEFAULT_PAGE_SIZE,
+          }),
+        )
+        .then((response) => ({ items: extractItems<T>(response) }))
+        .catch((error) => ({ items: [] as T[], error: error as Error })),
+    );
   }
+
+  const results = await Promise.all(pagePromises);
 
   // Log and surface page fetch failures
   const failedPages = results.filter((r) => r.error);
