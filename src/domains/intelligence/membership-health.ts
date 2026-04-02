@@ -4,7 +4,6 @@ import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
-  fetchAllPages,
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
@@ -21,6 +20,7 @@ import {
 const membershipHealthSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
+  includeServiceRevenue: z.boolean().optional().default(false).describe("Include totalServiceRevenue from invoice pagination (adds ~1-2s latency). Default: false."),
 });
 
 const MEMBERSHIP_SUMMARY_FIELD = {
@@ -154,7 +154,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, tenant-wide totalServiceRevenue from invoices, and business-unit membership conversion metrics. ServiceTitan's invoices API does not expose a membership-only invoice filter, so totalServiceRevenue is not membership-scoped." +
+      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and business-unit membership conversion metrics. Set includeServiceRevenue=true to also fetch tenant-wide totalServiceRevenue from invoices (adds ~1-2s latency)." +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
@@ -169,42 +169,51 @@ export function registerIntelligenceMembershipHealthTool(
         ];
 
         // Parallelize all data fetches — independent API calls
-        const [membershipSummaryReport, membershipConversionReport, invoices] =
-          await Promise.all([
-            fetchWithWarning(
-              warnings,
-              "Membership summary report (Report 182)",
-              () =>
-                client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
+        // invoices only fetched when includeServiceRevenue=true (opt-in to avoid ~1-2s overhead)
+        const fetches: [
+          Promise<unknown>,
+          Promise<unknown>,
+          Promise<GenericRecord[]>,
+        ] = [
+          fetchWithWarning(
+            warnings,
+            "Membership summary report (Report 182)",
+            () =>
+              client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
+                parameters: reportParams,
+              }),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Business unit memberships report (Report 178)",
+            () =>
+              client.post(
+                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
+                {
                   parameters: reportParams,
-                }),
-              null,
-            ),
-            fetchWithWarning(
-              warnings,
-              "Business unit memberships report (Report 178)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
-                  {
-                    parameters: reportParams,
-                  },
-                ),
-              null,
-            ),
-            fetchWithWarning(
-              warnings,
-              "Invoice data",
-              () =>
-                // The invoices endpoint supports job/customer/BU filters, but not membership-level
-                // scoping, so this revenue is tenant-wide service revenue for the selected period.
-                fetchAllPagesBlind<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-                  invoicedOnOrAfter: startIso,
-                  invoicedOnBefore: endIso,
-                }),
-              [],
-            ),
-          ]);
+                },
+              ),
+            null,
+          ),
+          input.includeServiceRevenue
+            ? fetchWithWarning(
+                warnings,
+                "Invoice data",
+                () =>
+                  // The invoices endpoint supports job/customer/BU filters, but not membership-level
+                  // scoping, so this revenue is tenant-wide service revenue for the selected period.
+                  fetchAllPagesBlind<GenericRecord>(client, "/tenant/{tenant}/invoices", {
+                    invoicedOnOrAfter: startIso,
+                    invoicedOnBefore: endIso,
+                  }),
+                [],
+              )
+            : Promise.resolve([]),
+        ];
+
+        const [membershipSummaryReport, membershipConversionReport, invoices] =
+          await Promise.all(fetches);
 
         const membershipTypeStats = membershipSummaryReport
           ? parseMembershipSummaryReport(membershipSummaryReport)
@@ -212,7 +221,9 @@ export function registerIntelligenceMembershipHealthTool(
         const conversionByBusinessUnit = membershipConversionReport
           ? parseMembershipConversionReport(membershipConversionReport)
           : [];
-        const totalServiceRevenue = round(sumBy(invoices, invoiceTotal), 2);
+        const totalServiceRevenue = input.includeServiceRevenue
+          ? round(sumBy(invoices, invoiceTotal), 2)
+          : null;
 
         const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));
         const newSignups = Math.round(sumBy(membershipTypeStats, (type) => type.newSales));
