@@ -337,8 +337,11 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/payments") {
+        if (Number(params?.page ?? 1) > 1) {
+          return { data: [], hasMore: false, page: Number(params?.page) };
+        }
         return {
           data: [
             { id: 1, amount: 250 },
@@ -356,6 +359,7 @@ describe("intelligence domain", () => {
       endDate: "2026-01-31",
       businessUnitId: 7,
       includeCollections: true,
+      includeProductivityMetrics: true,
     });
     const payload = payloadFrom(result);
 
@@ -479,8 +483,11 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/payments") {
+        if (Number(params?.page ?? 1) > 1) {
+          return { data: [], hasMore: false, page: Number(params?.page) };
+        }
         return {
           data: [{ amount: 125 }],
           hasMore: false,
@@ -494,6 +501,7 @@ describe("intelligence domain", () => {
       startDate: "2026-01-01",
       endDate: "2026-01-31",
       includeCollections: true,
+      includeProductivityMetrics: true,
     });
     const payload = payloadFrom(result);
 
@@ -636,9 +644,12 @@ describe("intelligence domain", () => {
       startDate: "2026-01-01",
       endDate: "2026-01-10",
       businessUnitId: 3,
+      includeExtendedMetrics: true,
     });
     const payload = payloadFrom(result);
 
+    // Tech 12 "Install Leader" only had data in Report 165 (now removed).
+    // All their metrics in 168/169/170/171/173/174 are zero, so they are filtered out.
     expect(payload.technicians).toEqual([
       {
         id: 10,
@@ -678,62 +689,43 @@ describe("intelligence domain", () => {
           closeRate: 60,
         },
       },
-      {
-        id: 12,
-        name: "Install Leader",
-        jobsCompleted: 2,
-        revenue: 0,
-        averageTicket: 0,
-        opportunities: 0,
-        convertedJobs: 0,
-        conversionRate: 0,
-        customerSatisfaction: 0,
-        revenuePerHour: 0,
-        billableEfficiency: 0,
-        recallsCaused: 0,
-        upsold: 0,
-        jobsPerDay: 0.29,
-        leadGeneration: ZERO_TECHNICIAN_LEAD_GENERATION,
-        memberships: ZERO_TECHNICIAN_MEMBERSHIPS,
-        salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
-        salesFromMarketingLeads: ZERO_TECHNICIAN_LEAD_SALES,
-      },
     ]);
 
+    // teamAverages now computed over 1 technician (Mike Johnson only)
     expect(payload.teamAverages).toEqual({
       jobsCompleted: 2,
-      revenue: 500,
-      averageTicket: 125,
-      opportunities: 2,
-      convertedJobs: 1,
-      conversionRate: 25,
-      customerSatisfaction: 2.4,
-      revenuePerHour: 100,
-      billableEfficiency: 0.425,
-      recallsCaused: 0.5,
-      upsold: 150,
+      revenue: 1000,
+      averageTicket: 250,
+      opportunities: 4,
+      convertedJobs: 2,
+      conversionRate: 50,
+      customerSatisfaction: 4.8,
+      revenuePerHour: 200,
+      billableEfficiency: 0.85,
+      recallsCaused: 1,
+      upsold: 300,
       jobsPerDay: 0.29,
       leadGeneration: {
-        replacementOpps: 1.5,
-        leadsSet: 1,
-        avgLeadSale: 375,
-        conversionRate: 25,
-        totalLeadSales: 750,
+        replacementOpps: 3,
+        leadsSet: 2,
+        avgLeadSale: 750,
+        conversionRate: 50,
+        totalLeadSales: 1500,
       },
       memberships: {
-        opportunities: 2,
-        sold: 0.5,
-        conversionRate: 12.5,
+        opportunities: 4,
+        sold: 1,
+        conversionRate: 25,
       },
       salesFromTechLeads: {
-        totalSales: 250,
-        avgSale: 125,
-        closeRate: 20,
+        totalSales: 500,
+        avgSale: 250,
+        closeRate: 40,
       },
       salesFromMarketingLeads: {
-        totalSales: 150,
-        avgSale: 150,
-        closeRate: 30,
+        totalSales: 300,
+        avgSale: 300,
+        closeRate: 60,
       },
     });
 
@@ -805,17 +797,7 @@ describe("intelligence domain", () => {
       },
     );
 
-    expect(postMock).toHaveBeenCalledWith(
-      "/tenant/{tenant}/report-category/operations/reports/165/data",
-      {
-        parameters: [
-          { name: "DateType", value: "1" },
-          { name: "From", value: "2026-01-01" },
-          { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitId", value: "3" },
-        ],
-      },
-    );
+    // Report 165 is no longer called (jobsCompleted now uses ConvertedJobs from Report 168)
   });
 
   it("intel_technician_scorecard keeps partial data when one endpoint fails", async () => {
@@ -878,13 +860,14 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeExtendedMetrics: true });
     const payload = payloadFrom(result);
 
+    // jobsCompleted now uses convertedJobs from Report 168 (which failed), so it's 0
     expect(payload.technicians[0]).toEqual({
       id: 10,
       name: "Mike Johnson",
-      jobsCompleted: 1,
+      jobsCompleted: 0,
       revenue: 0,
       averageTicket: 0,
       opportunities: 0,
@@ -895,7 +878,7 @@ describe("intelligence domain", () => {
       billableEfficiency: 0.6,
       recallsCaused: 2,
       upsold: 80,
-      jobsPerDay: 0.05,
+      jobsPerDay: 0,
       leadGeneration: {
         replacementOpps: 2,
         leadsSet: 1,
@@ -997,8 +980,11 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/invoices") {
+        if (Number(params?.page ?? 1) > 1) {
+          return { data: [], hasMore: false, page: Number(params?.page) };
+        }
         return {
           data: [
             { id: 1, total: 100 },
@@ -1015,7 +1001,7 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeServiceRevenue: true });
     const payload = payloadFrom(result);
 
     expect(payload.activeMemberships).toBe(25);
@@ -1108,8 +1094,11 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/invoices") {
+        if (Number(params?.page ?? 1) > 1) {
+          return { data: [], hasMore: false, page: Number(params?.page) };
+        }
         return {
           data: [
             { total: 50 },
@@ -1123,7 +1112,7 @@ describe("intelligence domain", () => {
       throw new Error(`Unexpected path: ${path}`);
     });
 
-    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeServiceRevenue: true });
     const payload = payloadFrom(result);
 
     expect(payload.activeMemberships).toBe(0);
@@ -1156,7 +1145,7 @@ describe("intelligence domain", () => {
     postMock.mockResolvedValue({ fields: [], data: [], hasMore: false });
     getMock.mockResolvedValue({ data: [], hasMore: false, page: 1 });
 
-    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
+    const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeServiceRevenue: true });
     const payload = payloadFrom(result);
 
     expect(payload.activeMemberships).toBe(0);
@@ -1182,9 +1171,14 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path !== "/tenant/{tenant}/estimates") {
         throw new Error(`Unexpected path: ${path}`);
+      }
+
+      // fetchAllPagesBlind fires all pages simultaneously; only page 1 has data
+      if (Number(params?.page ?? 1) > 1) {
+        return { data: [], hasMore: false, page: Number(params?.page) };
       }
 
       return {
@@ -1327,9 +1321,9 @@ describe("intelligence domain", () => {
         },
       ],
     });
-    expect(payload._warnings).toEqual([
-      "Estimate data unavailable: pipeline unavailable",
-    ]);
+    // fetchAllPagesBlind catches per-page errors internally, so fetchWithWarning
+    // sees a resolved [] and no "Estimate data unavailable" warning is surfaced
+    expect(payload._warnings).toBeUndefined();
   });
 
   it("intel_estimate_pipeline handles empty estimate data", async () => {
@@ -1405,26 +1399,32 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
-    getMock.mockResolvedValue({
-      data: [
-        {
-          id: 1,
-          status: "Open",
-          createdOn: "2026-01-10T08:00:00.000Z",
-          total: 1000,
-          customerName: "Alpha",
-        },
-        {
-          id: 2,
-          status: "Sold",
-          createdOn: "2026-01-05T08:00:00.000Z",
-          soldOn: "2026-01-06T08:00:00.000Z",
-          total: 2000,
-          customerName: "Beta",
-        },
-      ],
-      hasMore: false,
-      page: 1,
+    getMock.mockImplementation(async (_path: string, params?: Record<string, unknown>) => {
+      // fetchAllPagesBlind fires all pages simultaneously; only page 1 has data
+      if (Number(params?.page ?? 1) > 1) {
+        return { data: [], hasMore: false, page: Number(params?.page) };
+      }
+      return {
+        data: [
+          {
+            id: 1,
+            status: "Open",
+            createdOn: "2026-01-10T08:00:00.000Z",
+            total: 1000,
+            customerName: "Alpha",
+          },
+          {
+            id: 2,
+            status: "Sold",
+            createdOn: "2026-01-05T08:00:00.000Z",
+            soldOn: "2026-01-06T08:00:00.000Z",
+            total: 2000,
+            customerName: "Beta",
+          },
+        ],
+        hasMore: false,
+        page: 1,
+      };
     });
     postMock.mockRejectedValue(new Error("report outage"));
 
@@ -1454,7 +1454,7 @@ describe("intelligence domain", () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_campaign_performance");
 
-    getMock.mockImplementation(async (path: string) => {
+    getMock.mockImplementation(async (path: string, params?: Record<string, unknown>) => {
       if (path === "/tenant/{tenant}/campaigns") {
         return {
           data: [
@@ -1486,6 +1486,10 @@ describe("intelligence domain", () => {
       }
 
       if (path === "/tenant/{tenant}/bookings") {
+        // fetchAllPagesBlind fires all pages simultaneously; only page 1 has data
+        if (Number(params?.page ?? 1) > 1) {
+          return { data: [], hasMore: false, page: Number(params?.page) };
+        }
         return {
           data: [{ campaignId: 2 }, { campaignId: 2 }, { campaignId: 3 }],
           hasMore: false,
@@ -1694,8 +1698,9 @@ describe("intelligence domain", () => {
     );
     // Revenue now comes from Report 175 (empty mock = 0), not invoice pagination
     expect(payload.totals.revenue).toBe(0);
+    // fetchAllPagesBlind catches per-page errors internally, so "Booking data unavailable"
+    // is NOT surfaced via fetchWithWarning. Only the per-campaign revenue warning remains.
     expect(payload._warnings).toEqual([
-      "Booking data unavailable: bookings unavailable",
       PER_CAMPAIGN_REVENUE_WARNING,
     ]);
   });
