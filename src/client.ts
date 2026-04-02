@@ -1,3 +1,4 @@
+import https from "https";
 import axios, {
   type AxiosError,
   type AxiosInstance,
@@ -9,6 +10,14 @@ import type { ServiceTitanConfig } from "./config.js";
 import { buildParams } from "./utils.js";
 
 const TOKEN_EXPIRY_BUFFER_MS = 60_000;
+
+// Shared agent for connection pooling and keep-alive
+const httpsAgent = new https.Agent({
+  keepAlive: true,
+  maxSockets: 32, // Optimized for high-concurrency parallel fetching
+  maxFreeSockets: 10,
+  timeout: 60_000,
+});
 
 /**
  * Maps resource path segments to their ServiceTitan API module prefix.
@@ -267,6 +276,7 @@ export class ServiceTitanClient {
     this.http = axios.create({
       baseURL: environment.apiUrl,
       timeout: 60_000, // 60s default for all API requests
+      httpsAgent,
     });
 
     this.setupInterceptors();
@@ -439,6 +449,18 @@ export class ServiceTitanClient {
     );
   }
 
+  /**
+   * Pre-warm authentication token and connection pool.
+   * Call during server initialization to save latency on first tool execution.
+   */
+  public async prewarm(): Promise<void> {
+    try {
+      await this.getAccessToken();
+    } catch {
+      // Don't crash on prewarm failure, first real request will retry
+    }
+  }
+
   private async getAccessToken(forceRefresh = false): Promise<string> {
     const isTokenValid =
       this.accessToken !== null &&
@@ -482,6 +504,7 @@ export class ServiceTitanClient {
         headers: {
           "Content-Type": "application/x-www-form-urlencoded",
         },
+        httpsAgent,
         timeout: 15_000, // 15s timeout for auth — fail fast if ST auth is stalled
       },
     );

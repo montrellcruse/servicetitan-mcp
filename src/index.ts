@@ -33,6 +33,9 @@ async function main(): Promise<void> {
   // 4. Create API client
   const client = new ServiceTitanClient(config);
 
+  // Pre-warm token and connection pool (non-blocking)
+  client.prewarm();
+
   // 5. Create tool registry
   const auditLogger = new AuditLogger(logger);
   const registry = new ToolRegistry(server, config, logger, auditLogger);
