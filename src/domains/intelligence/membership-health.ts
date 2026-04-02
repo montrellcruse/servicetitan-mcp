@@ -5,7 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
-  fetchAllPagesParallel,
+  fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -198,7 +198,7 @@ export function registerIntelligenceMembershipHealthTool(
               () =>
                 // The invoices endpoint supports job/customer/BU filters, but not membership-level
                 // scoping, so this revenue is tenant-wide service revenue for the selected period.
-                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/invoices", {
+                fetchAllPagesBlind<GenericRecord>(client, "/tenant/{tenant}/invoices", {
                   invoicedOnOrAfter: startIso,
                   invoicedOnBefore: endIso,
                 }),

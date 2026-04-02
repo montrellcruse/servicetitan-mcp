@@ -273,6 +273,52 @@ export async function fetchAllPagesParallel<T>(
   return [firstItems, ...remainingPages.map((r) => r.items)].flat();
 }
 
+/**
+ * Fetch all pages blindly in parallel — fires pages 1..maxPages simultaneously
+ * without a probe step to determine totalCount first.
+ * Pages that return empty results are ignored.
+ * Saves 1 sequential round-trip vs fetchAllPagesParallel.
+ * Use only when you know roughly how many pages to expect.
+ */
+export async function fetchAllPagesBlind<T>(
+  client: ServiceTitanClient,
+  path: string,
+  params: Record<string, unknown>,
+  maxPages: number = DEFAULT_MAX_PAGES,
+  warnings?: string[],
+): Promise<T[]> {
+  // Fire all maxPages pages simultaneously
+  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
+  for (let page = 1; page <= maxPages; page++) {
+    pagePromises.push(
+      client
+        .get(
+          path,
+          buildParams({
+            ...params,
+            page,
+            pageSize: DEFAULT_PAGE_SIZE,
+          }),
+        )
+        .then((response) => ({ items: extractItems<T>(response) }))
+        .catch((error) => ({ items: [] as T[], error: error as Error })),
+    );
+  }
+
+  const results = await Promise.all(pagePromises);
+
+  // Log and surface page fetch failures
+  const failedPages = results.filter((r) => r.error);
+  if (failedPages.length > 0) {
+    const msg = `Failed to fetch ${failedPages.length}/${results.length} pages from ${path}. Results may be incomplete.`;
+    console.warn(msg);
+    warnings?.push(msg);
+  }
+
+  // Collect all non-empty pages in order
+  return results.flatMap((r) => r.items);
+}
+
 function extractItems<T>(response: unknown): T[] {
   if (Array.isArray(response)) {
     return response as T[];

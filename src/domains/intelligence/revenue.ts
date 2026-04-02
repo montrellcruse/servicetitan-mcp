@@ -5,7 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
-  fetchAllPagesParallel,
+  fetchAllPagesBlind,
   fetchWithWarning,
   getErrorMessage,
   round,
@@ -614,7 +614,7 @@ export function registerIntelligenceRevenueTool(
                 warnings,
                 "Payment data",
                 () =>
-                  fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/payments", {
+                  fetchAllPagesBlind<GenericRecord>(client, "/tenant/{tenant}/payments", {
                     paidOnAfter: startIso,
                     paidOnBefore: endIso,
                     businessUnitIds:
