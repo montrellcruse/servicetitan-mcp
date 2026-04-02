@@ -203,85 +203,6 @@ export async function fetchAllPagesParallel<T>(
   maxPages: number = DEFAULT_MAX_PAGES,
   warnings?: string[],
 ): Promise<T[]> {
-  // Key optimization: blind parallelism.
-  // Instead of fetching page 1 first to get the total count (adding a sequential trip),
-  // we fire all potential pages in parallel immediately.
-  // We stop at maxPages to maintain consistency and accuracy with the baseline.
-  
-  const pagePromises: Promise<{ items: T[]; error?: Error; hasMore?: boolean; totalCount?: number }>[] = [];
-  
-  for (let page = 1; page <= maxPages; page++) {
-    pagePromises.push(
-      client
-        .get(
-          path,
-          buildParams({
-            ...params,
-            page,
-            pageSize: DEFAULT_PAGE_SIZE,
-            includeTotal: page === 1, // Only need total from one page
-          }),
-        )
-        .then((response) => ({
-          items: extractItems<T>(response),
-          hasMore: isRecord(response) && response.hasMore === true,
-          totalCount: isRecord(response) && typeof response.totalCount === "number" ? response.totalCount as number : undefined,
-        }))
-        .catch((error) => ({ items: [] as T[], error: error as Error })),
-    );
-  }
-
-  const results = await Promise.all(pagePromises);
-  
-  // Combine items, keeping order by page
-  const allItems: T[] = [];
-  let totalCount: number | undefined;
-  let actuallyHasMore = false;
-  let failedCount = 0;
-
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i];
-    if (r.error) {
-      failedCount++;
-    } else {
-      allItems.push(...r.items);
-      if (r.totalCount !== undefined) totalCount = r.totalCount;
-      // If the last page we fetched says there's more, then we truncated
-      if (i === results.length - 1 && r.hasMore) actuallyHasMore = true;
-      // Also if any page returned fewer items than pageSize and isn't the last page of data? 
-      // No, hasMore is the authority.
-    }
-  }
-
-  if (failedCount > 0) {
-    const msg = `Failed to fetch ${failedCount}/${maxPages} pages from ${path}. Results may be incomplete.`;
-    console.warn(msg);
-    warnings?.push(msg);
-  }
-
-  // Warn if pagination was truncated
-  if (actuallyHasMore) {
-    const msg = `Pagination truncated at ${maxPages} pages. Increase ST_INTEL_MAX_PAGES for full coverage.`;
-    console.warn(msg);
-    warnings?.push(msg);
-  }
-
-  return allItems;
-}
-
-/**
- * Fetch all pages with bounded concurrency — probe page 1 for totalCount,
- * then fetch remaining pages in batches of `concurrency` to avoid 429 rate limits.
- * Safer than fetchAllPagesParallel when there are many pages (8+).
- */
-export async function fetchAllPagesBounded<T>(
-  client: ServiceTitanClient,
-  path: string,
-  params: Record<string, unknown>,
-  maxPages: number = DEFAULT_MAX_PAGES,
-  concurrency = 8,
-  warnings?: string[],
-): Promise<T[]> {
   // Fetch page 1 to get totalCount
   const firstResponse = await client.get(
     path,
@@ -299,6 +220,7 @@ export async function fetchAllPagesBounded<T>(
   const hasMore = isRecord(firstResponse) && firstResponse.hasMore === true;
   if (!hasMore) return firstItems;
 
+  // Calculate remaining pages
   const totalCount = isRecord(firstResponse) && typeof firstResponse.totalCount === "number"
     ? (firstResponse.totalCount as number)
     : undefined;
@@ -307,45 +229,48 @@ export async function fetchAllPagesBounded<T>(
   if (totalCount !== undefined) {
     totalPages = Math.min(Math.ceil(totalCount / DEFAULT_PAGE_SIZE), maxPages);
   } else {
+    // Fallback to sequential
     return fetchAllPages<T>(client, path, params, maxPages, warnings);
   }
 
   if (totalPages <= 1) return firstItems;
 
-  const allItems: T[] = [...firstItems];
-  const pages = Array.from({ length: totalPages - 1 }, (_, i) => i + 2);
-
-  // Process pages in batches of `concurrency`
-  for (let batchStart = 0; batchStart < pages.length; batchStart += concurrency) {
-    const batch = pages.slice(batchStart, batchStart + concurrency);
-    const results = await Promise.all(
-      batch.map((page) =>
-        client
-          .get(path, buildParams({ ...params, page, pageSize: DEFAULT_PAGE_SIZE }))
-          .then((response) => ({ items: extractItems<T>(response), error: undefined as Error | undefined }))
-          .catch((error) => ({ items: [] as T[], error: error as Error })),
-      ),
+  // Fetch pages 2..N in parallel, tracking failures
+  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
+  for (let page = 2; page <= totalPages; page++) {
+    pagePromises.push(
+      client
+        .get(
+          path,
+          buildParams({
+            ...params,
+            page,
+            pageSize: DEFAULT_PAGE_SIZE,
+          }),
+        )
+        .then((response) => ({ items: extractItems<T>(response) }))
+        .catch((error) => ({ items: [] as T[], error: error as Error })),
     );
-
-    const failed = results.filter((r) => r.error);
-    if (failed.length > 0) {
-      const msg = `Failed to fetch ${failed.length}/${batch.length} pages from ${path}. Results may be incomplete.`;
-      console.warn(msg);
-      warnings?.push(msg);
-    }
-
-    for (const r of results) {
-      allItems.push(...r.items);
-    }
   }
 
+  const remainingPages = await Promise.all(pagePromises);
+  
+  // Log and surface page fetch failures
+  const failedPages = remainingPages.filter((r) => r.error);
+  if (failedPages.length > 0) {
+    const msg = `Failed to fetch ${failedPages.length}/${remainingPages.length} pages from ${path}. Results may be incomplete.`;
+    console.warn(msg);
+    warnings?.push(msg);
+  }
+
+  // Warn if pagination was truncated at max page limit
   if (totalCount !== undefined && totalPages === maxPages && totalCount > maxPages * DEFAULT_PAGE_SIZE) {
     const msg = `Pagination truncated: fetched ${maxPages * DEFAULT_PAGE_SIZE} of ${totalCount} items from ${path}. Increase ST_INTEL_MAX_PAGES for full coverage.`;
     console.warn(msg);
     warnings?.push(msg);
   }
 
-  return allItems;
+  return [firstItems, ...remainingPages.map((r) => r.items)].flat();
 }
 
 function extractItems<T>(response: unknown): T[] {
