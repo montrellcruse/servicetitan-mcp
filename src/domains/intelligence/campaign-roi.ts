@@ -6,6 +6,7 @@ import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
   fetchAllPagesBlind,
+  fetchAllPagesWithTotal,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -190,7 +191,7 @@ export function registerIntelligenceCampaignPerformanceTool(
               warnings,
               "Call data",
               () =>
-                fetchAllPagesBlind<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
+                fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
                   createdOnOrAfter: startIso,
                   createdBefore: endIso,
                   active: "Any",
