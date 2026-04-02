@@ -5,7 +5,7 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
-  fetchAllPagesParallel,
+  fetchAllPagesBounded,
   fetchWithWarning,
   firstValue,
   getErrorMessage,
@@ -190,21 +190,21 @@ export function registerIntelligenceCampaignPerformanceTool(
               warnings,
               "Call data",
               () =>
-                fetchAllPagesParallel<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
+                fetchAllPagesBounded<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
                   createdOnOrAfter: startIso,
                   createdBefore: endIso,
                   active: "Any",
-                }),
+                }, undefined, 5, warnings),
               [],
             ),
             fetchWithWarning(
               warnings,
               "Booking data",
               () =>
-                fetchAllPagesParallel<GenericRecord>(client, "/tenant/{tenant}/bookings", {
+                fetchAllPagesBounded<GenericRecord>(client, "/tenant/{tenant}/bookings", {
                   createdOnOrAfter: startIso,
                   createdBefore: endIso,
-                }),
+                }, undefined, 5, warnings),
               [],
             ),
             fetchWithWarning(
