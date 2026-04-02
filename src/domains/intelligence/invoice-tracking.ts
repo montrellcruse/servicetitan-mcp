@@ -206,51 +206,43 @@ export function registerIntelligenceInvoiceTrackingTool(
           });
         }
 
-        const sentReport = await fetchWithWarning(
-          warnings,
-          "Invoices sent report (Report 2281)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/operations/reports/2281/data", {
-              parameters: baseParams,
-            }),
-          null,
-        );
+        // Run both reports in parallel — saves ~1-2s vs sequential
+        // Report 2282 runs without ExcludeInvoices since we don't have Report 2281 results yet;
+        // overlap is deduplicated in-memory after both complete.
+        const [sentReport, notSentReportRaw] = await Promise.all([
+          fetchWithWarning(
+            warnings,
+            "Invoices sent report (Report 2281)",
+            () =>
+              client.post("/tenant/{tenant}/report-category/operations/reports/2281/data", {
+                parameters: baseParams,
+              }),
+            null,
+          ),
+          fetchWithWarning(
+            warnings,
+            "Invoices not sent report (Report 2282)",
+            () =>
+              client.post("/tenant/{tenant}/report-category/operations/reports/2282/data", {
+                parameters: baseParams,
+              }),
+            null,
+          ),
+        ]);
 
         const sentInvoices = sentReport ? parseSentInvoices(sentReport) : [];
-        const excludeInvoiceNumbers = Array.from(
-          new Set(
-            sentInvoices
-              .map((invoice) => invoice.invoiceNumber.trim())
-              .filter((invoiceNumber) => invoiceNumber.length > 0),
-          ),
+        const sentInvoiceNumbers = new Set(
+          sentInvoices
+            .map((invoice) => invoice.invoiceNumber.trim().toLowerCase())
+            .filter((n) => n.length > 0),
         );
 
-        const notSentParams = [...baseParams];
-        const excludeInvoicesValue = excludeInvoiceNumbers.join(",");
-        if (excludeInvoicesValue.length > 0) {
-          if (excludeInvoicesValue.length <= 10_000) {
-            notSentParams.push({
-              name: "ExcludeInvoices",
-              value: excludeInvoicesValue,
-            });
-          } else {
-            warnings.push(
-              "ExcludeInvoices omitted because the sent invoice list was too large; not-sent results may include overlap.",
-            );
-          }
-        }
-
-        const notSentReport = await fetchWithWarning(
-          warnings,
-          "Invoices not sent report (Report 2282)",
-          () =>
-            client.post("/tenant/{tenant}/report-category/operations/reports/2282/data", {
-              parameters: notSentParams,
-            }),
-          null,
-        );
-
-        const notSentInvoices = notSentReport ? parseNotSentInvoices(notSentReport) : [];
+        // Deduplicate: remove from not-sent any invoice that also appears in sent (by invoice number)
+        const notSentRaw = notSentReportRaw ? parseNotSentInvoices(notSentReportRaw) : [];
+        const notSentInvoices = notSentRaw.filter((invoice) => {
+          const key = invoice.invoiceNumber.trim().toLowerCase();
+          return key.length === 0 || !sentInvoiceNumbers.has(key);
+        });
         const sentCount = sentInvoices.length;
         const notSentCount = notSentInvoices.length;
         const totalInvoices = sentCount + notSentCount;
