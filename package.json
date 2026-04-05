@@ -1,14 +1,14 @@
 {
   "name": "@rowvyn/servicetitan-mcp",
   "version": "2.5.0",
-  "description": "MCP server for the ServiceTitan API — 467 tools across 15 domains with 10 intelligence tools for business analytics",
+  "description": "MCP server for the ServiceTitan API \u2014 467 tools across 15 domains with 10 intelligence tools for business analytics",
   "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/montrellcruse/servicetitan-mcp.git"
   },
-  "homepage": "https://github.com/montrellcruse/servicetitan-mcp#readme",
+  "homepage": "https://rowvyn.com/case-studies/servicetitan-mcp",
   "bugs": {
     "url": "https://github.com/montrellcruse/servicetitan-mcp/issues"
   },
