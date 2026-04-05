@@ -9,6 +9,8 @@
 
 The only MCP server for the ServiceTitan API — 467 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
 
+Built by [**Rowvyn**](https://rowvyn.com) — [See the case study →](https://rowvyn.com/case-studies/servicetitan-mcp)
+
 <p align="center">
   <em>Connect any AI assistant to ServiceTitan's full API — CRM, dispatch, invoicing, payroll, and operational intelligence — through the Model Context Protocol.</em>
 </p>
