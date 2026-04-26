@@ -105,6 +105,49 @@ describe("convertTimestampsToLocal", () => {
       "2026-13-28T19:30:00Z",
     );
   });
+
+  it("preserves values whose key name signals UTC", () => {
+    // ServiceTitan responses (notably scheduling/capacity) include both
+    // local-tagged and UTC-tagged timestamps in the same object. Converting a
+    // *Utc-suffixed field to local would relabel UTC values with a local
+    // offset, which is misleading. Each *Utc field must round-trip unchanged.
+    const payload = {
+      start: "2026-05-01T12:00:00Z",
+      end: "2026-05-01T14:00:00Z",
+      startUtc: "2026-05-01T16:00:00Z",
+      endUtc: "2026-05-01T18:00:00Z",
+      createdOnUtc: "2026-05-01T16:00:00Z",
+      modifiedOnUtc: "2026-05-01T16:00:00.500Z",
+      // Negative case: "utc" embedded mid-word should NOT trigger preservation.
+      utcOffset: "2026-05-01T12:00:00Z",
+    };
+
+    expect(convertTimestampsToLocal(payload, "America/New_York")).toEqual({
+      start: "2026-05-01T08:00:00.000-04:00",
+      end: "2026-05-01T10:00:00.000-04:00",
+      startUtc: "2026-05-01T16:00:00Z",
+      endUtc: "2026-05-01T18:00:00Z",
+      createdOnUtc: "2026-05-01T16:00:00Z",
+      modifiedOnUtc: "2026-05-01T16:00:00.500Z",
+      utcOffset: "2026-05-01T08:00:00.000-04:00",
+    });
+  });
+
+  it("preserves UTC keys nested inside arrays", () => {
+    const payload = {
+      availabilities: [
+        { start: "2026-05-01T12:00:00Z", startUtc: "2026-05-01T16:00:00Z" },
+        { start: "2026-05-01T14:00:00Z", startUtc: "2026-05-01T18:00:00Z" },
+      ],
+    };
+
+    expect(convertTimestampsToLocal(payload, "America/New_York")).toEqual({
+      availabilities: [
+        { start: "2026-05-01T08:00:00.000-04:00", startUtc: "2026-05-01T16:00:00Z" },
+        { start: "2026-05-01T10:00:00.000-04:00", startUtc: "2026-05-01T18:00:00Z" },
+      ],
+    });
+  });
 });
 
 describe("toolResult timezone conversion", () => {
