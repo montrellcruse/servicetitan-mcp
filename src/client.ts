@@ -569,10 +569,37 @@ export class ServiceTitanClient {
     }
 
     if (data && typeof data === "object") {
-      const knownMessageFields = ["message", "error_description", "error"] as const;
+      const record = data as Record<string, unknown>;
 
+      // ServiceTitan validation errors follow RFC 7807-ish shape:
+      //   { errors: { fieldName: [reason1, reason2] }, title, status, traceId }
+      // Surface every field-level reason so callers can correct their payload
+      // in one round trip rather than guessing.
+      if (record.errors && typeof record.errors === "object") {
+        const fieldErrors = Object.entries(record.errors as Record<string, unknown>)
+          .map(([field, reasons]) => {
+            const reasonText = Array.isArray(reasons)
+              ? reasons.filter((r) => typeof r === "string").join("; ")
+              : String(reasons);
+            return `${field}: ${reasonText}`;
+          })
+          .join(" | ");
+        if (fieldErrors.length > 0) {
+          const title = typeof record.title === "string" ? record.title : "Validation error";
+          return `${title} — ${fieldErrors}`;
+        }
+      }
+
+      // Generic ST/Problem-Details responses with title (+ optional detail)
+      if (typeof record.title === "string" && record.title.trim().length > 0) {
+        const detail = typeof record.detail === "string" ? ` — ${record.detail}` : "";
+        return `${record.title}${detail}`;
+      }
+
+      // Legacy / OAuth / generic message fields
+      const knownMessageFields = ["message", "error_description", "error"] as const;
       for (const field of knownMessageFields) {
-        const value = (data as Record<string, unknown>)[field];
+        const value = record[field];
         if (typeof value === "string" && value.trim().length > 0) {
           return value;
         }
