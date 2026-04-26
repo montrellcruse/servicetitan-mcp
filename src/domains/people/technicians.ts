@@ -69,11 +69,30 @@ const technicianListSchema = dateFilterParams(
 
 const shiftTypeSchema = z.enum(["Normal", "OnCall", "TimeOff"]);
 
+const repeatTypeSchema = z.enum(["Never", "Daily", "Weekly", "Monthly"]);
+
+// ServiceTitan's POST /technician-shifts requires `technicianIds` (array),
+// `body`, and `repeatType`. Calling it with the previous `technicianId`
+// (singular) + missing `body`/`repeatType` returns HTTP 400 with all three
+// fields named.
 const technicianShiftCreateSchema = z.object({
-  technicianId: z.number().int().describe("Technician ID"),
-  start: z.string().datetime().describe("Shift start timestamp"),
-  end: z.string().datetime().describe("Shift end timestamp"),
-  shiftType: shiftTypeSchema.optional().describe("Shift type"),
+  technicianIds: z
+    .array(z.number().int())
+    .min(1)
+    .describe("Technician IDs to assign the shift to (one or more)"),
+  start: z.string().datetime().describe("Shift start timestamp (ISO UTC)"),
+  end: z.string().datetime().describe("Shift end timestamp (ISO UTC)"),
+  body: z.string().describe("Shift body / description (required by ST API)"),
+  repeatType: repeatTypeSchema.describe(
+    "Repeat type. Use 'Never' for a single shift; 'Daily'/'Weekly'/'Monthly' " +
+      "for recurrence (then `repeatEndOn` is required).",
+  ),
+  repeatEndOn: z
+    .string()
+    .datetime()
+    .optional()
+    .describe("End date for recurrence (required when repeatType != 'Never')"),
+  shiftType: shiftTypeSchema.optional().describe("Shift type. Default 'Normal'."),
   title: z.string().optional().describe("Shift title"),
   note: z.string().optional().describe("Shift note"),
   active: z.boolean().optional().describe("Whether the shift is active"),
@@ -123,11 +142,14 @@ const technicianShiftUpdateSchema = z.object({
   timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
 });
 
+// ST's bulk-delete endpoint expects `ids`, not `deletedIds`. The previous
+// `deletedIds` field was silently dropped (the request body was empty), so
+// the call returned 400.
 const technicianShiftsBulkDeleteSchema = z.object({
-  deletedIds: z
-    .array(z.number().int().describe("Technician shift ID"))
-    .optional()
-    .describe("IDs of shifts to delete"),
+  ids: z
+    .array(z.number().int())
+    .min(1)
+    .describe("IDs of technician shifts to delete"),
 });
 
 const performanceGetSchema = paginationParams(
