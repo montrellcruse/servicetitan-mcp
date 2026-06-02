@@ -92,22 +92,44 @@ function utcToLocal(isoString: string, timezone: string): string {
   return `${localIso}${sign}${offsetH}:${offsetM}`;
 }
 
-export function convertTimestampsToLocal(data: unknown, timezone: string): unknown {
+// When a key name explicitly signals UTC (e.g. startUtc, endUtc, createdOnUtc),
+// preserve the value as-is. Converting these to local time while keeping the
+// UTC-suffixed key name produces logically wrong output like
+// `startUtc: "2026-05-01T12:00:00-04:00"` which downstream consumers cannot
+// trust. ServiceTitan's capacity API is the most visible source of these.
+const UTC_SUFFIXED_KEY = /(^|[a-z0-9_])utc\b/i;
+
+function keyIndicatesUtc(key: string | undefined): boolean {
+  if (!key) return false;
+  return UTC_SUFFIXED_KEY.test(key);
+}
+
+export function convertTimestampsToLocal(
+  data: unknown,
+  timezone: string,
+  parentKey?: string,
+): unknown {
   if (isUtcTimezone(timezone)) {
     return data;
   }
 
   if (Array.isArray(data)) {
-    return data.map((item) => convertTimestampsToLocal(item, timezone));
+    return data.map((item) => convertTimestampsToLocal(item, timezone, parentKey));
   }
 
   if (isPlainObject(data)) {
     return Object.fromEntries(
-      Object.entries(data).map(([key, value]) => [key, convertTimestampsToLocal(value, timezone)]),
+      Object.entries(data).map(([key, value]) => [
+        key,
+        convertTimestampsToLocal(value, timezone, key),
+      ]),
     );
   }
 
   if (typeof data === "string" && ISO_TIMESTAMP_PATTERN.test(data)) {
+    if (keyIndicatesUtc(parentKey)) {
+      return data;
+    }
     return utcToLocal(data, timezone);
   }
 
