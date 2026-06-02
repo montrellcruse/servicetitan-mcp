@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.5.2] - 2026-06-02
+
+### Fixed
+- **UTC-labeled fields preserved** — timestamp conversion now leaves values unchanged when the field name explicitly signals UTC, preventing misleading local-offset values under `*Utc` keys.
+- **ServiceTitan validation errors surfaced** — field-level validation reasons from ServiceTitan error responses are included in client error messages.
+- **Docker build** — Dockerfile now copies `scripts/` before `npm run build`, so container builds have the bundled build script.
+- **Technician shift schemas** — technician shift create and bulk-delete inputs now match ServiceTitan's required `technicianIds`, `body`, `repeatType`, and `ids` fields.
+
+### Changed
+- **Scheduling capacity schema** — `scheduling_capacity_calculate` now exposes the required ServiceTitan capacity fields directly instead of accepting an opaque payload wrapper.
+- **Tool catalog refreshed** — generated `TOOLS.md` now reflects the updated scheduling capacity description and latest intelligence tool descriptions.
+
+## [2.5.1] - 2026-04-05
+
+### Changed
+- **Homepage URL** — npm package homepage now points to the Rowvyn ServiceTitan MCP case study.
+
 ## [2.5.0] - 2026-04-02
 
 ### Performance
@@ -239,6 +256,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.5.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.1...v2.5.2
+[2.5.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.4.2...v2.5.0
 [2.4.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.4.0...v2.4.2
 [2.3.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.3.0...v2.3.1
