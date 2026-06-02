@@ -54,11 +54,7 @@ export function registerSchedulingCapacityTools(
     name: "scheduling_capacity_calculate",
     domain: "scheduling",
     operation: "write",
-    description:
-      "Calculate available time slots for scheduling. Returns arrival windows " +
-      "with technician availability for the given business unit(s) within the " +
-      "time window. Note: this is a POST that does not mutate state — it is " +
-      "flagged 'write' due to the HTTP verb.",
+    description: "Calculate available time slots for scheduling. Returns arrival windows with technician availability for the given business unit(s) within the time window. Note: this is a POST that does not mutate state; it is flagged 'write' due to the HTTP verb.",
     schema: capacityCalculateSchema.shape,
     handler: async (params) => {
       const input = capacityCalculateSchema.parse(params);

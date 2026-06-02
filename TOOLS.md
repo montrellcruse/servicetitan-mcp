@@ -276,9 +276,9 @@ Total tools: 467
 | `intel_invoice_tracking` | `intelligence` | `read` | Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician |
 | `intel_labor_cost` | `intelligence` | `read` | Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown |
 | `intel_lookup` | `intelligence` | `read` | Look up reference data (technicians, business units, payment types, membership types).  |
-| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, tenant-wide totalServiceRevenue from invoices, and business-unit membership conversion metrics. ServiceTitan's invoices API does not expose a membership-only invoice filter, so totalServiceRevenue is not membership-scoped. |
-| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, plus BU-level productivity and sales metrics. Set includeCollections=true for payment/collections data (adds ~20s latency). |
-| `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard using ServiceTitan reports for completed jobs, revenue, opportunities, conversion, productivity, lead generation, memberships, sales from tech leads, sales from marketing leads, and team averages |
+| `intel_membership_health` | `intelligence` | `read` | Membership health summary with active counts, signups, cancellations, renewals, retention rate, and business-unit membership conversion metrics. Set includeServiceRevenue=true to also fetch tenant-wide totalServiceRevenue from invoices (adds ~1-2s latency). |
+| `intel_revenue_summary` | `intelligence` | `read` | Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, and sales metrics. Set includeProductivityMetrics=true for BU-level productivity metrics (adds ~0.5-1s). Set includeCollections=true for payment/collections data (adds ~20s). |
+| `intel_technician_scorecard` | `intelligence` | `read` | Technician performance scorecard with completed jobs, revenue, opportunities, conversion rates, productivity, and lead generation. Set includeExtendedMetrics=true for memberships sold and sales from tech/marketing leads (adds ~0.5-1s). |
 
 ## inventory
 
@@ -502,7 +502,7 @@ Total tools: 467
 | `scheduling_appointment_assignments_unassign_technicians` | `scheduling` | `write` | Unassign technicians from appointments |
 | `scheduling_business_hours_create` | `scheduling` | `write` | Create business hour configuration |
 | `scheduling_business_hours_list` | `scheduling` | `read` | Get business hour configuration |
-| `scheduling_capacity_calculate` | `scheduling` | `write` | Calculate capacity for scheduling |
+| `scheduling_capacity_calculate` | `scheduling` | `write` | Calculate available time slots for scheduling. Returns arrival windows with technician availability for the given business unit(s) within the time window. Note: this is a POST that does not mutate state; it is flagged 'write' due to the HTTP verb. |
 | `scheduling_non_job_appointments_create` | `scheduling` | `write` | Create a non-job appointment |
 | `scheduling_non_job_appointments_delete` | `scheduling` | `delete` | Delete a non-job appointment |
 | `scheduling_non_job_appointments_get` | `scheduling` | `read` | Get a non-job appointment by ID |
