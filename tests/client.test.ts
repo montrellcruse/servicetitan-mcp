@@ -317,6 +317,79 @@ describe("ServiceTitanClient", () => {
       expect(String(error)).not.toContain("secret-token");
     }
   });
+
+  it("surfaces field-level reasons from ST validation errors", async () => {
+    const http = createAxiosInstanceMock();
+    mockAxiosCreate.mockReturnValue(http);
+    mockAxiosPost.mockResolvedValue({
+      data: { access_token: "token-1", expires_in: 3600 },
+    });
+
+    // Real ST 400 shape, taken verbatim from POST /technician-shifts with a
+    // payload missing required fields.
+    http.queueReject({
+      isAxiosError: true,
+      message: "Request failed with status code 400",
+      response: {
+        status: 400,
+        data: {
+          errors: {
+            body: ["The body field is required."],
+            repeatType: ["Required property 'repeatType' not found in JSON."],
+            technicianIds: ["Required property 'technicianIds' not found in JSON."],
+          },
+          title: "One or more validation errors occurred.",
+          status: 400,
+          traceId: "9f26e02b89596d5c-MIA",
+        },
+      },
+    });
+
+    const client = new ServiceTitanClient(createConfig());
+
+    try {
+      await client.post("/dispatch/v2/tenant/{tenant}/technician-shifts", {});
+      throw new Error("Expected request to throw");
+    } catch (error) {
+      const message = (error as { message: string }).message;
+      expect(message).toContain("One or more validation errors occurred.");
+      expect(message).toContain("body: The body field is required.");
+      expect(message).toContain("repeatType:");
+      expect(message).toContain("technicianIds:");
+    }
+  });
+
+  it("surfaces title + detail for non-validation ST errors", async () => {
+    const http = createAxiosInstanceMock();
+    mockAxiosCreate.mockReturnValue(http);
+    mockAxiosPost.mockResolvedValue({
+      data: { access_token: "token-1", expires_in: 3600 },
+    });
+
+    http.queueReject({
+      isAxiosError: true,
+      message: "Request failed with status code 404",
+      response: {
+        status: 404,
+        data: {
+          title: "Resource not found",
+          detail: "Customer 999999 does not exist in tenant 42",
+          status: 404,
+        },
+      },
+    });
+
+    const client = new ServiceTitanClient(createConfig());
+
+    try {
+      await client.get("/crm/v2/tenant/{tenant}/customers/999999");
+      throw new Error("Expected request to throw");
+    } catch (error) {
+      expect((error as { message: string }).message).toBe(
+        "Resource not found — Customer 999999 does not exist in tenant 42",
+      );
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
