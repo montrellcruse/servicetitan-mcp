@@ -4,10 +4,10 @@
 [![npm version](https://img.shields.io/npm/v/@rowvyn/servicetitan-mcp.svg)](https://www.npmjs.com/package/@rowvyn/servicetitan-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
-[![Tools](https://img.shields.io/badge/tools-467-blue.svg)](#tool-catalog)
+[![Tools](https://img.shields.io/badge/tools-483-blue.svg)](#tool-catalog)
 [![Domains](https://img.shields.io/badge/domains-15-purple.svg)](#tool-catalog)
 
-The only MCP server for the ServiceTitan API — 467 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
+The only MCP server for the ServiceTitan API — 483 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
 
 Built by [**Rowvyn**](https://rowvyn.com) — [See the case study →](https://rowvyn.com/case-studies/servicetitan-mcp)
 
@@ -28,7 +28,7 @@ Built by [**Rowvyn**](https://rowvyn.com) — [See the case study →](https://r
 
 ## Features
 
-- **467 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
+- **483 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
 - **10 intelligence tools** — composite analytics that aggregate multiple API calls into revenue summaries, ops snapshots, technician scorecards, and more
 - **Dashboard-matched revenue** — `intel_revenue_summary` pulls from the same source as ST's own dashboard
 - **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
@@ -157,11 +157,11 @@ ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
 
 ## Tool Catalog
 
-467 tools registered across 15 domains:
+483 tools registered across 15 domains:
 
 | Domain | Tools | Example Tools |
 |--------|------:|---------------|
-| `dispatch` | 74 | `dispatch_jobs_list`, `dispatch_appointments_get`, `dispatch_job_types_list` |
+| `dispatch` | 79 | `dispatch_jobs_list`, `dispatch_appointments_get`, `dispatch_job_types_list` |
 | `crm` | 71 | `crm_customers_list`, `crm_contacts_get`, `crm_bookings_create` |
 | `export` | 49 | `export_invoices`, `export_customers`, `export_jobs` |
 | `inventory` | 37 | `inventory_purchase_orders_list`, `inventory_vendors_list`, `inventory_warehouses_list` |
@@ -173,10 +173,10 @@ ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
 | `people` | 22 | `people_technicians_list`, `people_employees_list`, `people_trucks_list` |
 | `memberships` | 21 | `memberships_list`, `memberships_types_list`, `memberships_recurring_services_list` |
 | `scheduling` | 17 | `scheduling_teams_list`, `scheduling_zones_list`, `scheduling_capacity_calculate` |
-| `estimates` | 11 | `estimates_list`, `estimates_get`, `estimates_items_list` |
+| `estimates` | 22 | `estimates_list`, `estimates_get`, `estimates_items_list` |
 | **`intelligence`** | **10** | `intel_revenue_summary`, `intel_daily_snapshot`, `intel_technician_scorecard` |
 | `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
-| **Total** | **466** | *(+ 1 system tool: `st_health_check` = **467** total)* |
+| **Total** | **482** | *(+ 1 system tool: `st_health_check` = **483** total)* |
 
 > With `ST_READONLY=true` (default), all tools are registered but write and delete operations are blocked at execution time with a clear error message (`Readonly mode: operation not permitted`). Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
 
@@ -306,7 +306,7 @@ The CLI and this MCP server share the same design philosophy: push the business 
 |---------|------------|----------------------|
 | Revenue accuracy | ✅ Dashboard-matched | ❌ $17–21K off per period |
 | Intelligence tools | ✅ 10 tools | ❌ None |
-| Domain coverage | ✅ 467 tools, 15 domains | ⚠️ 10–50 tools |
+| Domain coverage | ✅ 483 tools, 15 domains | ⚠️ 10–50 tools |
 | Safety layer | ✅ Read-only default, audit log | ❌ None |
 | Response shaping | ✅ LLM-optimized | ❌ Raw API responses |
 | Name-based filtering | ✅ Resolve names to IDs automatically | ❌ Numeric IDs required |

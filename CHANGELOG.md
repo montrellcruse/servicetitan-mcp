@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.6.0] - 2026-06-10
+
+### Added
+- **ServiceTitan ST-77.x dispatch tools** — added job equipment get/attach/detach tools, appointment summary creation, `equipmentIds` job filtering, `summaryOfWork`, and job type custom field assignment support.
+- **Sales template tools** — added estimate template CRUD, proposal template CRUD, and proposal type lookup tools from the ST-77.2 Sales & Estimates API.
+- **DELETE with body support** — added client support for ServiceTitan endpoints that require JSON payloads on DELETE requests.
+
+### Changed
+- **Tool catalog refreshed** — generated `TOOLS.md` now reflects 483 registered tools across 15 domains.
+- **Job type safety wording** — job type update surfaces `customFieldsUpdateMode` and warns about ServiceTitan's replace semantics for custom field type assignments.
+- **Template update safety wording** — estimate/proposal template update tools call out full-replace fields so callers can omit those fields when preserving existing assignments.
+
 ## [2.5.2] - 2026-06-02
 
 ### Fixed
@@ -256,6 +268,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.6.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.2...v2.6.0
 [2.5.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.4.2...v2.5.0

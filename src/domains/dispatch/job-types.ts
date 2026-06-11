@@ -30,6 +30,14 @@ const jobTypePayloadSchema = z.object({
   soldThreshold: z.number().optional().describe("Sold threshold value"),
   class: z.string().optional().describe("Job class"),
   summary: z.string().optional().describe("Job type summary"),
+  defaultEstimateSoldAction: z
+    .string()
+    .optional()
+    .describe("Default action when an estimate is sold for this job type"),
+  customFieldTypeIds: z
+    .array(z.number().int())
+    .optional()
+    .describe("Custom field type IDs assigned to this job type"),
   noCharge: z.boolean().optional().describe("Whether this job type is no-charge"),
   enforceRecurringServiceEventSelection: z
     .boolean()
@@ -45,23 +53,6 @@ const jobTypePayloadSchema = z.object({
 
 const jobTypeCreateSchema = jobTypePayloadSchema.extend({
   name: z.string().describe("Job type name"),
-  businessUnitIds: z
-    .array(z.number().int())
-    .describe("Business unit IDs associated to this job type"),
-  skills: z.array(z.string()).describe("Skill labels associated to this job type"),
-  tagTypeIds: z.array(z.number().int()).describe("Tag type IDs"),
-  priority: z.string().describe("Default priority"),
-  duration: z.number().describe("Default duration in seconds"),
-  soldThreshold: z.number().describe("Sold threshold value"),
-  class: z.string().describe("Job class"),
-  summary: z.string().describe("Job type summary"),
-  noCharge: z.boolean().describe("Whether this job type is no-charge"),
-  enforceRecurringServiceEventSelection: z
-    .boolean()
-    .describe("Require recurring service event selection"),
-  invoiceSignaturesRequired: z
-    .boolean()
-    .describe("Whether signatures are required for invoices"),
 });
 
 const jobTypeIdSchema = z.object({
@@ -76,7 +67,13 @@ const jobTypeGetSchema = jobTypeIdSchema.extend({
     .describe("External data application GUID"),
 });
 
-const jobTypeUpdateSchema = jobTypeIdSchema.extend(jobTypePayloadSchema.shape);
+const jobTypeUpdateSchema = jobTypeIdSchema.extend({
+  ...jobTypePayloadSchema.shape,
+  customFieldsUpdateMode: z
+    .enum(["Replace", "Merge"])
+    .optional()
+    .describe("How to apply customFieldTypeIds. Replace is the ST default and removes assignments not included in customFieldTypeIds; Merge preserves existing assignments and adds new ones."),
+});
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return dateFilterParams(schema).extend({
@@ -192,7 +189,7 @@ export function registerDispatchJobTypeTools(
     name: "dispatch_job_types_update",
     domain: "dispatch",
     operation: "write",
-    description: "Update a job type",
+    description: "Update a job type. Warning: customFieldTypeIds uses ST replace semantics unless customFieldsUpdateMode is Merge.",
     schema: jobTypeUpdateSchema.shape,
     handler: async (params) => {
       const input = jobTypeUpdateSchema.parse(params);

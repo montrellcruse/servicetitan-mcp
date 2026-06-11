@@ -1,6 +1,6 @@
 # Tool Catalog
 
-Total tools: 467
+Total tools: 483
 
 ## accounting
 
@@ -87,7 +87,7 @@ Total tools: 467
 | `crm_customers_notes_create` | `crm` | `write` | Create a note for a customer |
 | `crm_customers_notes_delete` | `crm` | `delete` | Delete a customer note |
 | `crm_customers_notes_list` | `crm` | `read` | List notes for a customer |
-| `crm_customers_tags_create` | `crm` | `write` | Create a tag for a customer |
+| `crm_customers_tags_create` | `crm` | `write` | Create a tag assignment for a customer |
 | `crm_customers_tags_delete` | `crm` | `delete` | Delete a tag assignment from a customer |
 | `crm_customers_update` | `crm` | `write` | Patch a customer |
 | `crm_leads_create` | `crm` | `write` | Create a lead |
@@ -104,7 +104,7 @@ Total tools: 467
 | `crm_locations_contacts_delete` | `crm` | `delete` | Delete a location contact |
 | `crm_locations_contacts_list` | `crm` | `read` | List contacts for a location |
 | `crm_locations_contacts_modified_list` | `crm` | `read` | List location contacts modified in a time range |
-| `crm_locations_contacts_update` | `crm` | `write` | Update a contact on a location |
+| `crm_locations_contacts_update` | `crm` | `write` | Patch a location contact |
 | `crm_locations_create` | `crm` | `write` | Create a location |
 | `crm_locations_custom_field_types_list` | `crm` | `read` | List location custom field types |
 | `crm_locations_get` | `crm` | `read` | Get a location by ID |
@@ -127,6 +127,7 @@ Total tools: 467
 | `dispatch_appointments_hold` | `dispatch` | `write` | Put an appointment on hold |
 | `dispatch_appointments_list` | `dispatch` | `read` | List appointments |
 | `dispatch_appointments_reschedule` | `dispatch` | `write` | Reschedule an appointment |
+| `dispatch_appointments_set_summary` | `dispatch` | `write` | Set an appointment summary. Private preview: only works for accounts with the ST feature enabled. |
 | `dispatch_appointments_unconfirm` | `dispatch` | `delete` | Remove appointment confirmation |
 | `dispatch_appointments_unhold` | `dispatch` | `delete` | Remove hold from an appointment |
 | `dispatch_appointments_update_special_instructions` | `dispatch` | `write` | Update appointment special instructions |
@@ -157,7 +158,7 @@ Total tools: 467
 | `dispatch_job_types_delete` | `dispatch` | `delete` | Delete a job type |
 | `dispatch_job_types_get` | `dispatch` | `read` | Get a job type by ID |
 | `dispatch_job_types_list` | `dispatch` | `read` | List job types |
-| `dispatch_job_types_update` | `dispatch` | `write` | Update a job type |
+| `dispatch_job_types_update` | `dispatch` | `write` | Update a job type. Warning: customFieldTypeIds uses ST replace semantics unless customFieldsUpdateMode is Merge. |
 | `dispatch_jobs_booked_log_get` | `dispatch` | `read` | Get booked log details for a job |
 | `dispatch_jobs_cancel` | `dispatch` | `write` | Cancel a job |
 | `dispatch_jobs_cancel_reasons_list` | `dispatch` | `read` | List cancel reasons available for jobs |
@@ -166,6 +167,10 @@ Total tools: 467
 | `dispatch_jobs_create` | `dispatch` | `write` | Create a job |
 | `dispatch_jobs_create_attachment` | `dispatch` | `write` | Attach a file to a job |
 | `dispatch_jobs_custom_field_types_list` | `dispatch` | `read` | List job custom field types |
+| `dispatch_jobs_equipment_attach` | `dispatch` | `write` | Attach installed equipment to a job |
+| `dispatch_jobs_equipment_detach` | `dispatch` | `delete` | Detach a single installed equipment item from a job. Requires confirm: true. |
+| `dispatch_jobs_equipment_detach_bulk` | `dispatch` | `delete` | Detach one or more installed equipment IDs from a job. Requires confirm: true. |
+| `dispatch_jobs_equipment_get` | `dispatch` | `read` | Get installed equipment IDs attached to a job |
 | `dispatch_jobs_get` | `dispatch` | `read` | Get a job by ID |
 | `dispatch_jobs_get_attachment` | `dispatch` | `read` | Get a job attachment by ID |
 | `dispatch_jobs_history_get` | `dispatch` | `read` | Get history for a job |
@@ -201,12 +206,23 @@ Total tools: 467
 | --- | --- | --- | --- |
 | `estimates_create` | `estimates` | `write` | Create a new estimate |
 | `estimates_dismiss` | `estimates` | `write` | Dismiss an estimate |
+| `estimates_estimate_templates_create` | `estimates` | `write` | Create an estimate template |
+| `estimates_estimate_templates_delete` | `estimates` | `delete` | Delete an estimate template by ID |
+| `estimates_estimate_templates_get` | `estimates` | `read` | Get an estimate template by ID |
+| `estimates_estimate_templates_list` | `estimates` | `read` | List estimate templates |
+| `estimates_estimate_templates_update` | `estimates` | `write` | Update an estimate template. Warning: items are full-replace when provided; omit items to preserve existing template items. |
 | `estimates_export_estimates` | `estimates` | `read` | Export estimates |
 | `estimates_get` | `estimates` | `read` | Get a single estimate by ID |
 | `estimates_items_delete` | `estimates` | `delete` | Delete a single item from an estimate |
 | `estimates_items_list` | `estimates` | `read` | List estimate items with optional filters |
 | `estimates_items_update` | `estimates` | `write` | Add or replace an item collection on an estimate |
 | `estimates_list` | `estimates` | `read` | List estimates with filters |
+| `estimates_proposal_templates_create` | `estimates` | `write` | Create a proposal template |
+| `estimates_proposal_templates_delete` | `estimates` | `delete` | Delete a proposal template by ID |
+| `estimates_proposal_templates_get` | `estimates` | `read` | Get a proposal template by ID |
+| `estimates_proposal_templates_list` | `estimates` | `read` | List proposal templates |
+| `estimates_proposal_templates_update` | `estimates` | `write` | Update a proposal template. Warning: businessUnitIds and estimateAssignments are full-replace when provided; omit them to preserve existing assignments. |
+| `estimates_proposal_types_list` | `estimates` | `read` | List proposal types |
 | `estimates_sell` | `estimates` | `write` | Mark an estimate as sold |
 | `estimates_unsell` | `estimates` | `write` | Revert an estimate from sold status |
 | `estimates_update` | `estimates` | `write` | Update an existing estimate |

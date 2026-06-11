@@ -254,6 +254,34 @@ describe("ServiceTitanClient", () => {
     );
   });
 
+  it("supports DELETE requests with a JSON body", async () => {
+    const http = createAxiosInstanceMock();
+    mockAxiosCreate.mockReturnValue(http);
+    mockAxiosPost.mockResolvedValue({
+      data: {
+        access_token: "token-1",
+        expires_in: 3600,
+      },
+    });
+
+    http.queueResolve({ data: { ok: true }, status: 200 });
+
+    const client = new ServiceTitanClient(createConfig());
+    await client.deleteWithBody("/tenant/{tenant}/jobs/123/equipment", {
+      equipmentIds: [10, 11],
+    });
+
+    expect(http.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "delete",
+        url: "/jpm/v2/tenant/tenant-42/jobs/123/equipment",
+        data: {
+          equipmentIds: [10, 11],
+        },
+      }),
+    );
+  });
+
   it("sets auth headers on requests", async () => {
     const http = createAxiosInstanceMock();
     mockAxiosCreate.mockReturnValue(http);
@@ -465,7 +493,7 @@ describe("Route table drift detection", () => {
   const domainsDir = join(__dirname, "../src/domains");
   const domainFiles = walkTs(domainsDir);
   const callPattern =
-    /client\.(?:get|post|put|patch|delete)\(\s*["`](\/(v\d+\/)?tenant\/\{tenant\}\/[^"`]+)["`]/g;
+    /client\.(?:get|post|put|patch|delete|deleteWithBody)\(\s*["`](\/(v\d+\/)?tenant\/\{tenant\}\/[^"`]+)["`]/g;
 
   const missingRegular = new Map<string, string>();
   const missingExport = new Map<string, string>();

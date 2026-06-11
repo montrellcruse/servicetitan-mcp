@@ -75,7 +75,24 @@ const jobGetSchema = jobIdSchema.extend({
     .describe("External data application GUID"),
 });
 
-const jobUpdateSchema = jobIdSchema.extend(jobWritePayloadSchema.shape);
+const jobUpdateSchema = jobIdSchema.extend({
+  ...jobWritePayloadSchema.shape,
+  summaryOfWork: z
+    .string()
+    .optional()
+    .describe("Summary of work completed on the job. Private preview: available for specific accounts only."),
+});
+
+const jobEquipmentBulkSchema = jobIdSchema.extend({
+  equipmentIds: z
+    .array(z.number().int())
+    .min(1)
+    .describe("Installed equipment IDs to attach or detach"),
+});
+
+const jobEquipmentDetachSchema = jobIdSchema.extend({
+  equipmentId: z.number().int().describe("Installed equipment ID to detach"),
+});
 
 const jobAttachmentCreateSchema = jobIdSchema.extend({
   file: z.string().describe("Base64-encoded attachment file"),
@@ -186,6 +203,10 @@ const jobsListSchema = paginationParams(
       campaignId: z.number().int().optional().describe("Filter by campaign ID"),
       businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
       invoiceId: z.number().int().optional().describe("Filter by invoice ID"),
+      equipmentIds: z
+        .string()
+        .optional()
+        .describe("Comma-separated installed equipment IDs; returns jobs with at least one attached equipment item"),
       completedOnOrAfter: z
         .string()
         .datetime()
@@ -411,6 +432,87 @@ export function registerDispatchJobTools(
 
       try {
         const data = await client.get("/tenant/{tenant}/jobs", buildParams(input));
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "dispatch_jobs_equipment_get",
+    domain: "dispatch",
+    operation: "read",
+    description: "Get installed equipment IDs attached to a job",
+    schema: jobIdSchema.shape,
+    handler: async (params) => {
+      const input = jobIdSchema.parse(params);
+
+      try {
+        const data = await client.get(`/tenant/{tenant}/jobs/${input.id}/equipment`);
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "dispatch_jobs_equipment_attach",
+    domain: "dispatch",
+    operation: "write",
+    description: "Attach installed equipment to a job",
+    schema: jobEquipmentBulkSchema.shape,
+    handler: async (params) => {
+      const input = jobEquipmentBulkSchema.parse(params);
+
+      try {
+        const data = await client.post(`/tenant/{tenant}/jobs/${input.id}/equipment`, {
+          equipmentIds: input.equipmentIds,
+        });
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "dispatch_jobs_equipment_detach_bulk",
+    domain: "dispatch",
+    operation: "delete",
+    description: "Detach one or more installed equipment IDs from a job. Requires confirm: true.",
+    schema: jobEquipmentBulkSchema.shape,
+    handler: async (params) => {
+      const input = jobEquipmentBulkSchema.parse(params);
+
+      try {
+        const data = await client.deleteWithBody(
+          `/tenant/{tenant}/jobs/${input.id}/equipment`,
+          {
+            equipmentIds: input.equipmentIds,
+          },
+        );
+        return toolResult(data);
+      } catch (error: unknown) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "dispatch_jobs_equipment_detach",
+    domain: "dispatch",
+    operation: "delete",
+    description: "Detach a single installed equipment item from a job. Requires confirm: true.",
+    schema: jobEquipmentDetachSchema.shape,
+    handler: async (params) => {
+      const input = jobEquipmentDetachSchema.parse(params);
+
+      try {
+        const data = await client.delete(
+          `/tenant/{tenant}/jobs/${input.id}/equipment/${input.equipmentId}`,
+        );
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));

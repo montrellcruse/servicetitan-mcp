@@ -36,6 +36,7 @@ rg -l 'registry\.register\(' "${SOURCE_DIR}" -g '*.ts' | sort | while IFS= read 
     # Match any line that starts a register block — either direct or via helper variable
     /registry\.register\(\{/ || /registry\.register\(options\)/ || /registry\.register\(\{$/ {
       in_block = 1
+      block_lines = 0
       name = ""
       domain = ""
       operation = ""
@@ -78,6 +79,7 @@ rg -l 'registry\.register\(' "${SOURCE_DIR}" -g '*.ts' | sort | while IFS= read 
       if (name != "" && domain != "" && operation != "" && description != "") {
         print domain "\t" name "\t" operation "\t" description
         in_block = 0
+        block_lines = 0
       }
 
       # Bail out after 30 lines if we cannot find all fields
@@ -127,8 +129,6 @@ echo "marketing	marketing_suppressions_list	read	List marketing suppressions" >>
 echo "marketing	marketing_campaign_costs_list	read	List campaign costs" >> "${tmp_entries}"
 
 # Additional tools missed by the awk scraper (inline register patterns)
-echo "crm	crm_customers_tags_create	write	Create a tag for a customer" >> "${tmp_entries}"
-echo "crm	crm_locations_contacts_update	write	Update a contact on a location" >> "${tmp_entries}"
 echo "dispatch	dispatch_jobs_cancel	write	Cancel a job" >> "${tmp_entries}"
 echo "dispatch	dispatch_jobs_custom_field_types_list	read	List job custom field types" >> "${tmp_entries}"
 echo "dispatch	dispatch_projects_custom_field_types_list	read	List project custom field types" >> "${tmp_entries}"

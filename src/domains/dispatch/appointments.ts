@@ -80,6 +80,12 @@ const appointmentListSchema = paginationParams(
   ),
 );
 
+const appointmentSummarySchema = z.object({
+  id: z.number().int().describe("Appointment ID"),
+  notes: z.string().describe("Appointment summary notes"),
+  technicianId: z.number().int().describe("Technician ID for the summary"),
+});
+
 export function registerDispatchAppointmentTools(
   client: ServiceTitanClient,
   registry: ToolRegistry,
@@ -231,6 +237,27 @@ export function registerDispatchAppointmentTools(
           `/tenant/{tenant}/appointments/${id}/reschedule`,
           Object.keys(payload).length > 0 ? payload : undefined,
         );
+        return toolResult(data);
+      } catch (error) {
+        return toolError(getErrorMessage(error));
+      }
+    },
+  });
+
+  registry.register({
+    name: "dispatch_appointments_set_summary",
+    domain: "dispatch",
+    operation: "write",
+    description: "Set an appointment summary. Private preview: only works for accounts with the ST feature enabled.",
+    schema: appointmentSummarySchema.shape,
+    handler: async (params) => {
+      const input = appointmentSummarySchema.parse(params);
+
+      try {
+        const data = await client.post(`/tenant/{tenant}/appointments/${input.id}/summaries`, {
+          notes: input.notes,
+          technicianId: input.technicianId,
+        });
         return toolResult(data);
       } catch (error) {
         return toolError(getErrorMessage(error));

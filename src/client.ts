@@ -71,6 +71,9 @@ const ROUTE_TABLE: Record<string, string> = {
 
   // Estimates / Sales
   "/estimates": "sales",
+  "/estimate-templates": "sales",
+  "/proposal-templates": "sales",
+  "/proposal-types": "sales",
 
   // Pricebook
   "/services": "pricebook",
@@ -312,6 +315,14 @@ export class ServiceTitanClient {
 
   async delete(path: string, params?: Record<string, unknown>): Promise<unknown> {
     return this.request("delete", path, undefined, params);
+  }
+
+  async deleteWithBody(
+    path: string,
+    body?: unknown,
+    params?: Record<string, unknown>,
+  ): Promise<unknown> {
+    return this.request("delete", path, body, params);
   }
 
   async ensureToken(): Promise<void> {
