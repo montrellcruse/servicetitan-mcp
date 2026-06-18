@@ -1,6 +1,6 @@
 {
   "id": "servicetitan-mcp-esbuild-upgrade",
-  "status": "local_validation_passed",
+  "status": "complete",
   "tasks": [
     {
       "id": "SEU-001",
@@ -20,17 +20,17 @@
     {
       "id": "SEU-004",
       "title": "Open focused PR and wait for CI",
-      "status": "in_progress"
+      "status": "done"
     },
     {
       "id": "SEU-005",
       "title": "Merge only after green CI and verify no release/publish",
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": "SEU-006",
       "title": "Update project memory and daily note",
-      "status": "pending"
+      "status": "done"
     }
   ]
 }
