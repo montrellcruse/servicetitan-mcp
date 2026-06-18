@@ -2,7 +2,7 @@
   "id": "servicetitan-mcp-esbuild-upgrade",
   "title": "ServiceTitan MCP esbuild Upgrade",
   "createdAt": "2026-06-17",
-  "status": "locally_validated",
+  "status": "complete",
   "roughIdea": "Resolve the remaining low-severity esbuild npm audit advisory safely after the lockfile-only audit repair left it parked.",
   "targetUser": "Maintainer of the public @rowvyn/servicetitan-mcp package and downstream MCP users who rely on stable Node 22 builds.",
   "problem": "npm audit still reports GHSA-g7r4-m6w7-qqqr for direct devDependency esbuild 0.27.x. npm marks the fix as semver-major because esbuild is pre-1.0 and recommends esbuild 0.28.1.",
