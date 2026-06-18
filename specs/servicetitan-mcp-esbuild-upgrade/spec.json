@@ -1,0 +1,78 @@
+{
+  "id": "servicetitan-mcp-esbuild-upgrade",
+  "title": "ServiceTitan MCP esbuild Upgrade",
+  "createdAt": "2026-06-17",
+  "status": "locally_validated",
+  "roughIdea": "Resolve the remaining low-severity esbuild npm audit advisory safely after the lockfile-only audit repair left it parked.",
+  "targetUser": "Maintainer of the public @rowvyn/servicetitan-mcp package and downstream MCP users who rely on stable Node 22 builds.",
+  "problem": "npm audit still reports GHSA-g7r4-m6w7-qqqr for direct devDependency esbuild 0.27.x. npm marks the fix as semver-major because esbuild is pre-1.0 and recommends esbuild 0.28.1.",
+  "desiredOutcome": "Upgrade esbuild to 0.28.1 and upgrade the Vitest/Vite test-toolchain path enough to remove the nested vulnerable esbuild, prove the Node 22 ESM build output and test suite still pass, publish through a PR only after checks are green, and avoid any npm release/deploy/live ServiceTitan API call.",
+  "scope": {
+    "in": [
+      "Update direct devDependency esbuild from ^0.27.3 to ^0.28.1",
+      "Update Vitest tooling from v3 to v4 so the transitive Vite path can move to Vite 8, which no longer depends on esbuild",
+      "Regenerate package-lock.json",
+      "Run local install, audit, typecheck, lint, tests, build, docs generation, package dry-run, and diff checks",
+      "Open and merge a focused GitHub PR only if validation and CI pass"
+    ],
+    "out": [
+      "No package version bump",
+      "No npm publish",
+      "No release tag",
+      "No deployment",
+      "No live ServiceTitan tenant/API validation",
+      "No unrelated dependency modernization beyond the Vitest/Vite path required to clear the esbuild advisory"
+    ]
+  },
+  "constraints": [
+    "Repo targets Node >=22 and CI runs Node 22.x.",
+    "Release workflow runs only on v* tags, so a normal PR merge should not publish.",
+    "esbuild is used by scripts/build.mjs through the JS build() API, not as production runtime code.",
+    "After the direct esbuild bump, npm audit still found vulnerable esbuild under node_modules/vite/node_modules/esbuild via Vitest 3.2.6.",
+    "Keep the existing package architecture and tool catalog intact."
+  ],
+  "preferredToolsRuntime": [
+    "npm",
+    "Node 22",
+    "GitHub PR + CI",
+    "Existing scripts: build, typecheck, lint, test, docs:tools, prepublishOnly"
+  ],
+  "risks": [
+    {
+      "risk": "esbuild pre-1.0 semver-major behavior change breaks bundling.",
+      "mitigation": "Run npm run build, inspect output, run package dry-run, and let GitHub CI repeat build/test on Node 22.x."
+    },
+    {
+      "risk": "Vitest 4 behavior differs from Vitest 3 and changes test execution.",
+      "mitigation": "Run the full 273-test suite locally and in GitHub CI; inspect any failing test for real behavior change before adapting."
+    },
+    {
+      "risk": "Generated TOOLS.md drifts unexpectedly.",
+      "mitigation": "Run npm run docs:tools and require a clean git diff unless generated output is intentionally updated."
+    },
+    {
+      "risk": "PR merge accidentally triggers release/publish.",
+      "mitigation": "Do not push tags; verify release workflow is tag-only and npm latest remains 2.6.0 after merge."
+    }
+  ],
+  "assumptions": [
+    "Trell's 'see that it is done safely' approves a focused PR/merge if local validation and CI are green.",
+    "A package release is not required because this is a devDependency-only build-tool change and package version stays 2.6.0."
+  ],
+  "openQuestions": [],
+  "verificationPlan": [
+    "npm ci",
+    "npm audit",
+    "npm run typecheck",
+    "npm run lint",
+    "npm test",
+    "npm run build",
+    "npm run docs:tools",
+    "npm pack --dry-run",
+    "npm run prepublishOnly",
+    "git diff --check",
+    "GitHub PR CI",
+    "Post-merge main CI",
+    "npm view @rowvyn/servicetitan-mcp version dist-tags.latest"
+  ]
+}
