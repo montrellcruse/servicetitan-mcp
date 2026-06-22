@@ -254,6 +254,33 @@ describe("ServiceTitanClient", () => {
     );
   });
 
+  it("preserves explicit Forms API job attachment paths", async () => {
+    const http = createAxiosInstanceMock();
+    mockAxiosCreate.mockReturnValue(http);
+    mockAxiosPost.mockResolvedValue({
+      data: {
+        access_token: "token-1",
+        expires_in: 3600,
+      },
+    });
+
+    http.queueResolve({ data: { ok: true }, status: 200 });
+
+    const client = new ServiceTitanClient(createConfig());
+    await client.get("/forms/v2/tenant/{tenant}/jobs/80233717/attachments");
+
+    expect(http.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "/forms/v2/tenant/tenant-42/jobs/80233717/attachments",
+      }),
+    );
+    expect(http.request).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.stringContaining("/jpm/"),
+      }),
+    );
+  });
+
   it("supports DELETE requests with a JSON body", async () => {
     const http = createAxiosInstanceMock();
     mockAxiosCreate.mockReturnValue(http);

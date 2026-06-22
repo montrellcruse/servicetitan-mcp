@@ -295,7 +295,7 @@ export function registerDispatchJobTools(
       const input = jobAttachmentCreateSchema.parse(params);
 
       try {
-        const data = await client.post(`/tenant/{tenant}/jobs/${input.id}/attachments`, {
+        const data = await client.post(`/forms/v2/tenant/{tenant}/jobs/${input.id}/attachments`, {
           file: input.file,
           fileName: input.fileName,
           contentType: input.contentType,
@@ -317,7 +317,7 @@ export function registerDispatchJobTools(
       const input = jobAttachmentIdSchema.parse(params);
 
       try {
-        const data = await client.get(`/tenant/{tenant}/jobs/attachment/${input.id}`);
+        const data = await client.get(`/forms/v2/tenant/{tenant}/jobs/attachment/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
@@ -336,7 +336,10 @@ export function registerDispatchJobTools(
       const { jobId, ...query } = input;
 
       try {
-        const data = await client.get(`/tenant/{tenant}/jobs/${jobId}/attachments`, buildParams(query));
+        const data = await client.get(
+          `/forms/v2/tenant/{tenant}/jobs/${jobId}/attachments`,
+          buildParams(query),
+        );
         return toolResult(data);
       } catch (error: unknown) {
         return toolError(getErrorMessage(error));
