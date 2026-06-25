@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.6.1] - 2026-06-24
+
+### Fixed
+- **Job attachment routing** — job attachment create, get, and list tools now call the ServiceTitan Forms API paths directly instead of being rewritten to JPM job routes.
+
 ## [2.6.0] - 2026-06-10
 
 ### Added
@@ -268,6 +273,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.6.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.2...v2.6.0
 [2.5.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.1...v2.5.2
 [2.5.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.0...v2.5.1
