@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Appointment assignment payload** — `scheduling_appointment_assignments_assign_technicians` now accepts `jobAppointmentId` with `technicianIds[]` and posts the ServiceTitan API's expected body shape.
+
 ## [2.6.1] - 2026-06-24
 
 ### Fixed
