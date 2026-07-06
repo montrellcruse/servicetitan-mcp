@@ -44,6 +44,24 @@ const customFieldValueSchema = z.object({
   value: z.string().optional().describe("Custom field value"),
 });
 
+const jobCreateAppointmentSchema = z.object({
+  start: z.string().datetime().describe("Appointment start timestamp"),
+  end: z.string().datetime().describe("Appointment end timestamp"),
+  arrivalWindowStart: z
+    .string()
+    .datetime()
+    .describe("Arrival window start timestamp"),
+  arrivalWindowEnd: z
+    .string()
+    .datetime()
+    .describe("Arrival window end timestamp"),
+  technicianIds: z
+    .array(z.number().int())
+    .min(1)
+    .describe("Technician IDs assigned to the appointment"),
+  specialInstructions: z.string().describe("Special instructions for dispatch"),
+});
+
 const jobWritePayloadSchema = z.object({
   number: z.string().optional().describe("Job number"),
   projectId: z.number().int().optional().describe("Project ID"),
@@ -61,6 +79,14 @@ const jobWritePayloadSchema = z.object({
   externalData: z.array(externalDataEntrySchema).optional().describe("External data entries"),
   customFields: z.array(customFieldValueSchema).optional().describe("Custom field values"),
   tagTypeIds: z.array(z.number().int()).optional().describe("Tag type IDs"),
+});
+
+const jobCreateSchema = jobWritePayloadSchema.extend({
+  priority: jobPrioritySchema.describe("Job priority"),
+  appointments: z
+    .array(jobCreateAppointmentSchema)
+    .min(1)
+    .describe("Appointments to create with the job"),
 });
 
 const jobIdSchema = z.object({
@@ -528,9 +554,9 @@ export function registerDispatchJobTools(
     domain: "dispatch",
     operation: "write",
     description: "Create a job",
-    schema: jobWritePayloadSchema.shape,
+    schema: jobCreateSchema.shape,
     handler: async (params) => {
-      const input = jobWritePayloadSchema.parse(params);
+      const input = jobCreateSchema.parse(params);
 
       try {
         const payload = buildParams(input);
