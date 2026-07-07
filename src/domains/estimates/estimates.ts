@@ -13,6 +13,8 @@ import {
   getErrorMessage,
 } from "../../utils.js";
 const estimateItemSchema = z.object({
+  skuId: z.number().int().describe("Pricebook SKU ID for the estimate item"),
+  skuName: z.string().optional().describe("Pricebook SKU display name"),
   skuAccount: z.string().optional().describe("SKU account code for the estimate item"),
   description: z.string().optional().describe("Description of the estimate item"),
   membershipTypeId: z

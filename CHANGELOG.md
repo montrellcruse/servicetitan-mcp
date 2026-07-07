@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Fixed
 - **Appointment assignment payload** — `scheduling_appointment_assignments_assign_technicians` now accepts `jobAppointmentId` with `technicianIds[]` and posts the ServiceTitan API's expected body shape.
+- **Estimate line item SKUs** — estimate create and item update schemas now expose and forward `skuId`/`skuName`, allowing ServiceTitan to add priced SKU lines to estimates.
 
 ## [2.6.1] - 2026-06-24
 
