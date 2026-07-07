@@ -12,6 +12,8 @@ import {
   getErrorMessage,
 } from "../../utils.js";
 const estimateItemPayloadSchema = z.object({
+  skuId: z.number().int().describe("Pricebook SKU ID for the estimate item"),
+  skuName: z.string().optional().describe("Pricebook SKU display name"),
   skuAccount: z.string().optional().describe("SKU account code for the estimate item"),
   description: z.string().optional().describe("Description of the estimate item"),
   membershipTypeId: z
@@ -44,7 +46,17 @@ const estimateItemsListSchema = dateFilterParams(
 );
 
 const estimateItemUpdateSchema = estimateItemPayloadSchema.extend({
-  id: z.number().int().describe("Estimate ID"),
+  estimateId: z.number().int().optional().describe("Estimate ID"),
+  id: z
+    .number()
+    .int()
+    .optional()
+    .describe("Legacy estimate ID alias. Prefer estimateId."),
+  itemId: z
+    .number()
+    .int()
+    .optional()
+    .describe("Existing estimate item ID to update; omit to add a new line item"),
 });
 
 const estimateItemDeleteSchema = z.object({
@@ -90,16 +102,24 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
     name: "estimates_items_update",
     domain: "estimates",
     operation: "write",
-    description: "Add or replace an item collection on an estimate",
+    description: "Add a new SKU line or update an existing item on an estimate",
     schema: estimateItemUpdateSchema.shape,
     handler: async (params) => {
       const parsed = estimateItemUpdateSchema.parse(params);
-      const { id, ...item } = parsed;
+      const { estimateId, id, itemId, ...item } = parsed;
+      const resolvedEstimateId = estimateId ?? id;
+
+      if (resolvedEstimateId === undefined) {
+        return toolError("estimateId is required");
+      }
 
       try {
         const data = await client.put(
-          `/tenant/{tenant}/estimates/${id}/items`,
-          buildParams(item),
+          `/tenant/{tenant}/estimates/${resolvedEstimateId}/items`,
+          buildParams({
+            id: itemId,
+            ...item,
+          }),
         );
 
         return toolResult(data);

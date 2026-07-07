@@ -215,7 +215,7 @@ Total tools: 483
 | `estimates_get` | `estimates` | `read` | Get a single estimate by ID |
 | `estimates_items_delete` | `estimates` | `delete` | Delete a single item from an estimate |
 | `estimates_items_list` | `estimates` | `read` | List estimate items with optional filters |
-| `estimates_items_update` | `estimates` | `write` | Add or replace an item collection on an estimate |
+| `estimates_items_update` | `estimates` | `write` | Add a new SKU line or update an existing item on an estimate |
 | `estimates_list` | `estimates` | `read` | List estimates with filters |
 | `estimates_proposal_templates_create` | `estimates` | `write` | Create a proposal template |
 | `estimates_proposal_templates_delete` | `estimates` | `delete` | Delete a proposal template by ID |
