@@ -50,16 +50,18 @@ const jobCreateAppointmentSchema = z.object({
   arrivalWindowStart: z
     .string()
     .datetime()
+    .optional()
     .describe("Arrival window start timestamp"),
   arrivalWindowEnd: z
     .string()
     .datetime()
+    .optional()
     .describe("Arrival window end timestamp"),
   technicianIds: z
     .array(z.number().int())
     .min(1)
+    .optional()
     .describe("Technician IDs assigned to the appointment"),
-  specialInstructions: z.string().describe("Special instructions for dispatch"),
 });
 
 const jobWritePayloadSchema = z.object({
@@ -82,6 +84,11 @@ const jobWritePayloadSchema = z.object({
 });
 
 const jobCreateSchema = jobWritePayloadSchema.extend({
+  customerId: z.number().int().describe("Customer ID"),
+  locationId: z.number().int().describe("Location ID"),
+  businessUnitId: z.number().int().describe("Business unit ID"),
+  jobTypeId: z.number().int().describe("Job type ID"),
+  campaignId: z.number().int().describe("Campaign ID"),
   priority: jobPrioritySchema.describe("Job priority"),
   appointments: z
     .array(jobCreateAppointmentSchema)

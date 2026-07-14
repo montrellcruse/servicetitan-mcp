@@ -12,27 +12,12 @@ import {
   toolResult,
   getErrorMessage,
 } from "../../utils.js";
-const estimateItemSchema = z.object({
-  skuId: z.number().int().describe("Pricebook SKU ID for the estimate item"),
-  skuName: z.string().optional().describe("Pricebook SKU display name"),
-  skuAccount: z.string().optional().describe("SKU account code for the estimate item"),
-  description: z.string().optional().describe("Description of the estimate item"),
-  membershipTypeId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Membership type ID associated with this item"),
-  qty: z.number().optional().describe("Quantity for this estimate item"),
-  unitRate: z.number().optional().describe("Unit sale rate for this estimate item"),
-  unitCost: z.number().optional().describe("Unit cost for this estimate item"),
-  itemGroupName: z.string().optional().describe("Item group display name"),
-  itemGroupRootId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Item group root ID for categorization"),
-  chargeable: z.boolean().optional().describe("Whether this estimate item is chargeable"),
-});
+import {
+  estimateItemRequestSchema,
+  normalizeEstimateItemRequest,
+} from "./item-request.js";
+
+const estimateItemSchema = estimateItemRequestSchema;
 
 const externalLinkSchema = z.object({
   name: z.string().optional().describe("External link label"),
@@ -241,11 +226,12 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     schema: estimateCreateSchema.shape,
     handler: async (params) => {
       const parsed = estimateCreateSchema.parse(params);
-      const { statusValue, ...rest } = parsed;
+      const { statusValue, items, ...rest } = parsed;
 
       try {
         const payload = buildParams({
           ...rest,
+          items: items?.map(normalizeEstimateItemRequest),
           status: statusValue === undefined ? undefined : { value: statusValue },
         });
 
@@ -265,11 +251,12 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     schema: estimateUpdateSchema.shape,
     handler: async (params) => {
       const parsed = estimateUpdateSchema.parse(params);
-      const { id, statusValue, ...rest } = parsed;
+      const { id, statusValue, items, ...rest } = parsed;
 
       try {
         const payload = buildParams({
           ...rest,
+          items: items?.map(normalizeEstimateItemRequest),
           status: statusValue === undefined ? undefined : { value: statusValue },
         });
 

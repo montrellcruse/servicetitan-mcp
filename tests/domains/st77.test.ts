@@ -211,7 +211,8 @@ describe("ST-77.2 Sales template refresh", () => {
         {
           skuId: 26865519,
           skuName: "40 Gal Natural Gas Water Heater (Standard)",
-          qty: 1,
+          quantity: 1,
+          unitPrice: 1250,
           chargeable: true,
         },
       ],
@@ -226,7 +227,8 @@ describe("ST-77.2 Sales template refresh", () => {
           expect.objectContaining({
             skuId: 26865519,
             skuName: "40 Gal Natural Gas Water Heater (Standard)",
-            qty: 1,
+            quantity: 1,
+            unitPrice: 1250,
             chargeable: true,
           }),
         ],
@@ -240,7 +242,7 @@ describe("ST-77.2 Sales template refresh", () => {
     await handler(handlers, "estimates_items_update")({
       estimateId: 81121781,
       skuId: 26865519,
-      qty: 1,
+      quantity: 1,
       chargeable: true,
     });
 
@@ -248,7 +250,7 @@ describe("ST-77.2 Sales template refresh", () => {
       "/tenant/{tenant}/estimates/81121781/items",
       expect.objectContaining({
         skuId: 26865519,
-        qty: 1,
+        quantity: 1,
         chargeable: true,
       }),
     );
@@ -259,13 +261,13 @@ describe("ST-77.2 Sales template refresh", () => {
       skuId: 26865519,
       skuName: "40 Gal Natural Gas Water Heater (Standard)",
       description: "Water heater replacement",
-      qty: 2,
-      unitRate: 1250,
+      quantity: 2,
+      unitPrice: 1250,
       unitCost: 800,
       chargeable: true,
       itemGroupName: "Water Heaters",
       itemGroupRootId: 700,
-      membershipTypeId: 12,
+      membershipDurationBillingId: 12,
     });
 
     expect(putMock).toHaveBeenLastCalledWith(
@@ -275,13 +277,77 @@ describe("ST-77.2 Sales template refresh", () => {
         skuId: 26865519,
         skuName: "40 Gal Natural Gas Water Heater (Standard)",
         description: "Water heater replacement",
-        qty: 2,
-        unitRate: 1250,
+        quantity: 2,
+        unitPrice: 1250,
         unitCost: 800,
         chargeable: true,
         itemGroupName: "Water Heaters",
         itemGroupRootId: 700,
-        membershipTypeId: 12,
+        membershipDurationBillingId: 12,
+      }),
+    );
+  });
+
+  it("maps legacy estimate item quantity/rate aliases to documented request fields", async () => {
+    const { handlers, postMock, putMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_create")({
+      name: "Alias compatibility estimate",
+      items: [
+        {
+          skuId: 26865519,
+          qty: 1,
+          unitRate: 1250,
+        },
+      ],
+    });
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates",
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            skuId: 26865519,
+            quantity: 1,
+            unitPrice: 1250,
+          }),
+        ],
+      }),
+    );
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      itemId: 9001,
+      description: "Labor-only adjustment",
+      qty: 0.5,
+      unitRate: 250,
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        id: 9001,
+        description: "Labor-only adjustment",
+        quantity: 0.5,
+        unitPrice: 250,
+      }),
+    );
+  });
+
+  it("allows estimate item updates without SKU fields", async () => {
+    const { handlers, putMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      itemId: 9001,
+      description: "Description-only correction",
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        id: 9001,
+        description: "Description-only correction",
       }),
     );
   });

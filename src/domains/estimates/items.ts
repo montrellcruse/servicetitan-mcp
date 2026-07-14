@@ -11,27 +11,12 @@ import {
   toolResult,
   getErrorMessage,
 } from "../../utils.js";
-const estimateItemPayloadSchema = z.object({
-  skuId: z.number().int().describe("Pricebook SKU ID for the estimate item"),
-  skuName: z.string().optional().describe("Pricebook SKU display name"),
-  skuAccount: z.string().optional().describe("SKU account code for the estimate item"),
-  description: z.string().optional().describe("Description of the estimate item"),
-  membershipTypeId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Membership type ID associated with this item"),
-  qty: z.number().optional().describe("Quantity for the estimate item"),
-  unitRate: z.number().optional().describe("Unit sale rate for the estimate item"),
-  unitCost: z.number().optional().describe("Unit cost for the estimate item"),
-  itemGroupName: z.string().optional().describe("Item group display name"),
-  itemGroupRootId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Item group root ID for categorization"),
-  chargeable: z.boolean().optional().describe("Whether this item is chargeable"),
-});
+import {
+  estimateItemRequestSchema,
+  normalizeEstimateItemRequest,
+} from "./item-request.js";
+
+const estimateItemPayloadSchema = estimateItemRequestSchema.omit({ id: true });
 
 const estimateItemsListSchema = dateFilterParams(
   paginationParams(
@@ -116,7 +101,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
       try {
         const data = await client.put(
           `/tenant/{tenant}/estimates/${resolvedEstimateId}/items`,
-          buildParams({
+          normalizeEstimateItemRequest({
             id: itemId,
             ...item,
           }),

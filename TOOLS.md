@@ -513,7 +513,7 @@ Total tools: 483
 
 | Name | Domain | Operation | Description |
 | --- | --- | --- | --- |
-| `scheduling_appointment_assignments_assign_technicians` | `scheduling` | `write` | Assign technicians to appointments |
+| `scheduling_appointment_assignments_assign_technicians` | `scheduling` | `write` | Assign technicians to an appointment |
 | `scheduling_appointment_assignments_list` | `scheduling` | `read` | List appointment assignments |
 | `scheduling_appointment_assignments_unassign_technicians` | `scheduling` | `write` | Unassign technicians from appointments |
 | `scheduling_business_hours_create` | `scheduling` | `write` | Create business hour configuration |

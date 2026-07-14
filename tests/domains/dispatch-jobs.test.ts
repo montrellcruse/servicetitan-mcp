@@ -63,7 +63,7 @@ function getHandler(
 }
 
 describe("dispatch job creation", () => {
-  it("passes required appointment details through the create job payload", async () => {
+  it("passes the documented create-job payload with appointments", async () => {
     const { post, handlers } = createContext();
 
     await getHandler(handlers, "dispatch_jobs_create")({
@@ -81,7 +81,6 @@ describe("dispatch job creation", () => {
           arrivalWindowStart: "2026-07-06T14:00:00.000Z",
           arrivalWindowEnd: "2026-07-06T18:00:00.000Z",
           technicianIds: [5890, 57387153],
-          specialInstructions: "",
         },
       ],
     });
@@ -101,13 +100,47 @@ describe("dispatch job creation", () => {
           arrivalWindowStart: "2026-07-06T14:00:00.000Z",
           arrivalWindowEnd: "2026-07-06T18:00:00.000Z",
           technicianIds: [5890, 57387153],
-          specialInstructions: "",
         },
       ],
     });
   });
 
-  it("rejects job creation without an appointment", async () => {
+  it("keeps optional appointment fields optional and strips unsupported extras", async () => {
+    const { post, handlers } = createContext();
+
+    await getHandler(handlers, "dispatch_jobs_create")({
+      customerId: 30118932,
+      locationId: 32126671,
+      businessUnitId: 26835039,
+      jobTypeId: 57477915,
+      campaignId: 56079032,
+      priority: "Normal",
+      appointments: [
+        {
+          start: "2026-07-06T14:00:00.000Z",
+          end: "2026-07-06T18:00:00.000Z",
+          specialInstructions: "Leave at side gate",
+        },
+      ],
+    });
+
+    expect(post).toHaveBeenCalledWith("/tenant/{tenant}/jobs", {
+      customerId: 30118932,
+      locationId: 32126671,
+      businessUnitId: 26835039,
+      jobTypeId: 57477915,
+      campaignId: 56079032,
+      priority: "Normal",
+      appointments: [
+        {
+          start: "2026-07-06T14:00:00.000Z",
+          end: "2026-07-06T18:00:00.000Z",
+        },
+      ],
+    });
+  });
+
+  it("rejects job creation without required fields", async () => {
     const { post, handlers } = createContext();
 
     await expect(
@@ -118,7 +151,7 @@ describe("dispatch job creation", () => {
         jobTypeId: 57477915,
         campaignId: 56079032,
       }),
-    ).rejects.toThrow("Required");
+    ).rejects.toThrow("appointments");
 
     expect(post).not.toHaveBeenCalled();
   });
