@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- **Appointment assignment payload** — `scheduling_appointment_assignments_assign_technicians` now accepts `jobAppointmentId` with `technicianIds[]` and posts the ServiceTitan API's expected body shape.
+- **Dispatch job creation appointments** — `dispatch_jobs_create` now accepts the ServiceTitan JPM create-job appointment payload and validates the documented required job fields before posting.
+- **Estimate line item SKUs** — estimate create and item update schemas now expose `skuId`/`skuName`, forward documented `quantity`/`unitPrice` fields, and preserve `qty`/`unitRate` as compatibility aliases.
+
 ## [2.6.1] - 2026-06-24
 
 ### Fixed

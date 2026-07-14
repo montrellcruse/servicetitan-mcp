@@ -29,6 +29,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
 interface DomainContext {
   getMock: ReturnType<typeof vi.fn>;
   postMock: ReturnType<typeof vi.fn>;
+  putMock: ReturnType<typeof vi.fn>;
   patchMock: ReturnType<typeof vi.fn>;
   deleteMock: ReturnType<typeof vi.fn>;
   deleteWithBodyMock: ReturnType<typeof vi.fn>;
@@ -46,12 +47,14 @@ function createContext(loader: DomainLoader): DomainContext {
   const registry = new ToolRegistry(server as any, createConfig(), logger as any);
   const getMock = vi.fn().mockResolvedValue({ ok: true });
   const postMock = vi.fn().mockResolvedValue({ ok: true });
+  const putMock = vi.fn().mockResolvedValue({ ok: true });
   const patchMock = vi.fn().mockResolvedValue({ ok: true });
   const deleteMock = vi.fn().mockResolvedValue({ ok: true });
   const deleteWithBodyMock = vi.fn().mockResolvedValue({ ok: true });
   const client = {
     get: getMock,
     post: postMock,
+    put: putMock,
     patch: patchMock,
     delete: deleteMock,
     deleteWithBody: deleteWithBodyMock,
@@ -68,6 +71,7 @@ function createContext(loader: DomainLoader): DomainContext {
   return {
     getMock,
     postMock,
+    putMock,
     patchMock,
     deleteMock,
     deleteWithBodyMock,
@@ -196,6 +200,158 @@ describe("ST-77 dispatch refresh", () => {
 });
 
 describe("ST-77.2 Sales template refresh", () => {
+  it("creates estimates with SKU-bearing line items", async () => {
+    const { handlers, postMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_create")({
+      customerId: 81104750,
+      locationId: 81104764,
+      name: "Apartment A - Water Heater",
+      items: [
+        {
+          skuId: 26865519,
+          skuName: "40 Gal Natural Gas Water Heater (Standard)",
+          quantity: 1,
+          unitPrice: 1250,
+          chargeable: true,
+        },
+      ],
+    });
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates",
+      expect.objectContaining({
+        customerId: 81104750,
+        locationId: 81104764,
+        items: [
+          expect.objectContaining({
+            skuId: 26865519,
+            skuName: "40 Gal Natural Gas Water Heater (Standard)",
+            quantity: 1,
+            unitPrice: 1250,
+            chargeable: true,
+          }),
+        ],
+      }),
+    );
+  });
+
+  it("adds and updates estimate items with explicit SKU and line item identifiers", async () => {
+    const { handlers, putMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      skuId: 26865519,
+      quantity: 1,
+      chargeable: true,
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        skuId: 26865519,
+        quantity: 1,
+        chargeable: true,
+      }),
+    );
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      itemId: 9001,
+      skuId: 26865519,
+      skuName: "40 Gal Natural Gas Water Heater (Standard)",
+      description: "Water heater replacement",
+      quantity: 2,
+      unitPrice: 1250,
+      unitCost: 800,
+      chargeable: true,
+      itemGroupName: "Water Heaters",
+      itemGroupRootId: 700,
+      membershipDurationBillingId: 12,
+    });
+
+    expect(putMock).toHaveBeenLastCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        id: 9001,
+        skuId: 26865519,
+        skuName: "40 Gal Natural Gas Water Heater (Standard)",
+        description: "Water heater replacement",
+        quantity: 2,
+        unitPrice: 1250,
+        unitCost: 800,
+        chargeable: true,
+        itemGroupName: "Water Heaters",
+        itemGroupRootId: 700,
+        membershipDurationBillingId: 12,
+      }),
+    );
+  });
+
+  it("maps legacy estimate item quantity/rate aliases to documented request fields", async () => {
+    const { handlers, postMock, putMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_create")({
+      name: "Alias compatibility estimate",
+      items: [
+        {
+          skuId: 26865519,
+          qty: 1,
+          unitRate: 1250,
+        },
+      ],
+    });
+
+    expect(postMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates",
+      expect.objectContaining({
+        items: [
+          expect.objectContaining({
+            skuId: 26865519,
+            quantity: 1,
+            unitPrice: 1250,
+          }),
+        ],
+      }),
+    );
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      itemId: 9001,
+      description: "Labor-only adjustment",
+      qty: 0.5,
+      unitRate: 250,
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        id: 9001,
+        description: "Labor-only adjustment",
+        quantity: 0.5,
+        unitPrice: 250,
+      }),
+    );
+  });
+
+  it("allows estimate item updates without SKU fields", async () => {
+    const { handlers, putMock } = createContext(loadEstimatesDomain);
+
+    await handler(handlers, "estimates_items_update")({
+      estimateId: 81121781,
+      itemId: 9001,
+      description: "Description-only correction",
+    });
+
+    expect(putMock).toHaveBeenCalledWith(
+      "/tenant/{tenant}/estimates/81121781/items",
+      expect.objectContaining({
+        id: 9001,
+        description: "Description-only correction",
+      }),
+    );
+  });
+
   it("lists and updates estimate templates", async () => {
     const { handlers, getMock, patchMock } = createContext(loadEstimatesDomain);
 

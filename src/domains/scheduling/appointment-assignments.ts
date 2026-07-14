@@ -13,11 +13,6 @@ import {
   getErrorMessage,
 } from "../../utils.js";
 
-const assignmentSchema = z.object({
-  appointmentId: z.number().int().describe("Appointment ID to assign"),
-  technicianId: z.number().int().describe("Technician ID to assign"),
-});
-
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
   return dateFilterParams(schema).extend({
     createdBefore: z
@@ -65,28 +60,30 @@ export function registerSchedulingAppointmentAssignmentTools(
     name: "scheduling_appointment_assignments_assign_technicians",
     domain: "scheduling",
     operation: "write",
-    description: "Assign technicians to appointments",
+    description: "Assign technicians to an appointment",
     schema: {
-      assignments: z
-        .array(assignmentSchema)
-        .optional()
-        .describe("Appointment/technician assignment items"),
-      overrideExisting: z
-        .boolean()
-        .optional()
-        .describe("Replace existing technician assignments when true"),
+      jobAppointmentId: z
+        .number()
+        .int()
+        .describe("Job appointment ID to assign technicians to"),
+      technicianIds: z
+        .array(z.number().int())
+        .min(1)
+        .describe("Technician IDs to assign to the appointment"),
     },
     handler: async (params) => {
       const typed = params as {
-        assignments?: Array<z.infer<typeof assignmentSchema>>;
-        overrideExisting?: boolean;
+        jobAppointmentId: number;
+        technicianIds: number[];
       };
 
       try {
-        const payload = buildParams(typed);
         const data = await client.post(
           "/tenant/{tenant}/appointment-assignments/assign-technicians",
-          Object.keys(payload).length > 0 ? payload : undefined,
+          {
+            jobAppointmentId: typed.jobAppointmentId,
+            technicianIds: typed.technicianIds,
+          },
         );
         return toolResult(data);
       } catch (error) {
