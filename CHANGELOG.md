@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.6.2] - 2026-07-13
+
 ### Fixed
 - **Appointment assignment payload** — `scheduling_appointment_assignments_assign_technicians` now accepts `jobAppointmentId` with `technicianIds[]` and posts the ServiceTitan API's expected body shape.
 - **Dispatch job creation appointments** — `dispatch_jobs_create` now accepts the ServiceTitan JPM create-job appointment payload and validates the documented required job fields before posting.
@@ -280,6 +282,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.6.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.2...v2.6.0
 [2.5.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.1...v2.5.2
