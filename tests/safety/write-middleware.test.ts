@@ -30,7 +30,7 @@ function createRegistry(options: {
   config?: Partial<ServiceTitanConfig>;
   auditLogger?: { log: ReturnType<typeof vi.fn> };
 } = {}) {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -91,7 +91,7 @@ describe("write middleware safety", () => {
 
     registry.register(createWriteTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     const result = await wrapped({ id: 7 });
 
     expect(result.isError).toBe(true);
@@ -108,7 +108,7 @@ describe("write middleware safety", () => {
 
     registry.register(createWriteTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
 
     const blocked = await wrapped({ id: 7 });
     expect(blocked.isError).toBe(true);
@@ -127,7 +127,7 @@ describe("write middleware safety", () => {
 
     registry.register(createWriteTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 7 });
 
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
@@ -147,7 +147,7 @@ describe("write middleware safety", () => {
 
     registry.register(createWriteTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
 
     await expect(wrapped({ id: 7 })).rejects.toThrow("write exploded");
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
@@ -165,7 +165,7 @@ describe("write middleware safety", () => {
   it("hardened write schemas reject empty input", () => {
     const { server } = registerAccountingAndSchedulingWriteTools();
     const registered = new Map(
-      server.tool.mock.calls.map(([name, schema]) => [name as string, schema as Record<string, z.ZodTypeAny>]),
+      server.registerTool.mock.calls.map(([name, config]) => [name as string, config.inputSchema as Record<string, z.ZodTypeAny>]),
     );
 
     const hardenedToolNames = [

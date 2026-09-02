@@ -60,7 +60,7 @@ function buildRegistryForDomain(
   domainName: string,
   loader: DomainLoader,
 ): { tools: ToolDefinition[] } {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -188,7 +188,7 @@ describe("domain tool registration", () => {
 
 describe("total tool count", () => {
   it("all domains combined register ≥ 400 tools", () => {
-    const server = { tool: vi.fn() };
+    const server = { registerTool: vi.fn() };
     const logger = {
       debug: vi.fn(),
       info: vi.fn(),
@@ -216,7 +216,7 @@ describe("total tool count", () => {
   });
 
   it("each domain appears in the stats byDomain map", () => {
-    const server = { tool: vi.fn() };
+    const server = { registerTool: vi.fn() };
     const logger = {
       debug: vi.fn(),
       info: vi.fn(),

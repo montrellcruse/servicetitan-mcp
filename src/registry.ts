@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import type { ZodType } from "zod";
 import { z } from "zod";
 
@@ -11,6 +12,32 @@ import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
 
+/**
+ * MCP tool annotations derived from the tool's operation. Hosts use these hints
+ * to badge read-only tools and to decide which calls need user approval. Every
+ * tool talks to the ServiceTitan API, so openWorldHint is always true.
+ */
+const DEFAULT_ANNOTATIONS: Record<ToolOperation, ToolAnnotations> = {
+  read: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: true,
+  },
+  write: {
+    readOnlyHint: false,
+    destructiveHint: false,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+  delete: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+};
+
 export interface ToolDefinition {
   name: string;
   domain: string;
@@ -18,6 +45,8 @@ export interface ToolDefinition {
   schema: Record<string, ZodType>;
   handler: (params: unknown, extra?: ToolHandlerExtra) => Promise<ToolResponse>;
   description?: string;
+  /** Overrides merged on top of the defaults derived from `operation`. */
+  annotations?: ToolAnnotations;
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -93,7 +122,18 @@ export class ToolRegistry {
       throw new Error(`Tool "${wrappedTool.name}" is already registered`);
     }
 
-    this.server.tool(wrappedTool.name, wrappedTool.schema, wrappedTool.handler);
+    this.server.registerTool(
+      wrappedTool.name,
+      {
+        description: wrappedTool.description,
+        inputSchema: wrappedTool.schema,
+        annotations: {
+          ...DEFAULT_ANNOTATIONS[wrappedTool.operation],
+          ...wrappedTool.annotations,
+        },
+      },
+      wrappedTool.handler,
+    );
 
     this.registered += 1;
     this.byDomain[domain] = (this.byDomain[domain] ?? 0) + 1;

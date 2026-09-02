@@ -26,7 +26,7 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
 }
 
 function registryWithConfig(overrides: Partial<ServiceTitanConfig> = {}) {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -76,7 +76,7 @@ describe("safety confirmation wrapper", () => {
 
     registry.register(definition({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     const result = await wrapped({ id: 55 });
     const preview = JSON.parse(result.content[0].text);
 
@@ -93,7 +93,7 @@ describe("safety confirmation wrapper", () => {
 
     registry.register(definition({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 55, confirm: true });
 
     expect(handler).toHaveBeenCalledTimes(1);
@@ -112,7 +112,7 @@ describe("safety confirmation wrapper", () => {
       }),
     );
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     const blocked = await wrapped({ id: 55 });
     expect(blocked.isError).toBe(true);
     expect(blocked.content[0]?.text).toContain("Write confirmation required");
@@ -135,7 +135,7 @@ describe("safety confirmation wrapper", () => {
       }),
     );
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 55 });
 
     expect(handler).toHaveBeenCalledTimes(1);
