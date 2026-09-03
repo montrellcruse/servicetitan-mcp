@@ -107,7 +107,7 @@ const EXPECTED_ANNOTATIONS_BY_OPERATION: Record<ToolDefinition["operation"], Too
   },
   write: {
     readOnlyHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: false,
     openWorldHint: true,
   },
@@ -120,10 +120,16 @@ const EXPECTED_ANNOTATIONS_BY_OPERATION: Record<ToolDefinition["operation"], Too
 };
 
 describe("MCP wire contract: tools/list", () => {
-  it("delivers every registered tool's description to the client", async () => {
-    const { tools } = await listAllDomainTools();
+  it("delivers every registered tool and description to the client", async () => {
+    const { tools, registry } = await listAllDomainTools();
 
     expect(tools.length).toBeGreaterThan(400);
+    expect(tools.map((tool) => tool.name).sort()).toEqual(
+      registry
+        .getRegisteredTools()
+        .map((tool) => tool.name)
+        .sort(),
+    );
 
     const missingDescription = tools
       .filter((tool) => typeof tool.description !== "string" || tool.description.trim() === "")
@@ -165,19 +171,24 @@ describe("MCP wire contract: tools/list", () => {
 
   it("annotates every tool consistently with its registered operation", async () => {
     const { tools, registry } = await listAllDomainTools();
-    const operationByName = new Map(
-      registry.getRegisteredTools().map((tool) => [tool.name, tool.operation]),
+    const definitionByName = new Map(
+      registry.getRegisteredTools().map((tool) => [tool.name, tool]),
     );
 
     const mismatches: string[] = [];
     for (const tool of tools) {
-      const operation = operationByName.get(tool.name);
-      if (!operation) {
+      const definition = definitionByName.get(tool.name);
+      if (!definition) {
         mismatches.push(`${tool.name}: not present in registry`);
         continue;
       }
 
-      const expected = EXPECTED_ANNOTATIONS_BY_OPERATION[operation];
+      const defaults = EXPECTED_ANNOTATIONS_BY_OPERATION[definition.operation];
+      const expected = {
+        ...defaults,
+        ...definition.annotations,
+        readOnlyHint: defaults.readOnlyHint,
+      };
       const actual = tool.annotations;
       const matches =
         actual !== undefined &&
@@ -187,7 +198,7 @@ describe("MCP wire contract: tools/list", () => {
         actual.openWorldHint === expected.openWorldHint;
 
       if (!matches) {
-        mismatches.push(`${tool.name} (${operation}): ${JSON.stringify(actual)}`);
+        mismatches.push(`${tool.name} (${definition.operation}): ${JSON.stringify(actual)}`);
       }
     }
 
@@ -202,7 +213,7 @@ describe("MCP wire contract: tools/list", () => {
         operation: "write",
         description: "Idempotent write used to exercise annotation overrides",
         schema: { id: z.number().int() },
-        annotations: { idempotentHint: true },
+        annotations: { destructiveHint: false, idempotentHint: true },
         handler: async () => toolResult({ ok: true }),
       });
     });
@@ -213,5 +224,21 @@ describe("MCP wire contract: tools/list", () => {
       idempotentHint: true,
       openWorldHint: true,
     });
+  });
+
+  it("does not let an annotation override contradict the registered operation", async () => {
+    const { tools } = await listToolsOverWire((registry) => {
+      registry.register({
+        name: "crm_customers_touch",
+        domain: "crm",
+        operation: "write",
+        description: "Write used to exercise the read-only annotation invariant",
+        schema: { id: z.number().int() },
+        annotations: { readOnlyHint: true } as unknown as ToolDefinition["annotations"],
+        handler: async () => toolResult({ ok: true }),
+      });
+    });
+
+    expect(toolNamed(tools, "crm_customers_touch").annotations?.readOnlyHint).toBe(false);
   });
 });

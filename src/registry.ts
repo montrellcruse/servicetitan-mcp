@@ -11,11 +11,13 @@ import type { ToolResponse } from "./types.js";
 import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
+export type ToolAnnotationOverrides = Omit<ToolAnnotations, "readOnlyHint">;
 
 /**
- * MCP tool annotations derived from the tool's operation. Hosts use these hints
- * to badge read-only tools and to decide which calls need user approval. Every
- * tool talks to the ServiceTitan API, so openWorldHint is always true.
+ * MCP tool annotations derived from the tool's operation. Mutating operations
+ * default to destructive because `destructiveHint: false` means additive-only
+ * in the MCP specification. Every tool talks to the ServiceTitan API, so
+ * openWorldHint is always true.
  */
 const DEFAULT_ANNOTATIONS: Record<ToolOperation, ToolAnnotations> = {
   read: {
@@ -26,7 +28,7 @@ const DEFAULT_ANNOTATIONS: Record<ToolOperation, ToolAnnotations> = {
   },
   write: {
     readOnlyHint: false,
-    destructiveHint: false,
+    destructiveHint: true,
     idempotentHint: false,
     openWorldHint: true,
   },
@@ -44,9 +46,9 @@ export interface ToolDefinition {
   operation: ToolOperation;
   schema: Record<string, ZodType>;
   handler: (params: unknown, extra?: ToolHandlerExtra) => Promise<ToolResponse>;
-  description?: string;
-  /** Overrides merged on top of the defaults derived from `operation`. */
-  annotations?: ToolAnnotations;
+  description: string;
+  /** Overrides for hints not fixed by `operation`; `readOnlyHint` cannot be overridden. */
+  annotations?: ToolAnnotationOverrides;
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -122,14 +124,17 @@ export class ToolRegistry {
       throw new Error(`Tool "${wrappedTool.name}" is already registered`);
     }
 
+    const defaultAnnotations = DEFAULT_ANNOTATIONS[wrappedTool.operation];
+
     this.server.registerTool(
       wrappedTool.name,
       {
         description: wrappedTool.description,
         inputSchema: wrappedTool.schema,
         annotations: {
-          ...DEFAULT_ANNOTATIONS[wrappedTool.operation],
+          ...defaultAnnotations,
           ...wrappedTool.annotations,
+          readOnlyHint: defaultAnnotations.readOnlyHint,
         },
       },
       wrappedTool.handler,

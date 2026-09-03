@@ -34,6 +34,7 @@ function createTool(overrides: Partial<ToolDefinition> = {}): ToolDefinition {
     schema: {
       id: z.number().optional(),
     },
+    description: "Get a customer by ID",
     handler: async () => ({
       content: [{ type: "text", text: "ok" }],
     }),
@@ -94,6 +95,33 @@ describe("ToolRegistry", () => {
       registered: 1,
       skipped: 0,
       byDomain: { crm: 1 },
+    });
+  });
+
+  it("registers conservative annotations and preserves the read-only invariant", () => {
+    const { registry, server } = createRegistry({
+      config: { readonlyMode: false },
+    });
+
+    registry.register(
+      createTool({
+        operation: "write",
+        annotations: {
+          destructiveHint: false,
+          readOnlyHint: true,
+        } as unknown as ToolDefinition["annotations"],
+      }),
+    );
+
+    const [, config] = server.registerTool.mock.calls[0] ?? [];
+    expect(config).toMatchObject({
+      description: "Get a customer by ID",
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
     });
   });
 

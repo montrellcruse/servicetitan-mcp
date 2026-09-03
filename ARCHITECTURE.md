@@ -304,10 +304,10 @@ Every tool is registered through `McpServer.registerTool()` with its description
 | `operation` | `readOnlyHint` | `destructiveHint` | `idempotentHint` | `openWorldHint` |
 |---|---|---|---|---|
 | `read` | `true` | `false` | `true` | `true` |
-| `write` | `false` | `false` | `false` | `true` |
+| `write` | `false` | `true` | `false` | `true` |
 | `delete` | `false` | `true` | `false` | `true` |
 
-`openWorldHint` is always `true` because every tool calls the ServiceTitan API. Hosts use these hints to badge read-only tools and to decide which calls need user approval; they complement, but do not replace, the execution-time readonly guard and confirmation wrapper above. A tool definition can override individual hints with an optional `annotations` field (for example, a write that is safe to repeat can set `idempotentHint: true`).
+`openWorldHint` is always `true` because every tool calls the ServiceTitan API. Hosts use these hints to badge read-only tools and to decide which calls need user approval; they complement, but do not replace, the execution-time readonly guard and confirmation wrapper above. Mutations default to destructive because MCP defines `destructiveHint: false` as additive-only. A tool definition can use the optional `annotations` field to relax `destructiveHint` or override `idempotentHint` and `openWorldHint` after its behavior has been verified. `readOnlyHint` always comes from `operation` and cannot be overridden.
 
 ### Audit logging
 
