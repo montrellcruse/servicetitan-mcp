@@ -225,7 +225,7 @@ beforeAll(async () => {
 
   vi.doMock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
     McpServer: class MockMcpServer {
-      tool(): void {}
+      registerTool(): void {}
       async connect(): Promise<void> {}
       async close(): Promise<void> {}
     },

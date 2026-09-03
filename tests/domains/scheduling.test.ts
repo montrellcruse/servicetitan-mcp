@@ -33,7 +33,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
 }
 
 function createSchedulingContext(): SchedulingTestContext {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -56,9 +56,9 @@ function createSchedulingContext(): SchedulingTestContext {
   const handlers = new Map<string, (params: unknown) => Promise<ToolResponse>>();
   const schemas = new Map<string, Record<string, z.ZodTypeAny>>();
 
-  for (const [name, schema, handler] of server.tool.mock.calls) {
+  for (const [name, config, handler] of server.registerTool.mock.calls) {
     handlers.set(name as string, handler as (params: unknown) => Promise<ToolResponse>);
-    schemas.set(name as string, schema as Record<string, z.ZodTypeAny>);
+    schemas.set(name as string, config.inputSchema as Record<string, z.ZodTypeAny>);
   }
 
   return { postMock, handlers, schemas };

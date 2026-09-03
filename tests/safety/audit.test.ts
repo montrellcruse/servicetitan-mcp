@@ -24,7 +24,7 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
 }
 
 function createRegistry(overrides: Partial<ServiceTitanConfig> = {}) {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -61,7 +61,7 @@ describe("safety audit wrapper", () => {
 
     registry.register(createTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 1 });
 
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
@@ -86,7 +86,7 @@ describe("safety audit wrapper", () => {
       }),
     );
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
 
     await wrapped({ id: 1 });
     expect(auditLogger.log).not.toHaveBeenCalled();
@@ -107,7 +107,7 @@ describe("safety audit wrapper", () => {
       }),
     );
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 1 });
 
     expect(auditLogger.log).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe("safety audit wrapper", () => {
 
     registry.register(createTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({ id: 1 });
 
     expect(auditLogger.log).toHaveBeenCalledWith(
@@ -139,7 +139,7 @@ describe("safety audit wrapper", () => {
 
     registry.register(createTool({ handler }));
 
-    const [, , wrapped] = server.tool.mock.calls[0] ?? [];
+    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
     await wrapped({
       id: 1,
       clientSecret: "pw",

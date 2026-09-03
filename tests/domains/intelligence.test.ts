@@ -41,7 +41,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
 }
 
 function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -59,7 +59,7 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext
   loadIntelligenceDomain(client, registry);
 
   const handlers = new Map<string, (params: unknown) => Promise<ToolResponse>>();
-  for (const [name, _schema, handler] of server.tool.mock.calls) {
+  for (const [name, _schema, handler] of server.registerTool.mock.calls) {
     handlers.set(name as string, handler as (params: unknown) => Promise<ToolResponse>);
   }
 
@@ -199,10 +199,10 @@ describe("intelligence domain", () => {
   it("registers all 9 intelligence tools as read operations", () => {
     const { server, registry } = createContext();
 
-    expect(server.tool).toHaveBeenCalledTimes(10);
+    expect(server.registerTool).toHaveBeenCalledTimes(10);
 
     const names = new Set(
-      server.tool.mock.calls.map((call) => call[0] as string),
+      server.registerTool.mock.calls.map((call) => call[0] as string),
     );
 
     expect(names).toEqual(

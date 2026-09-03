@@ -34,7 +34,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
 }
 
 function createContext() {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -52,7 +52,7 @@ function createContext() {
   loadIntelligenceDomain(client, registry);
 
   const handlers = new Map<string, (params: unknown) => Promise<ToolResponse>>();
-  for (const [name, _schema, handler] of server.tool.mock.calls) {
+  for (const [name, _schema, handler] of server.registerTool.mock.calls) {
     handlers.set(name as string, handler as (params: unknown) => Promise<ToolResponse>);
   }
 

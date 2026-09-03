@@ -33,6 +33,7 @@ Built by [**Rowvyn**](https://rowvyn.com) — [See the case study →](https://r
 - **Dashboard-matched revenue** — `intel_revenue_summary` pulls from the same source as ST's own dashboard
 - **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
 - **Safety layer** — confirmation workflow for writes/deletes, audit logging with sensitive field redaction
+- **Tool annotations** — every tool advertises conservative MCP `readOnlyHint` / `destructiveHint` / `idempotentHint` hints derived from its operation, so hosts can badge read-only tools and gate destructive ones
 - **Domain filtering** — expose only the tool groups you need via `ST_DOMAINS`
 - **Name-based filtering** — pass `businessUnitName` or `technicianName` instead of numeric IDs; resolved via 30-minute cache
 - **LLM-optimized responses** — response shaping trims API noise and structures data for AI consumption

@@ -34,6 +34,7 @@ function createTool(overrides: Partial<ToolDefinition> = {}): ToolDefinition {
     schema: {
       id: z.number().optional(),
     },
+    description: "Get a customer by ID",
     handler: async () => ({
       content: [{ type: "text", text: "ok" }],
     }),
@@ -45,7 +46,7 @@ function createRegistry(options: {
   config?: Partial<ServiceTitanConfig>;
   auditLogger?: Partial<AuditLogger>;
 } = {}) {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -89,11 +90,38 @@ describe("ToolRegistry", () => {
 
     registry.register(createTool());
 
-    expect(server.tool).toHaveBeenCalledTimes(1);
+    expect(server.registerTool).toHaveBeenCalledTimes(1);
     expect(registry.getStats()).toEqual({
       registered: 1,
       skipped: 0,
       byDomain: { crm: 1 },
+    });
+  });
+
+  it("registers conservative annotations and preserves the read-only invariant", () => {
+    const { registry, server } = createRegistry({
+      config: { readonlyMode: false },
+    });
+
+    registry.register(
+      createTool({
+        operation: "write",
+        annotations: {
+          destructiveHint: false,
+          readOnlyHint: true,
+        } as unknown as ToolDefinition["annotations"],
+      }),
+    );
+
+    const [, config] = server.registerTool.mock.calls[0] ?? [];
+    expect(config).toMatchObject({
+      description: "Get a customer by ID",
+      annotations: {
+        readOnlyHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+        openWorldHint: true,
+      },
     });
   });
 
@@ -143,7 +171,7 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.tool).toHaveBeenCalledTimes(1);
+    expect(server.registerTool).toHaveBeenCalledTimes(1);
     expect(registry.getStats().registered).toBe(1);
   });
 
@@ -163,8 +191,8 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, schema, wrappedHandler] = server.tool.mock.calls[0] ?? [];
-    expect((schema as Record<string, z.ZodTypeAny>).confirm).toBeDefined();
+    const [, config, wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
+    expect((config.inputSchema as Record<string, z.ZodTypeAny>).confirm).toBeDefined();
 
     const result = await wrappedHandler({ id: 42 });
     const payload = JSON.parse(result.content[0].text);
@@ -193,7 +221,7 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     await wrappedHandler({ id: 42, confirm: true, token: "secret-token" });
 
     expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, undefined);
@@ -228,8 +256,8 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, schema, wrappedHandler] = server.tool.mock.calls[0] ?? [];
-    expect((schema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
+    const [, config, wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
+    expect((config.inputSchema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
 
     const preview = await wrappedHandler({ id: 42 });
 
@@ -260,8 +288,8 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, schema, wrappedHandler] = server.tool.mock.calls[0] ?? [];
-    expect((schema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
+    const [, config, wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
+    expect((config.inputSchema as Record<string, z.ZodTypeAny>)._confirmed).toBeDefined();
 
     await wrappedHandler({ id: 42 });
 
@@ -287,9 +315,9 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.tool).toHaveBeenCalledTimes(1);
+    expect(server.registerTool).toHaveBeenCalledTimes(1);
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const result = await wrappedHandler({ id: 42 });
 
     expect(result.isError).toBe(true);
@@ -316,9 +344,9 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.tool).toHaveBeenCalledTimes(1);
+    expect(server.registerTool).toHaveBeenCalledTimes(1);
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const result = await wrappedHandler({ id: 42, confirm: true });
 
     expect(result.isError).toBe(true);
@@ -346,7 +374,7 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const unauthorized = await wrappedHandler(
       { id: 42 },
       { requestInfo: { headers: { "x-user-email": "mallory@example.com" } } },
@@ -388,7 +416,7 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const result = await wrappedHandler({ id: 42 });
 
     expect(result.isError).toBe(true);
@@ -414,7 +442,7 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    const [, , wrappedHandler] = server.tool.mock.calls[0] ?? [];
+    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     await wrappedHandler({ id: 42 });
 
     expect(handlerSpy).toHaveBeenCalledTimes(1);

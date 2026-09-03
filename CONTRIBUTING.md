@@ -80,6 +80,8 @@ Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed 
 - Use `getErrorMessage()` from `src/utils.ts` for error formatting (intelligence helpers have their own copy for internal use)
 - Use Zod schemas for all tool input validation
 - Use `toolResult()` / `toolError()` for tool responses
+- Always set `description` — it is sent to MCP clients and is what the model reads to choose a tool. `tests/mcp-contract.test.ts` fails if any tool arrives without one
+- MCP tool annotations are derived from `operation`; mutations default to destructive. Use `annotations` only after verifying a narrower hint (e.g. `destructiveHint: false` for an additive-only write or `idempotentHint: true` for a safe repeat). `readOnlyHint` cannot be overridden
 - Respect read-only mode: when `ST_READONLY=true`, all tools are registered but write and delete operations are blocked at execution time by the middleware
 
 ## Commit Messages

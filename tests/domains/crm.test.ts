@@ -58,7 +58,7 @@ interface CrmContext {
 }
 
 function createContext(overrides: Partial<ServiceTitanConfig> = {}): CrmContext {
-  const server = { tool: vi.fn() };
+  const server = { registerTool: vi.fn() };
   const logger = {
     debug: vi.fn(),
     info: vi.fn(),
@@ -76,7 +76,7 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): CrmContext 
   loadCrmDomain(client, registry);
 
   const handlers = new Map<string, (params: unknown) => Promise<ToolResponse>>();
-  for (const [name, _schema, handler] of server.tool.mock.calls) {
+  for (const [name, _schema, handler] of server.registerTool.mock.calls) {
     handlers.set(name as string, handler as (params: unknown) => Promise<ToolResponse>);
   }
 

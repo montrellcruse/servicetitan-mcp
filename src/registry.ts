@@ -1,4 +1,5 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import type { ZodType } from "zod";
 import { z } from "zod";
 
@@ -10,6 +11,34 @@ import type { ToolResponse } from "./types.js";
 import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
+export type ToolAnnotationOverrides = Omit<ToolAnnotations, "readOnlyHint">;
+
+/**
+ * MCP tool annotations derived from the tool's operation. Mutating operations
+ * default to destructive because `destructiveHint: false` means additive-only
+ * in the MCP specification. Every tool talks to the ServiceTitan API, so
+ * openWorldHint is always true.
+ */
+const DEFAULT_ANNOTATIONS: Record<ToolOperation, ToolAnnotations> = {
+  read: {
+    readOnlyHint: true,
+    destructiveHint: false,
+    idempotentHint: true,
+    openWorldHint: true,
+  },
+  write: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+  delete: {
+    readOnlyHint: false,
+    destructiveHint: true,
+    idempotentHint: false,
+    openWorldHint: true,
+  },
+};
 
 export interface ToolDefinition {
   name: string;
@@ -17,7 +46,9 @@ export interface ToolDefinition {
   operation: ToolOperation;
   schema: Record<string, ZodType>;
   handler: (params: unknown, extra?: ToolHandlerExtra) => Promise<ToolResponse>;
-  description?: string;
+  description: string;
+  /** Overrides for hints not fixed by `operation`; `readOnlyHint` cannot be overridden. */
+  annotations?: ToolAnnotationOverrides;
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -93,7 +124,21 @@ export class ToolRegistry {
       throw new Error(`Tool "${wrappedTool.name}" is already registered`);
     }
 
-    this.server.tool(wrappedTool.name, wrappedTool.schema, wrappedTool.handler);
+    const defaultAnnotations = DEFAULT_ANNOTATIONS[wrappedTool.operation];
+
+    this.server.registerTool(
+      wrappedTool.name,
+      {
+        description: wrappedTool.description,
+        inputSchema: wrappedTool.schema,
+        annotations: {
+          ...defaultAnnotations,
+          ...wrappedTool.annotations,
+          readOnlyHint: defaultAnnotations.readOnlyHint,
+        },
+      },
+      wrappedTool.handler,
+    );
 
     this.registered += 1;
     this.byDomain[domain] = (this.byDomain[domain] ?? 0) + 1;

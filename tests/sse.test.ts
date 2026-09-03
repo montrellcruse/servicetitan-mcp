@@ -36,7 +36,7 @@ class MockMcpServer {
     serverInstances.push(this);
   }
 
-  tool(): void {}
+  registerTool(): void {}
 }
 
 class MockLogger {

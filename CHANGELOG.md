@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+### Fixed
+- **Tool descriptions now reach MCP clients** — the registry registered every tool through the SDK's `server.tool(name, schema, handler)` overload, which silently drops the description. Clients received tool names and parameter descriptions only; the intelligence tools' usage examples never left the process. Registration now goes through `server.registerTool()` so `tools/list` carries every description.
+
+### Added
+- **MCP tool annotations** — every tool now advertises `readOnlyHint`, `destructiveHint`, `idempotentHint`, and `openWorldHint`, derived from its `operation` (read, write, delete). Mutations default to destructive; verified additive or idempotent behavior can be declared through the optional `annotations` field. `readOnlyHint` remains fixed by `operation`.
+- `tests/mcp-contract.test.ts` — connects a real MCP client over an in-memory transport and asserts what `tools/list` actually returns, so metadata dropped at registration time is caught.
+
 ## [2.6.2] - 2026-07-13
 
 ### Fixed
