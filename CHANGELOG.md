@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.6.3] - 2026-09-02
+
 ### Fixed
 - **Tool descriptions now reach MCP clients** — the registry registered every tool through the SDK's `server.tool(name, schema, handler)` overload, which silently drops the description. Clients received tool names and parameter descriptions only; the intelligence tools' usage examples never left the process. Registration now goes through `server.registerTool()` so `tools/list` carries every description.
 
@@ -289,6 +291,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.6.3]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.5.2...v2.6.0
