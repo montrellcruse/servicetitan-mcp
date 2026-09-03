@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [2.6.4] - 2026-09-02
+
+### Security
+- **npm Trusted Publishing** — releases now authenticate through GitHub Actions OIDC instead of a long-lived npm token. The release job runs on Node.js 24 with npm's supported trusted-publishing client, requests only read access to repository contents plus permission to mint an OIDC identity token, and publishes provenance automatically.
+
 ## [2.6.3] - 2026-09-02
 
 ### Fixed
@@ -291,6 +296,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
   - Generated TOOLS.md tool catalog
   - `.env.example` with all environment variables documented
 
+[2.6.4]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.3...v2.6.4
 [2.6.3]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.2...v2.6.3
 [2.6.2]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.1...v2.6.2
 [2.6.1]: https://github.com/montrellcruse/servicetitan-mcp/compare/v2.6.0...v2.6.1
