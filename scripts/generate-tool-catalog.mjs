@@ -6,9 +6,11 @@ const {server,registry}=await createMcpServer(config);
 try {
   const tools=registry.getRegisteredTools().sort((a,b)=>a.domain.localeCompare(b.domain)||a.name.localeCompare(b.name));
   const reads=tools.filter(t=>t.operation==='read').length;
-  const mutations=tools.length-reads;
-  let text='# V3 tool catalog\n\nGenerated from the actual registry. Readonly adapters are eligible for stable support subject to scopes, module availability, and company validation. Live evidence covers representative reads, not every read adapter. Mutations are experimental and have not been verified against a live ServiceTitan Integration environment; they require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. Readonly mode always hides mutations. Profiles and tool allowlists narrow this catalog further. Discovery does not grant ServiceTitan API scopes.\n\n';
-  text+=`Readonly-supported tools: ${reads}; experimental mutations: ${mutations}; total with explicit experimental opt-in: ${tools.length}.\n\n`;
+  const systemTools=tools.filter(t=>t.domain==='_system');
+  const serviceTitanReads=tools.filter(t=>t.operation==='read'&&t.domain!=='_system');
+  const mutations=tools.filter(t=>t.operation!=='read');
+  let text='# V3 tool catalog\n\nGenerated from the actual registry. ServiceTitan-facing read tools are backed by pinned API contracts and are eligible for stable support subject to scopes, module availability, and company validation. Live evidence covers representative reads, not every read tool. Built-in system tools provide health, readiness, and stored-result retrieval. Mutations are experimental and have not been verified against a live ServiceTitan Integration environment; they require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. Readonly mode always hides mutations. Profiles and tool allowlists narrow this catalog further. Discovery does not grant ServiceTitan API scopes.\n\n';
+  text+=`ServiceTitan-facing reads: ${serviceTitanReads.length}; built-in system tools: ${systemTools.length}; readonly discovery: ${reads}; experimental mutations: ${mutations.length}; total with explicit experimental opt-in: ${tools.length}.\n\n`;
   let domain='';
   for(const tool of tools){
     if(tool.domain!==domain){domain=tool.domain;text+=`## ${domain}\n\n| Tool | Operation | Description |\n| --- | --- | --- |\n`;}
@@ -17,5 +19,5 @@ try {
   text+='\n## Removed undocumented operations\n\nThese tools are unavailable in v3.\n\n| Tool | Reason |\n| --- | --- |\n';
   for(const [name,reason]of Object.entries(registry.getUnavailableTools()).sort())text+=`| \`${name}\` | ${reason.replaceAll('|','\\|')} |\n`;
   await writeFile('TOOLS.md',text);
-  console.log(JSON.stringify({tools:tools.length,readonlySupported:reads,experimentalMutations:mutations,excluded:Object.keys(registry.getUnavailableTools()).length}));
+  console.log(JSON.stringify({tools:tools.length,serviceTitanReads:serviceTitanReads.length,builtInSystemTools:systemTools.length,readonlyDiscovery:reads,experimentalMutations:mutations.length,excluded:Object.keys(registry.getUnavailableTools()).length}));
 }finally{await server.close();}

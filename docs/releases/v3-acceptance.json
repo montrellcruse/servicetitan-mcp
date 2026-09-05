@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "d1e1da71146b0a39791b7ec2d776c8f8a7c564194e3519d6ccb7d97cde8c8e7c",
+  "sourceFingerprint": "20631106b5b3ac03858cd21d1547e1da41691bf510d896a3d3f4c4e3de08fe4d",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -39,8 +39,8 @@
         "24.20.0"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 462,
-      "testFiles": 38,
+      "testsPerRuntime": 522,
+      "testFiles": 39,
       "wireTestsPerRuntime": 8,
       "summary": "VALIDATION-v3.md",
       "packagingTestsPerRuntime": 2
@@ -52,7 +52,7 @@
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Built 3.0.0 stdio readonly refresh: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification.",
+      "boundary": "Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the fault-classification changes; those were validated with deterministic adapters.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -67,9 +67,11 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Final 3.0.0 runtime: full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory refresh passed. Runtime JavaScript identity was unchanged before and after measurement. No production capacity or latency SLA; the documented Node 22 benchmark-client listener warnings remain.",
-      "javascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
-      "summary": "../BENCHMARKS.md"
+      "boundary": "Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. After review fixes, current-source client-load and analytics refresh passed on both runtimes, including explicit unknown-write nonretryability assertions. The full protocol/soak/memory matrix was not repeated for these error-handling changes. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
+      "javascriptBuildSha256": "9ae4fac12e3aac62d4d5f90ff75fe90c239564e6ad51eb1d9a54a1a0e6eab81d",
+      "summary": "../BENCHMARKS.md",
+      "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
+      "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846"
     }
   },
   "releaseDisposition": "stable-readonly"

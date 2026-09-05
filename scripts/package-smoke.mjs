@@ -18,6 +18,7 @@ const { createMcpServer, loadConfig, VERSION, Client, StdioClientTransport, InMe
 const pkg = require('@rowvyn/servicetitan-mcp/package.json');
 assert.equal(VERSION, pkg.version);
 const fixtureEnv = { ST_CLIENT_ID: 'package-fixture', ST_CLIENT_SECRET: 'package-secret', ST_APP_KEY: 'package-key', ST_TENANT_ID: '7', ST_LOG_LEVEL: 'error' };
+const builtInSystemTools = new Set(['st_health_check', 'st_readiness_check', 'st_result_read']);
 assert.throws(() => loadConfig({ ...fixtureEnv, ST_READONLY: 'false' }), /ST_EXPERIMENTAL_WRITES=true/);
 const results = [];
 for (const profile of ['full', 'crm', 'dispatch', 'analytics', 'full-write']) {
@@ -35,11 +36,19 @@ for (const profile of ['full', 'crm', 'dispatch', 'analytics', 'full-write']) {
     assert(catalog.tools.length > 3); assert(catalog.tools.every(t => t.outputSchema?.type === 'object'));
     if (profile !== 'full-write') assert(catalog.tools.every(t => t.annotations.readOnlyHint));
     const mutations = catalog.tools.filter(tool => tool.annotations.readOnlyHint === false);
+    const systemTools = catalog.tools.filter(tool => builtInSystemTools.has(tool.name));
+    const serviceTitanReads = catalog.tools.filter(tool => tool.annotations.readOnlyHint === true && !builtInSystemTools.has(tool.name));
     assert(mutations.every(tool => tool.description.startsWith('EXPERIMENTAL:') && tool.description.includes('live ServiceTitan Integration')));
-    if (profile === 'full') assert.equal(catalog.tools.length, 264);
+    if (profile === 'full') {
+      assert.equal(catalog.tools.length, 264);
+      assert.equal(serviceTitanReads.length, 261);
+      assert.equal(systemTools.length, 3);
+    }
     if (profile === 'full-write') {
       assert.equal(mutations.length, 194);
       assert.equal(catalog.tools.length - mutations.length, 264);
+      assert.equal(serviceTitanReads.length, 261);
+      assert.equal(systemTools.length, 3);
       const confirmation = await client.callTool({ name: 'crm_customers_update', arguments: { id: 7 } });
       assert(confirmation.isError);
       assert.match(confirmation.structuredContent.error.message, /Write confirmation required/);
@@ -51,7 +60,7 @@ for (const profile of ['full', 'crm', 'dispatch', 'analytics', 'full-write']) {
     const result = await client.callTool({ name: 'st_result_read', arguments: { resultId: '00000000-0000-4000-8000-000000000000' } });
     assert(result.isError); assert.deepEqual(result.structuredContent, JSON.parse(result.content[0].text));
     assert.equal(calls, 0);
-    results.push({ profile, tools: catalog.tools.length, readonlySupported: catalog.tools.length - mutations.length, experimentalMutations: mutations.length, catalogBytes: Buffer.byteLength(JSON.stringify(catalog)), registrationAndDiscoveryMs: Math.round(performance.now() - started) });
+    results.push({ profile, tools: catalog.tools.length, serviceTitanReads: serviceTitanReads.length, builtInSystemTools: systemTools.length, readonlyDiscovery: catalog.tools.length - mutations.length, experimentalMutations: mutations.length, catalogBytes: Buffer.byteLength(JSON.stringify(catalog)), registrationAndDiscoveryMs: Math.round(performance.now() - started) });
   } finally { await client.close(); await runtime.server.close(); }
 }
 const wire = new Client({ name: 'installed-cli-smoke', version: '1' });

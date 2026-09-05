@@ -149,9 +149,9 @@ export function convertTimestampsToLocal(
   return data;
 }
 
-function responseEnvelope(payload: Record<string, unknown>, isError = false): ToolResponse {
+function responseEnvelope(payload: Record<string, unknown>, isError = false, compact = false): ToolResponse {
   return {
-    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+    content: [{ type: "text", text: JSON.stringify(payload, null, compact ? undefined : 2) }],
     structuredContent: payload,
     ...(isError ? { isError: true } : {}),
   };
@@ -242,6 +242,9 @@ function errorPayload(error: unknown, fallbackCode: string): Record<string, unkn
   if (typeof details.traceId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(details.traceId)) payload.traceId = details.traceId;
   if (typeof details.retryAfterMs === "number" && Number.isFinite(details.retryAfterMs) && details.retryAfterMs >= 0) payload.retryAfterMs = details.retryAfterMs;
   for (const flag of ["retryable", "outcomeUnknown"]) if (typeof details[flag] === "boolean") payload[flag] = details[flag];
+  // An uncertain business outcome always requires verification before another
+  // attempt, including errors supplied by embedders or older clients.
+  if (payload.outcomeUnknown === true) payload.retryable = false;
   return payload;
 }
 
@@ -253,7 +256,7 @@ export function toolError(error: unknown, code = "REQUEST_FAILED"): ToolResponse
   // Uncertain writes keep their essential safety meaning even at the minimum
   // budget instead of degrading to a generic error that invites a replay.
   if (payload.outcomeUnknown === true) {
-    const uncertain = responseEnvelope({ error: { code: "OUTCOME_UNKNOWN", outcomeUnknown: true } }, true);
+    const uncertain = responseEnvelope({ error: { code: "OUTCOME_UNKNOWN", outcomeUnknown: true, retryable: false } }, true, true);
     if (fitsBudget(uncertain, limit)) return uncertain;
   }
   const compact = responseEnvelope({ error: { code, message: "Request failed; error details exceed the response budget." } }, true);

@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 This branch prepares `3.0.0`; the earlier release candidate was not published.
 
 ### Changed
-- Prepares stable `3.0.0` under the `readonly-v1` support policy: 264 documented, contract-checked read adapters are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
+- Prepares stable `3.0.0` under the `readonly-v1` support policy: 261 ServiceTitan-facing read tools backed by pinned API contracts plus three built-in system tools are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
 - The 194 mutation adapters are experimental, hidden by default, and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`.
 - Integration-environment and independent-company live gates are explicitly scoped out because validation credentials were unavailable; neither is represented as passed. Representative live reads cover one production company, without dashboard-parity or Scheduling Pro certification.
 - Pinned ServiceTitan operation/request contracts replace guessed module routing; undocumented tools are excluded from discovery.
@@ -20,6 +20,9 @@ This branch prepares `3.0.0`; the earlier release candidate was not published.
 
 ### Fixed
 - OAuth failures cannot replay token requests through a business client or expose token payloads in tool results; concurrent stale 401s reuse fresh tokens.
+- Ambiguous write failures return `outcomeUnknown: true` and `retryable: false`, including size-limited error responses, and are not automatically replayed.
+- Reporting data execution remains a read operation even though the official endpoint uses POST.
+- Report page failures preserve API status, trace ID, and retry metadata when adding report/page context.
 - Default warning removal, silent page loss, failed-result caching, ambiguous name broadening, and DST date boundaries.
 - Report 166 hours/layout, missing gross-pay semantics, CSR/upcoming date keys, and technician BU filtering.
 - Accounting export arrays and multiple documented write/action bodies, including gross pay and technician shifts.

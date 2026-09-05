@@ -79,7 +79,19 @@ describe("final MCP response budgets", () => {
 
   it("keeps uncertain-write semantics even when all diagnostic details cannot fit", () => {
     const error = new ServiceTitanApiError(0, "x".repeat(5000), "/crm/v2/tenant/42/customers", { phase: "resource", outcomeUnknown: true });
-    expect(bounded(MIN_RESPONSE_CHARS, () => toolError(error)).structuredContent).toEqual({ error: { code: "OUTCOME_UNKNOWN", outcomeUnknown: true } });
+    const result = bounded(MIN_RESPONSE_CHARS, () => toolError(error));
+    expect(result.structuredContent).toEqual({ error: { code: "OUTCOME_UNKNOWN", outcomeUnknown: true, retryable: false } });
+    expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
+    expect(JSON.stringify(result).length).toBeLessThanOrEqual(MIN_RESPONSE_CHARS);
+  });
+
+  it("never invites replay when an API error has contradictory retry metadata", () => {
+    const error = new ServiceTitanApiError(503, "Verify the write upstream", "/crm/v2/tenant/42/customers", {
+      phase: "resource", outcomeUnknown: true, retryable: true,
+    });
+    const result = bounded(2500, () => toolError(error));
+    expect(result.structuredContent).toMatchObject({ error: { status: 503, outcomeUnknown: true, retryable: false } });
+    expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
   });
 
   it("rejects untrusted error metadata rather than copying arbitrary fields", () => {

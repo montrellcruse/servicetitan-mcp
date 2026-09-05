@@ -1,4 +1,5 @@
 import type { ServiceTitanClient } from "../../client.js";
+import { ServiceTitanApiError } from "../../client.js";
 import { awaitWithSignal, getRequestContext, sleepWithSignal, throwIfAborted } from "../../request-context.js";
 import { getErrorMessage, isRecord } from "./helpers.js";
 
@@ -183,7 +184,11 @@ export async function executeReport(
           { page, pageSize, includeTotal: true },
         );
       } catch (error) {
-        throw new Error(`Report ${key} page ${page} failed: ${getErrorMessage(error)}`);
+        const message = `Report ${key} page ${page} failed: ${getErrorMessage(error)}`;
+        if (error instanceof ServiceTitanApiError) {
+          throw new ServiceTitanApiError(error.status, message, error.path, error.details);
+        }
+        throw new Error(message);
       }
       if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`Report ${key} returned an invalid page`);
       if (typeof response.hasMore !== "boolean") throw new Error(`Report ${key} page ${page} omitted boolean hasMore`);

@@ -29,7 +29,7 @@ The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicet
 
 ## Choose the tool surface
 
-The [generated catalog](TOOLS.md) lists 458 documented adapters: 264 contract-checked reads are eligible for stable readonly support, subject to each company's scopes/modules and readiness/report validation, and 194 mutations are experimental. Live verification sampled representative reads rather than all 264. Discovery is filtered by configuration:
+The [generated catalog](TOOLS.md) lists 458 tools: 261 ServiceTitan-facing read tools backed by pinned API contracts, three built-in system tools, and 194 experimental mutations. The 264-tool readonly discovery surface is eligible for stable support subject to each company's scopes/modules and readiness/report validation. Live verification sampled representative reads rather than every tool. Discovery is filtered by configuration:
 
 | Setting | Behavior |
 | --- | --- |

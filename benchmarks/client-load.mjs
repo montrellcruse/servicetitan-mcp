@@ -183,7 +183,7 @@ async function main(options) {
         return { ok: true, latencyMs: performance.now() - started };
       } catch (error) {
         if (error?.name === "AssertionError") throw error;
-        return { ok: false, latencyMs: performance.now() - started, status: error?.status ?? null, code: error?.details?.code ?? error?.name ?? "UNKNOWN", phase: error?.details?.phase, outcomeUnknown: error?.details?.outcomeUnknown === true };
+        return { ok: false, latencyMs: performance.now() - started, status: error?.status ?? null, code: error?.details?.code ?? error?.name ?? "UNKNOWN", phase: error?.details?.phase, retryable: error?.details?.retryable, outcomeUnknown: error?.details?.outcomeUnknown === true };
       }
     }
 
@@ -366,9 +366,9 @@ async function main(options) {
           return response(request, { fixtureRequestId: request.params.page });
         } });
         const result = await observedRequest(f, 1, signal, { method: "post", body: { name: "Synthetic fixture" } });
-        assert(!result.ok && result.status === status && result.outcomeUnknown); assert.equal(f.state.resourceCalls, 1, "Ambiguous mutation was replayed");
+        assert(!result.ok && result.status === status && result.outcomeUnknown); assert.equal(result.retryable, false, "Ambiguous mutation was marked retryable"); assert.equal(f.state.resourceCalls, 1, "Ambiguous mutation was replayed");
         const recovery = await observedRequest(f, 2, signal); assert(recovery.ok); assert.equal(f.state.resourceCalls, 2); assertDrained(f);
-        return { mutationStatus: status, mutationAttempts: 1, outcomeUnknown: true, latencyMs: rounded(result.latencyMs), recovery: { successfulRequests: 1, latencyMs: rounded(recovery.latencyMs) }, clientMetrics: f.client.getMetrics() };
+        return { mutationStatus: status, mutationAttempts: 1, outcomeUnknown: true, retryable: result.retryable, latencyMs: rounded(result.latencyMs), recovery: { successfulRequests: 1, latencyMs: rounded(recovery.latencyMs) }, clientMetrics: f.client.getMetrics() };
       }));
     }
 

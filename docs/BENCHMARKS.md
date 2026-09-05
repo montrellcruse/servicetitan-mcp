@@ -2,7 +2,7 @@
 
 Measured September 4, 2026 against v2.6.4 (`f6becd5`) on an Apple M4 with 10 logical CPUs, 16 GiB RAM, macOS arm64, and Node 22.23.2 / 24.20.0. Each comparison uses the same runtime and locked dependencies. See [benchmark instructions](../benchmarks/README.md) to reproduce the workloads.
 
-The measured package is v3.0.0. Its built JavaScript identity is `6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846`, calculated from the sorted paths and SHA-256 values of the eight runtime JavaScript files. Documentation edits do not alter that runtime identity.
+The full comparison below measured v3.0.0 at `786f15b`, before the PR review fixes. Its built JavaScript identity is `6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846`, calculated from the sorted paths and SHA-256 values of the eight runtime JavaScript files. Documentation edits do not alter that runtime identity.
 
 V3 avoids repeated upstream work through complete-report caching and bounds overload. Ordinary reads remain close to v2; startup, structured responses, validation, and queueing add costs. These results do not establish a universal latency improvement.
 
@@ -31,6 +31,14 @@ The fixed customer response grew from 8,227 to 12,845 bytes because v3 provides 
 - Separate diagnostics force garbage collection after three equal 1,000-call rounds and 24 closed sessions. V3 round-three retained heap was 42.6 MB on Node 24 and 46.2 MB on Node 22, without exceeding the exploratory growth threshold. This is not process RSS, a deployment memory limit, or proof of long-duration leak-free operation.
 
 Node 22's benchmark driver emitted abort-listener warnings during sustained HTTP work, including against v2. A separate raw-fetch control showed settled-request listeners returning to zero after garbage collection on both runtimes, consistent with GC-dependent client cleanup. The smaller control did not reproduce the warning itself. No listener limit or dependency was patched. Node 22 soak timing may include warning-output overhead; steady latency comparisons finished before the warnings.
+
+## Focused refresh after review fixes
+
+On September 5, 2026, the client-load and analytics harnesses were repeated sequentially on Node 22.23.2 and 24.20.0 after correcting retry metadata and report POST classification. The rebuilt package identity is `9ae4fac12e3aac62d4d5f90ff75fe90c239564e6ad51eb1d9a54a1a0e6eab81d`; the harnesses bundle the corresponding current client/executor source. The full protocol, soak, and retained-memory comparison above remains evidence for `786f15b` and was not repeated for these error-handling changes.
+
+The refresh passed three statistics checks, 20 client-load scenarios, and 18 fault scenarios across both runtimes: 7,680 offered requests, 6,688 successful requests, and 992 expected queue-overflow rejections. Concurrency, queue bounds, cancellation, and recovery invariants passed. Both timeout and HTTP 503 mutation faults made exactly one mutation attempt and returned `outcomeUnknown: true` with `retryable: false`; the harness now asserts that pair explicitly.
+
+Analytics checks passed with 40 local samples and ten modeled samples at 20 ms per page. Three-page cold/warm medians were 66.016 / 0.035 ms on Node 22 and 65.397 / 0.024 ms on Node 24, with no added upstream requests for warm results. Duplicate fan-in, complete pagination, expiry, and per-client isolation checks passed. These measurements confirm the tested behavior under synthetic load; they do not add a production latency or capacity claim.
 
 ## Operating limits
 

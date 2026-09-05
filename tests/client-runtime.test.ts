@@ -18,6 +18,126 @@ function deferred<T>() {
 
 afterEach(() => vi.useRealTimers());
 
+const mutationTargets = [
+  { method: "post", path: "/tenant/{tenant}/customers" },
+  { method: "put", path: "/tenant/{tenant}/contacts/00000000-0000-4000-8000-000000000007" },
+  { method: "patch", path: "/tenant/{tenant}/customers/7" },
+  { method: "delete", path: "/tenant/{tenant}/contacts/00000000-0000-4000-8000-000000000007" },
+] as const;
+const failureKinds = ["timeout", "network", "500", "503", "cancel"] as const;
+type FailureKind = typeof failureKinds[number];
+function failRequest(request: InternalAxiosRequestConfig, kind: FailureKind, controller: AbortController): never {
+  if (kind === "cancel") { controller.abort(); throw new CanceledError("Fixture cancellation", request); }
+  if (kind === "timeout") throw new AxiosError("Fixture timeout", "ECONNABORTED", request);
+  if (kind === "network") throw new AxiosError("Fixture network failure", "ERR_NETWORK", request);
+  throw rejection(request, Number(kind));
+}
+function callMutation(client: ServiceTitanClient, target: typeof mutationTargets[number]) {
+  return target.method === "delete" ? client.delete(target.path) : client[target.method](target.path, { fixture: true });
+}
+function serializedError(error: unknown): Record<string, unknown> {
+  expect(error).toBeInstanceOf(ServiceTitanApiError);
+  return JSON.parse(JSON.stringify((error as ServiceTitanApiError).toJSON()));
+}
+
+describe("sent mutation flags", () => {
+  it.each(mutationTargets.flatMap(target => failureKinds.map(kind => ({ ...target, kind }))))("$method $kind cannot be presented as safely retryable", async target => {
+    const controller = new AbortController();
+    const events: Array<{ attempts: number; method: string }> = [];
+    const auth = vi.fn(tokenAdapter);
+    const resource = vi.fn(async (request: InternalAxiosRequestConfig) => failRequest(request, target.kind, controller));
+    const client = new ServiceTitanClient(config(), { authAdapter: auth, adapter: resource, onRequestComplete: event => events.push(event) });
+    const error = await withRequestContext({ signal: controller.signal }, () => callMutation(client, target)).catch(value => value);
+    expect(serializedError(error)).toMatchObject({ phase: "resource", status: target.kind === "500" || target.kind === "503" ? Number(target.kind) : 0, outcomeUnknown: true, retryable: false });
+    expect((error as Error).message).toContain("Verify its result before retrying");
+    expect(resource).toHaveBeenCalledTimes(1); expect(auth).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([expect.objectContaining({ method: target.method, attempts: 1 })]);
+    expect(client.getMetrics()).toMatchObject({ resourceAttempts: 1, retries401: 0, retries429: 0 });
+  });
+});
+
+describe("report data POST classification", () => {
+  const paths = [
+    "/tenant/{tenant}/report-category/operations/reports/162/data",
+    "/tenant/{tenant}/report-category/accounting/reports/166/data",
+    "/reporting/v2/tenant/42/report-category/accounting/reports/166/data",
+  ];
+  it.each(paths.flatMap(path => failureKinds.map(kind => ({ path, kind }))))("$path $kind remains a read without adding automatic retries", async ({ path, kind }) => {
+    const controller = new AbortController();
+    const events: Array<{ attempts: number }> = [];
+    const resource = vi.fn(async (request: InternalAxiosRequestConfig) => failRequest(request, kind, controller));
+    const client = new ServiceTitanClient(config(), { authAdapter: tokenAdapter, adapter: resource, onRequestComplete: event => events.push(event) });
+    const error = await withRequestContext({ signal: controller.signal }, () => client.post(path, { parameters: [] })).catch(value => value);
+    const json = serializedError(error);
+    expect(json).toMatchObject({ phase: "resource", retryable: kind !== "cancel" });
+    expect(json).not.toHaveProperty("outcomeUnknown");
+    expect(json.path).toMatch(/^\/reporting\/v2\/tenant\/42\/report-category\/(operations|accounting)\/reports\/\d+\/data$/);
+    expect((error as Error).message).not.toMatch(/write may have completed|Verify its result before retrying/i);
+    expect(resource).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([expect.objectContaining({ attempts: 1 })]);
+    expect(client.getMetrics()).toMatchObject({ resourceAttempts: 1, retries401: 0, retries429: 0 });
+  });
+
+  it("does not classify a different reporting POST operation as the allowlisted read", async () => {
+    const resource = vi.fn(async (request: InternalAxiosRequestConfig) => { throw rejection(request, 503); });
+    const client = new ServiceTitanClient(config(), { authAdapter: tokenAdapter, adapter: resource });
+    const error = await client.post("/tenant/{tenant}/report-category/accounting/reports/166/data/query", { parameters: [] }).catch(value => value);
+    expect(serializedError(error)).toMatchObject({ outcomeUnknown: true, retryable: false });
+    expect(resource).toHaveBeenCalledTimes(1);
+  });
+
+  it("retains GET retry metadata without retrying its 503 automatically", async () => {
+    const resource = vi.fn(async (request: InternalAxiosRequestConfig) => { throw rejection(request, 503); });
+    const client = new ServiceTitanClient(config(), { authAdapter: tokenAdapter, adapter: resource });
+    const error = await client.get("/tenant/{tenant}/customers").catch(value => value);
+    expect(serializedError(error)).toMatchObject({ retryable: true, status: 503 });
+    expect(serializedError(error)).not.toHaveProperty("outcomeUnknown");
+    expect(resource).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("mutation failures before resource dispatch", () => {
+  it.each(mutationTargets.flatMap(target => (["network", "503", "cancel"] as const).map(kind => ({ ...target, kind }))))("$method auth $kind does not create mutation uncertainty", async target => {
+    const controller = new AbortController();
+    const events: Array<{ attempts: number }> = [];
+    const resource = vi.fn(tokenAdapter);
+    const auth = vi.fn(async (request: InternalAxiosRequestConfig) => failRequest(request, target.kind, controller));
+    const client = new ServiceTitanClient(config(), { adapter: resource, authAdapter: auth, onRequestComplete: event => events.push(event) });
+    const error = await withRequestContext({ signal: controller.signal }, () => callMutation(client, target)).catch(value => value);
+    const json = serializedError(error);
+    expect(json).not.toHaveProperty("outcomeUnknown");
+    expect(json.retryable).toBe(target.kind !== "cancel");
+    if (target.kind !== "cancel") expect(json.phase).toBe("auth");
+    expect(auth).toHaveBeenCalledTimes(1); expect(resource).not.toHaveBeenCalled();
+    expect(events).toEqual([expect.objectContaining({ attempts: 0 })]);
+    expect(client.getMetrics().resourceAttempts).toBe(0);
+  });
+
+  it.each(mutationTargets)("$method queue overflow and cancellation are not sent mutations", async target => {
+    const firstStarted = deferred<void>();
+    const releaseFirst = deferred<void>();
+    const controller = new AbortController();
+    const events: Array<{ attempts: number; method: string }> = [];
+    const resource = vi.fn(async (request: InternalAxiosRequestConfig) => { firstStarted.resolve(); await releaseFirst.promise; return response(request, { ok: true }); });
+    const client = new ServiceTitanClient(config(), { maxConcurrentRequests: 1, maxQueuedRequests: 1, authAdapter: tokenAdapter, adapter: resource, onRequestComplete: event => events.push(event) });
+    const first = client.get("/tenant/{tenant}/customers");
+    await firstStarted.promise;
+    try {
+      const queued = withRequestContext({ signal: controller.signal }, () => callMutation(client, target)).catch(value => value);
+      const overflow = await callMutation(client, target).catch(value => value);
+      expect(serializedError(overflow)).toMatchObject({ phase: "queue", code: "QUEUE_FULL", retryable: true });
+      expect(serializedError(overflow)).not.toHaveProperty("outcomeUnknown");
+      controller.abort();
+      const cancellation = serializedError(await queued);
+      expect(cancellation).toMatchObject({ code: "CANCELLED", retryable: false });
+      expect(cancellation).not.toHaveProperty("outcomeUnknown");
+      expect(events).toEqual([expect.objectContaining({ method: target.method, attempts: 0 }), expect.objectContaining({ method: target.method, attempts: 0 })]);
+      expect(resource).toHaveBeenCalledTimes(1);
+    } finally { releaseFirst.resolve(); await first; }
+    expect(client.getMetrics()).toMatchObject({ resourceAttempts: 1, activeRequests: 0, queuedRequests: 0 });
+  });
+});
+
 describe("real Axios request boundaries", () => {
   it.each([401, 403])("an auth %s fails the business call and recovery only sends the intended resource", async (status) => {
     let authCalls = 0;

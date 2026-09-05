@@ -2,6 +2,7 @@ import https from "node:https";
 import axios, { type AxiosAdapter, type AxiosError, type AxiosInstance } from "axios";
 
 import type { ServiceTitanConfig } from "./config.js";
+import { findOfficialOperation } from "./contracts/operations.js";
 import { resolveServiceTitanPath } from "./contracts/resolve-route.js";
 import { redactSensitiveText } from "./audit.js";
 import { awaitWithSignal, getRequestContext, sleepWithSignal, throwIfAborted } from "./request-context.js";
@@ -184,6 +185,15 @@ export class ServiceTitanClient {
 
   private async request(method: string, path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> {
     const resolvedPath = resolveServiceTitanPath(path, this.config.tenantId, method);
+    // This exact pinned Reporting operation reads data using POST. No caller
+    // metadata or broader reporting prefix can declare another write safe.
+    const reportOperation = method === "post" && resolvedPath.startsWith("/reporting/v2/")
+      ? findOfficialOperation(method, resolvedPath) : undefined;
+    const isReportDataRead = reportOperation?.id === "ReportCategoryReports_GetData"
+      && reportOperation.document === "tenant-reporting-v2.json"
+      && reportOperation.method === "POST"
+      && reportOperation.fullPath === "/reporting/v2/tenant/{tenant}/report-category/{report_category}/reports/{reportId}/data";
+    const mutation = method !== "get" && !isReportDataRead;
     const signal = getRequestContext().signal;
     const started = Date.now();
     let attempts = 0;
@@ -220,11 +230,11 @@ export class ServiceTitanClient {
               this.counters.retries401 += 1;
             } else if (axios.isAxiosError(error) && error.response?.status === 429) {
               this.recordCooldown(error, "resource");
-              if (retried429) throw this.sanitizeError(error, resolvedPath, "resource", method !== "get");
+              if (retried429) throw this.sanitizeError(error, resolvedPath, "resource", mutation);
               retried429 = true;
               rateLimitError = error;
             } else {
-              throw this.sanitizeError(error, resolvedPath, "resource", method !== "get");
+              throw this.sanitizeError(error, resolvedPath, "resource", mutation);
             }
           }
         } finally {
@@ -360,9 +370,9 @@ export class ServiceTitanClient {
     return new ServiceTitanApiError(status, safeMessage, path, {
       phase, code: cancelled ? "CANCELLED" : axios.isAxiosError(error) ? error.code : undefined,
       traceId: trace && /^[A-Za-z0-9_-]{1,200}$/.test(trace) ? trace : undefined,
-      retryable: !cancelled && (status === 429 || status >= 500 || status === 0),
+      retryable: !outcomeUnknown && !cancelled && (status === 429 || status >= 500 || status === 0),
       // A sent write that times out/cancels can still have committed upstream.
-      outcomeUnknown: outcomeUnknown || undefined,
+      ...(outcomeUnknown ? { outcomeUnknown: true } : {}),
     });
   }
 

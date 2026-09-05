@@ -32,7 +32,7 @@ Official date-time fields accept RFC 3339 numeric timezone offsets as well as UT
 
 ## Results, errors, and audit
 
-Fields are no longer removed, renamed, rounded, or array-capped by generic response shaping. Arrays/scalars use `{data:...}`. `structuredContent` and text contain equivalent JSON. Errors include safe status/phase/trace/retry metadata when available; uncertain writes carry `outcomeUnknown` and must be verified upstream before retrying.
+Fields are no longer removed, renamed, rounded, or array-capped by generic response shaping. Arrays/scalars use `{data:...}`. `structuredContent` and text contain equivalent JSON. Errors include safe status/phase/trace/retry metadata when available; uncertain writes carry `outcomeUnknown: true` and `retryable: false` and must be verified upstream before retrying, even when diagnostic details are shortened to fit the response budget. The pinned report-data POST is a read: its timeout/5xx failures may be retried by a caller subject to reporting limits, without uncertain-write metadata or automatic replay. Report-page errors preserve the API status, trace ID, and retry metadata.
 
 The response budget includes the serialized tool envelope. Large results can return a `st_result_read` handle; concatenate JSON text chunks to retrieve the complete stored result. Storage is temporary, per session/runtime, and bounded; small budgets or oversize results may instead produce an explicit delivery error. A failed delivery is not proof that a preceding mutation failed. Audit events distinguish these cases and remain enabled independently of diagnostic verbosity.
 
