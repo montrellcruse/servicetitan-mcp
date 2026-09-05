@@ -1,6 +1,6 @@
 # Migrating from v2.6.4 to v3
 
-V3 is a correctness and portability release with intentional interface changes. This branch prepares `3.0.0` for stable publication; it has not yet been published. Its `readonly-v1` support policy covers readonly use with a separate runtime/configuration for each company and requires readiness and report-definition validation for every company before use.
+Version `3.0.0` is a correctness and portability release with intentional interface changes. Its `readonly-v1` support policy covers readonly use with a separate runtime/configuration for each company and requires readiness and report-definition validation for every company before use.
 
 ## Discovery and deployment
 

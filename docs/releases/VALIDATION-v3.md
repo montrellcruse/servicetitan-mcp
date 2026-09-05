@@ -1,10 +1,10 @@
 # V3 stable read-only validation
 
-Version `3.0.0` prepares a stable release under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
+Version `3.0.0` defines stable read-only support under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
 
 ## Automated coverage
 
-The local matrix uses Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime passes 581 tests across 42 files, fifteen MCP wire tests (eleven built-process cases and four built-factory SDK cases), and two packaging exclusion tests. Contract checks, TypeScript checking, lint, builds, package installation, ESM imports, and declaration consumption also pass. [GitHub CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml) runs the automated gates and release-policy check on Linux with Node 22 and 24; consult the release commit's checks for its result.
+The runtime implementation at `af7f347` passed the local matrix on Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime passed 581 tests across 42 files, fifteen MCP wire tests (eleven built-process cases and four built-factory SDK cases), and two packaging exclusion tests. Contract checks, TypeScript checking, lint, builds, package installation, ESM imports, and declaration consumption also pass. [GitHub CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml) runs the automated gates and release-policy check on Linux with Node 22 and 24. The stable aggregate check named `ci` runs after the matrix and passes only on matrix success; failure, cancellation, and skipped work cannot satisfy it. Consult the release commit's checks for its result.
 
 | Area | Coverage |
 | --- | --- |
@@ -26,7 +26,9 @@ Audit-sink isolation adds 31 direct/SDK regressions for successful, failed, unce
 
 Diagnostic regressions cover configured-secret canaries, nested errors, unsafe serializers, fallback paths, query-free SSE logging, and suppression of untrusted configuration values in all four built entrypoints' startup errors. Packaging tests use synthetic files with the real npm and Docker CLIs; the Docker test uses a loopback mock engine rather than a running daemon. The final locked-dependency audit reported zero known vulnerabilities.
 
-A fresh 148-file npm archive installed in an isolated consumer. Both supported runtimes passed five-profile discovery, the experimental opt-in/labeling/confirmation checks, package imports, and actual stdio CLI calls with dummy credentials and zero upstream requests. A TypeScript consumer also checked the installed declarations and public experimental-policy error export.
+A fresh 154-file npm archive installed in an isolated consumer. Both supported runtimes passed five-profile discovery, the experimental opt-in/labeling/confirmation checks, package imports, and actual stdio CLI calls with dummy credentials and zero upstream requests. A TypeScript consumer also checked the installed declarations and public experimental-policy error export. The six additional files are maintained public documentation: contribution instructions, contract provenance, validation, acceptance, benchmark results, and benchmark reproduction instructions. Relative Markdown links resolve within the archive; raw benchmark results, snapshots, scripts, and credential files remain excluded.
+
+The release-metadata preflight reruns the complete npm prepublication hook in dry-run mode on Node 24, the release-policy regressions, package-content and documentation-link checks on both supported runtimes, and fresh installed-package smokes. No runtime source changed from `af7f347`; the recorded runtime build identity and earlier benchmark measurements remain unchanged. A matching version tag triggers npm publication; creating the GitHub Release from that existing tag remains a separate manual step documented in [CONTRIBUTING.md](../../CONTRIBUTING.md).
 
 ## Live validation boundary
 

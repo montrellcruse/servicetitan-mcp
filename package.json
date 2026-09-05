@@ -44,7 +44,13 @@
     "CHANGELOG.md",
     ".env.example",
     "docs/MIGRATION-v3.md",
-    "TOOLS.md"
+    "TOOLS.md",
+    "CONTRIBUTING.md",
+    "docs/contracts/README.md",
+    "docs/BENCHMARKS.md",
+    "docs/releases/VALIDATION-v3.md",
+    "docs/releases/v3-acceptance.json",
+    "benchmarks/README.md"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",

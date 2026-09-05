@@ -66,3 +66,10 @@ Intelligence tools live in `src/domains/intelligence/`. Define logical report co
 Use conventional commit prefixes such as `feat:`, `fix:`, `docs:`, `test:`, and `refactor:`. Include the concrete behavior change, contract source, migration impact, and validation commands. Run `npm run docs:tools` when the supported tool catalog changes.
 
 Report security issues through the private channel in `SECURITY.md`; do not open a public issue for a vulnerability.
+
+## Publishing a release
+
+1. Finalize the package version, dated changelog entry, migration guidance, and support policy. Check all relative links in the packed Markdown and keep raw live evidence and credential files excluded.
+2. Run the release preflight and installed-package smoke tests, record only verified acceptance evidence, refresh its source fingerprint, and require the Node 22 and 24 jobs plus aggregate `ci` check to pass on the release commit. Obtain the required review and merge through the protected branch.
+3. When publication is authorized, push a tag matching the package version (for example, `v3.0.0`) on that reviewed commit. The tag-triggered Release workflow rechecks acceptance and tests, then publishes npm through Trusted Publishing. Stable versions use `latest`; prerelease versions use `next`. Pushing the tag is a publication action.
+4. Verify the successful workflow and the exact npm version. Create the GitHub Release manually from the existing tag using the versioned changelog notes. The workflow publishes npm but does not create a GitHub Release; do not create another tag or republish the package for this step.

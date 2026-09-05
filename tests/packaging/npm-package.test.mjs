@@ -2,13 +2,18 @@ import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
 import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import test from "node:test";
 
 const execute = promisify(execFile);
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+const publicDocumentation = [
+  "README.md", "CHANGELOG.md", "TOOLS.md", "CONTRIBUTING.md",
+  "docs/MIGRATION-v3.md", "docs/contracts/README.md", "docs/BENCHMARKS.md",
+  "docs/releases/VALIDATION-v3.md", "docs/releases/v3-acceptance.json", "benchmarks/README.md",
+];
 
 async function put(root, path, contents = "fixture\n") {
   const target = join(root, path);
@@ -45,13 +50,15 @@ test("npm package includes public runtime files and excludes private evidence", 
 
     for (const file of [
       "build/server.js", "build/index.js", "build/sse.js", "build/streamable-http.js",
-      "build/readiness-cli.js", "build/types/server.d.ts", "LICENSE", "README.md",
-      "CHANGELOG.md", ".env.example", "TOOLS.md", "docs/MIGRATION-v3.md",
+      "build/readiness-cli.js", "build/types/server.d.ts", "LICENSE", ".env.example",
     ]) await put(temporary, file);
+    for (const file of publicDocumentation) {
+      await put(temporary, file, await readFile(join(repo, file), "utf8"));
+    }
 
     const excluded = [
       ".env", ".env.integration", ".env.secondary", "docs/reviews/live.json",
-      "audit/live.json", "benchmarks/results/live.json",
+      "docs/releases/private.json", "audit/live.json", "benchmarks/run.mjs", "benchmarks/results/live.json",
       "private-review.tar", "private-package.tgz",
       "docs/contracts/official-openapi-2026-09-04.tar.gz", "scripts/private.mjs", "tests/private.test.mjs",
     ];
@@ -79,7 +86,7 @@ test("npm package includes public runtime files and excludes private evidence", 
     for (const file of [
       "package.json", "build/server.js", "build/index.js", "build/sse.js",
       "build/streamable-http.js", "build/readiness-cli.js", "build/types/server.d.ts",
-      "LICENSE", "README.md", "CHANGELOG.md", ".env.example", "TOOLS.md", "docs/MIGRATION-v3.md",
+      "LICENSE", ".env.example", ...publicDocumentation,
     ]) assert(packed.has(file), `expected npm package entry: ${file}`);
     for (const file of excluded) assert(!packed.has(file), `private canary entered npm package: ${file}`);
     assert([...packed].every(path =>
@@ -87,12 +94,24 @@ test("npm package includes public runtime files and excludes private evidence", 
       && !path.startsWith(".npm-cache/")
       && !path.startsWith("docs/reviews/")
       && !path.startsWith("audit/")
-      && !path.startsWith("benchmarks/")
+      && (path === "benchmarks/README.md" || !path.startsWith("benchmarks/"))
       && !path.startsWith("scripts/")
       && !path.startsWith("tests/")
       && (path === ".env.example" || !path.startsWith(".env"))
       && !/\.(?:tar|tar\.gz|tgz)$/.test(path)
     ));
+
+    for (const source of publicDocumentation.filter(path => path.endsWith(".md"))) {
+      const contents = await readFile(join(temporary, source), "utf8");
+      for (const match of contents.matchAll(/!?\[[^\]]*\]\(([^)]+)\)/g)) {
+        const destination = match[1].trim().replace(/^<|>$/g, "");
+        if (!destination || destination.startsWith("#") || /^[a-z][a-z\d+.-]*:/i.test(destination)) continue;
+        const relativePath = decodeURIComponent(destination.split("#", 1)[0].split("?", 1)[0]);
+        const target = normalize(join(dirname(source), relativePath));
+        assert(!target.startsWith("../"), `${source} links outside the package: ${destination}`);
+        assert(packed.has(target), `${source} links to missing package entry: ${destination}`);
+      }
+    }
   } finally {
     await rm(temporary, { recursive: true, force: true });
   }

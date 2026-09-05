@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "35393c027e2e8635a3f9eb7cec2f455363ee08737c3f533f0fd64e8a49957125",
+  "sourceFingerprint": "d90f58ac0a74b1ab5076e386edb498984141830648bacff7007cb97eba5037e5",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -48,7 +48,7 @@
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Fresh 148-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed.",
+      "boundary": "Fresh 154-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed. The six added files are maintained public documentation; relative Markdown file links resolve in the archive, while raw evidence, scripts, and credential files remain excluded.",
       "javascriptBuildSha256": "4d2447f7ac853d6c40fde562e57fc0dfacc3b4aa063aedb59e256bd579660c00"
     },
     "liveProduction": {

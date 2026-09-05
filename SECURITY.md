@@ -4,7 +4,7 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 3.0     | Stable readonly support; preparing publication |
+| 3.0     | Stable readonly support under `readonly-v1` |
 | 2.x     | Stable line; security fixes only |
 | < 2     | ❌ Not supported        |
 

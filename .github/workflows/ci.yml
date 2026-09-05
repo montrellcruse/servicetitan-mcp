@@ -6,7 +6,7 @@ on:
 permissions:
   contents: read
 jobs:
-  ci:
+  test:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
@@ -27,3 +27,17 @@ jobs:
       - run: npm run test:packaging
       - run: npm run release:check
       - run: npm pack --dry-run
+  ci:
+    name: ci
+    needs: test
+    if: ${{ always() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require every matrix job to succeed
+        env:
+          MATRIX_RESULT: ${{ needs.test.result }}
+        run: |
+          if [ "$MATRIX_RESULT" != "success" ]; then
+            echo "Node test matrix concluded with: $MATRIX_RESULT"
+            exit 1
+          fi

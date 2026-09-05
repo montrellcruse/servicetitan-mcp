@@ -1,6 +1,6 @@
 # Pinned ServiceTitan API contracts
 
-This directory contains the immutable official OpenAPI input used to generate and check the runtime contract manifest.
+The source repository stores the immutable official OpenAPI input used to generate and check the runtime contract manifest in this directory. The npm package includes this provenance guide; the archive, source index, and generation scripts require a repository checkout.
 
 - `official-openapi-2026-09-04.tar.gz` contains the 24 public OpenAPI 3.1 documents retrieved from the [ServiceTitan API catalog](https://developer.servicetitan.io/api/docs/apis) on September 4, 2026.
 - `sources.json` records each official document URL, SHA-256 digest, byte size, server URL, and operation count.

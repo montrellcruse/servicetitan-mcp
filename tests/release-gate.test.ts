@@ -11,8 +11,8 @@ const required = ["maintenance", "contracts", "analytics", "interface", "runtime
 type Gate = { status: string; reason?: string; requiredFor?: string };
 function fixture() {
   const cwd = mkdtempSync(join(tmpdir(), "st-release-gate-")); directories.push(cwd);
-  for (const dir of ["src", "tests", "scripts", "benchmarks", ".github/workflows", "docs/releases"]) mkdirSync(join(cwd, dir), { recursive: true });
-  for (const file of ["package-lock.json", "tsconfig.json", "vitest.config.ts", "eslint.config.js", "README.md", "SECURITY.md", "CONTRIBUTING.md", "ARCHITECTURE.md", ".gitignore", ".dockerignore", "CHANGELOG.md", "TOOLS.md", "LICENSE", ".env.example", "Dockerfile", "fly.toml", "docs/MIGRATION-v3.md", "docs/releases/VALIDATION-v3.md", "docs/BENCHMARKS.md", "benchmarks/README.md", "benchmarks/protocol.mjs", "src/example.ts"]) writeFileSync(join(cwd, file), "fixture\n");
+  for (const dir of ["src", "tests", "scripts", "benchmarks", ".github/workflows", "docs/releases", "docs/contracts"]) mkdirSync(join(cwd, dir), { recursive: true });
+  for (const file of ["package-lock.json", "tsconfig.json", "vitest.config.ts", "eslint.config.js", "README.md", "SECURITY.md", "CONTRIBUTING.md", "ARCHITECTURE.md", ".gitignore", ".dockerignore", "CHANGELOG.md", "TOOLS.md", "LICENSE", ".env.example", "Dockerfile", "fly.toml", "docs/MIGRATION-v3.md", "docs/contracts/README.md", "docs/releases/VALIDATION-v3.md", "docs/BENCHMARKS.md", "benchmarks/README.md", "benchmarks/protocol.mjs", "src/example.ts"]) writeFileSync(join(cwd, file), "fixture\n");
   writeFileSync(join(cwd, "package.json"), '{"version":"3.0.0"}');
   const gates: Record<string, Gate> = Object.fromEntries(required.map(key => [key, { status: "passed" }]));
   gates.liveIntegration = { status: "scoped_out", reason: "No integration access; writes remain experimental", requiredFor: "Stable writes" };
@@ -66,7 +66,7 @@ describe("release acceptance enforcement", () => {
   });
   it("invalidates evidence when credential exclusion rules or support guidance change", () => {
     const f = fixture();
-    for (const file of [".dockerignore", ".gitignore", "SECURITY.md", "CONTRIBUTING.md", "ARCHITECTURE.md", "docs/releases/VALIDATION-v3.md", "docs/BENCHMARKS.md", "benchmarks/protocol.mjs"]) {
+    for (const file of [".dockerignore", ".gitignore", "SECURITY.md", "CONTRIBUTING.md", "ARCHITECTURE.md", "docs/contracts/README.md", "docs/releases/VALIDATION-v3.md", "docs/BENCHMARKS.md", "benchmarks/protocol.mjs"]) {
       writeFileSync(join(f.cwd, file), "changed policy\n");
       expect(f.run().stderr).toContain("source fingerprint");
       f.record.sourceFingerprint = f.run("--fingerprint").stdout.trim(); f.save(); expect(f.run().status).toBe(0);

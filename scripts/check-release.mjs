@@ -42,7 +42,7 @@ const sourceFiles = [
   'package.json', 'package-lock.json', 'tsconfig.json', 'vitest.config.ts', 'eslint.config.js',
   'README.md', 'SECURITY.md', 'CONTRIBUTING.md', 'ARCHITECTURE.md', '.gitignore', '.dockerignore',
   'CHANGELOG.md', 'TOOLS.md', 'LICENSE', '.env.example', 'Dockerfile', 'fly.toml',
-  'docs/MIGRATION-v3.md', 'docs/releases/VALIDATION-v3.md', 'docs/BENCHMARKS.md', 'benchmarks/README.md',
+  'docs/MIGRATION-v3.md', 'docs/contracts/README.md', 'docs/releases/VALIDATION-v3.md', 'docs/BENCHMARKS.md', 'benchmarks/README.md',
   ...(await readdir('benchmarks')).filter(name => name.endsWith('.mjs')).map(name => path.join('benchmarks', name)),
 ].sort();
 const hash = createHash('sha256');

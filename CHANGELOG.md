@@ -4,12 +4,10 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
-
-This branch prepares `3.0.0`; the earlier release candidate was not published.
+## [3.0.0] - 2026-09-05
 
 ### Changed
-- Prepares stable `3.0.0` under the `readonly-v1` support policy: 261 ServiceTitan-facing read tools backed by pinned API contracts plus three built-in system tools are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
+- Defines stable `3.0.0` support under the `readonly-v1` policy: 261 ServiceTitan-facing read tools backed by pinned API contracts plus three built-in system tools are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
 - The 194 mutation adapters are experimental, hidden by default, and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`.
 - Integration-environment and independent-company live gates are explicitly scoped out because validation credentials were unavailable; neither is represented as passed. Representative live reads cover one production company, without dashboard-parity or Scheduling Pro certification.
 - Pinned ServiceTitan operation/request contracts replace guessed module routing; undocumented tools are excluded from discovery.
@@ -37,12 +35,14 @@ This branch prepares `3.0.0`; the earlier release candidate was not published.
 - Docker contexts exclude environment-specific credential files, private audit output, and local review archives.
 
 ### Added
+- A stable aggregate `ci` check that requires both Node 22 and 24 jobs to pass.
+- Maintained validation, acceptance, contract-provenance, and benchmark documentation in the npm package so its relative documentation links resolve after installation.
 - Readonly readiness CLI/tool with company report definition fingerprints and compatibility diagnostics.
 - Auth/cancellation/pagination/schema/metric/identity/budget regressions, real MCP protocol tests, Node 22/24 CI, and explicit release acceptance gates.
 - Reproducible v2/v3 protocol, client-load, report-cache, and retained-memory benchmarks with documented measurement limits.
 
-### Release status
-- Preparing stable 3.0.0 under the readonly support policy; it has not yet been published. Integration and independent-company validation are explicitly scoped out, not passed. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
+### Support scope
+- Stable 3.0.0 supports readonly use under the `readonly-v1` policy. Integration and independent-company validation are explicitly scoped out, not passed. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
 
 ## [2.6.4] - 2026-09-02
 

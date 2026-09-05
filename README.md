@@ -6,7 +6,7 @@
 
 A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [Rowvyn](https://rowvyn.com). This branch prepares **3.0.0** for stable publication; it has not yet been published. Stable v3 support is the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+Built by [Rowvyn](https://rowvyn.com). Version **3.0.0** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
 
 ## Run from source
 
@@ -25,7 +25,7 @@ Keep the credential file outside source control, restrict it to the account runn
 
 Configure an MCP host to run `node` with `--env-file=/absolute/path/.env` and `/absolute/path/build/index.js`. Stdio reserves stdout for MCP protocol traffic. Logs and mutation audits go to stderr.
 
-The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints. The published stable npm version remains v2 until 3.0.0 is published.
+The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints.
 
 ## Choose the tool surface
 
@@ -102,6 +102,8 @@ Create a separate client/runtime for each company. Caches and report queues use 
 
 ## Development and release gates
 
+Run these commands from a repository checkout; the npm package contains the runtime and maintained documentation.
+
 ```sh
 npm run contracts:check
 npm run typecheck
@@ -118,7 +120,7 @@ The contract generator uses the [pinned official September 4, 2026 snapshot](doc
 
 Packaging tests use synthetic credential files to verify npm and Docker exclusions. The Docker check captures the installed CLI's context against a local mock engine, requires no running daemon, and skips explicitly when the CLI is unavailable. It never sends the repository or live credentials to a builder.
 
-CI tests Node 22 and 24. The `readonly-v1` release policy requires maintenance, contracts, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load gates plus a current source fingerprint. Unavailable integration-environment and independent-company gates are recorded as scoped out, never as passed. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
+CI tests Node 22 and 24. The required aggregate `ci` check passes only when both runtime jobs succeed. The `readonly-v1` release policy requires maintenance, contracts, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load gates plus a current source fingerprint. Unavailable integration-environment and independent-company gates are recorded as scoped out, never as passed. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
 
 See the [validation summary](docs/releases/VALIDATION-v3.md) for coverage and remaining acceptance gates, and the [benchmark results](docs/BENCHMARKS.md) and [reproduction instructions](benchmarks/README.md) for latency, load, caching, and memory measurements.
 
