@@ -1,10 +1,10 @@
 # Migrating from v2.6.4 to v3
 
-V3 is a correctness and portability release with intentional interface changes. Validate a company's configuration and report definitions before enabling workflows. The current candidate is `3.0.0-rc.1`; publication remains subject to its acceptance record.
+V3 is a correctness and portability release with intentional interface changes. This branch prepares `3.0.0` for stable publication; it has not yet been published. Its `readonly-v1` support policy covers readonly use with a separate runtime/configuration for each company and requires readiness and report-definition validation for every company before use.
 
 ## Discovery and deployment
 
-- Readonly mode now hides write/delete tools. Set `ST_READONLY=false` only for installations that need them; confirmations remain separate controls.
+- Readonly mode now hides write/delete tools. The 194 mutation adapters are experimental and outside stable v3 operational support. An existing v2 configuration with `ST_READONLY=false` must either add `ST_EXPERIMENTAL_WRITES=true` to opt in or return to `ST_READONLY=true`; disabling readonly without the experimental flag fails startup. Confirmations remain separate controls.
 - `ST_TOOL_PROFILE` and `ST_TOOLS` narrow discovery. The full profile does not include undocumented tools. Exact unsupported names and reasons appear in [TOOLS.md](../TOOLS.md).
 - Native HTTP defaults to loopback. Containers must set `ST_MCP_HOST=0.0.0.0`; the included Docker/Fly configurations do so.
 - Browser Origin is validated. Replace wildcard CORS with an exact origin or leave it empty for native clients only.
@@ -41,10 +41,10 @@ The response budget includes the serialized tool envelope. Large results can ret
 1. Preserve the existing v2 package/configuration for rollback; keep credentials out of commits.
 2. Build and test the candidate, then run the readiness CLI with this company's configuration.
 3. Resolve unavailable reports/scopes and configure report bindings. Verify representative KPI amounts against the company's dashboard using the same dates, timezone and filters.
-4. Test independent company fixtures, then complete the separate live second-company and integration-environment gates. Fixture success does not replace live evidence.
+4. Run fixture-based configuration-isolation tests. The stable `readonly-v1` policy scopes unavailable integration-environment and independent-company live validation out rather than marking it passed; do not infer certification for another company.
 5. Run the built-package protocol tests, runtime matrix, package-content/install smoke, and release gate checker against the exact source fingerprint.
-6. Publish only after every required gate passes. Revalidate saved workflows before enabling writes; integration fixtures should be disposable and explicitly scoped.
+6. Publish only after every gate required by the selected release policy passes. Treat all writes as experimental; if evaluating them, use disposable integration fixtures and explicitly scoped authorization.
 
 Keep integration and production credentials separate and paired with the matching ServiceTitan environment. Do not copy `.env`, tokens, tenant identifiers, customer payloads, raw live-test output, or local paths into migration notes, CI artifacts, issues, or pull requests. Live acceptance evidence should contain only the minimum sanitized status, count, and timing data needed to establish the gate. Delete disposable records and temporary local output after verification, subject to company retention requirements and the [ServiceTitan API Terms](https://www.servicetitan.com/legal/api-terms).
 
-Live validation currently covers representative reads for one production company. Integration-environment mutations and an independent second company remain unverified in the [acceptance record](releases/v3-acceptance.json).
+Live validation covers representative reads for one production company. It does not guarantee dashboard parity or certify an independent company. Scheduling Pro returned HTTP 403 and remains unverified. Integration-environment writes and an independent second company are explicitly scoped out of `readonly-v1`, never recorded as passed, in the [acceptance record](releases/v3-acceptance.json).

@@ -25,7 +25,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
 import { ServiceTitanClient } from "./client.js";
-import { loadConfig } from "./config.js";
+import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 import { createMcpServer, VERSION } from "./server.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
@@ -375,7 +375,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof ExperimentalWritesDisabledError
+    ? error.message : "Check required ServiceTitan and transport configuration.";
   process.stderr.write(
     `${JSON.stringify({
       level: "error",

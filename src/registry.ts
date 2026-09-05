@@ -6,6 +6,7 @@ import { z } from "zod";
 import { type AuditEntry, AuditLogger, sanitizeParams } from "./audit.js";
 import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
+import { assertWritePolicy, ExperimentalWritesDisabledError } from "./config.js";
 import { isUnsupportedTool, UNSUPPORTED_TOOLS } from "./contracts/index.js";
 import { withRequestContext } from "./request-context.js";
 import { ResultStore } from "./result-store.js";
@@ -14,6 +15,7 @@ import type { ToolResponse } from "./types.js";
 import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
+export const EXPERIMENTAL_MUTATION_NOTICE = "EXPERIMENTAL: This mutation has not been verified against a live ServiceTitan Integration environment. ";
 export type ToolAnnotationOverrides = Omit<ToolAnnotations, "readOnlyHint">;
 
 /**
@@ -92,7 +94,7 @@ export class ToolRegistry {
     private readonly config: ServiceTitanConfig,
     private readonly logger: Logger,
     private readonly auditLogger: AuditLogger = new AuditLogger(logger),
-  ) {}
+  ) { assertWritePolicy(config); }
 
   attachClient(client: ServiceTitanClient): void {
     this.client = client;
@@ -127,6 +129,7 @@ export class ToolRegistry {
   }
 
   register(tool: ToolDefinition): void {
+    assertWritePolicy(this.config);
     const domain = tool.domain.toLowerCase();
     this.seenToolNames.add(tool.name);
     const profiles: Record<string, readonly string[]> = {
@@ -162,6 +165,7 @@ export class ToolRegistry {
     const wrappedTool = this.wrapTool({
       ...tool,
       domain,
+      description: tool.operation === "read" ? tool.description : EXPERIMENTAL_MUTATION_NOTICE + tool.description,
     });
 
     if (this.registeredToolNames.has(wrappedTool.name)) {
@@ -293,6 +297,10 @@ export class ToolRegistry {
 
       if (isMutating && this.config.readonlyMode) {
         return toolError("Readonly mode: operation not permitted");
+      }
+
+      if (isMutating && this.config.experimentalWrites !== true) {
+        return toolError(new ExperimentalWritesDisabledError());
       }
 
       if (isWrite && this.config.confirmWrites && paramRecord._confirmed !== true) {

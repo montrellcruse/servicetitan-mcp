@@ -1,6 +1,6 @@
 # Maintainer benchmarks
 
-These reusable benchmarks exercise the release candidate with deterministic local fixtures. They do not read `.env` or contact ServiceTitan. Run them from the repository root with locked dependencies installed and the package built. Node 22 and 24 are supported.
+These reusable benchmarks exercise the current package with deterministic local fixtures. They do not read `.env` or contact ServiceTitan. Run them from the repository root with locked dependencies installed and the package built. Use the package version and a hash of the built runtime files to identify a measured build; a documentation commit hash alone does not identify runtime code. Node 22 and 24 are supported.
 
 Run one benchmark process at a time on an otherwise quiet machine. Store generated output under the ignored `benchmarks/results/` directory; raw samples are intentionally not committed.
 

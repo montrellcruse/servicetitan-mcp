@@ -42,7 +42,9 @@ Use `npm start` for stdio and `npm run start:streamable-http` for remote MCP. `n
 
 Tool names follow `<domain>_<resource>_<action>`. Files use kebab-case, functions and variables use camelCase, and types use PascalCase. Every tool needs an accurate description and operation classification. Mutation annotations may be narrowed only when ServiceTitan behavior supports it; `readOnlyHint` always comes from the operation.
 
-Readonly mode omits mutation tools from MCP discovery. Test mutation adapters with fake clients or in-memory MCP unless a separate, explicit live-write authorization and cleanup plan exists.
+Readonly mode omits mutation tools from MCP discovery. Mutations are experimental outside the stable `readonly-v1` support policy and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. Test mutation adapters with fake clients or in-memory MCP unless a separate, explicit live-write authorization and cleanup plan exists.
+
+The `readonly-v1` release policy requires maintenance, contract, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load evidence. If integration or independent-company credentials are unavailable, record those gates as scoped out with their limits; never mark an unexecuted gate passed.
 
 ## Changing pinned contracts
 

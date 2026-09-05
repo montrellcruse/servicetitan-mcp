@@ -1,6 +1,18 @@
 {
-  "version": "3.0.0-rc.1",
-  "sourceFingerprint": "9223fde442ddfb9bb55dd00b8447af73ec5e4970f69414d3444d909acb300485",
+  "version": "3.0.0",
+  "supportPolicy": {
+    "id": "readonly-v1",
+    "stableOperations": [
+      "read"
+    ],
+    "experimentalOperations": [
+      "write",
+      "delete"
+    ],
+    "independentCompanyCertification": false,
+    "dashboardParity": false
+  },
+  "sourceFingerprint": "d1e1da71146b0a39791b7ec2d776c8f8a7c564194e3519d6ccb7d97cde8c8e7c",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -27,34 +39,38 @@
         "24.20.0"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 441,
-      "testFiles": 37,
-      "wireTestsPerRuntime": 5,
+      "testsPerRuntime": 462,
+      "testFiles": 38,
+      "wireTestsPerRuntime": 8,
       "summary": "VALIDATION-v3.md",
       "packagingTestsPerRuntime": 2
     },
     "packageSmoke": {
       "status": "passed",
-      "summary": "VALIDATION-v3.md"
+      "summary": "VALIDATION-v3.md",
+      "boundary": "Fresh 148-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed."
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Bounded readonly validation of the initial candidate, before the diagnostic-redaction follow-up; Scheduling Pro 403 remains. No production mutations, dashboard parity, or repeat live run is claimed.",
+      "boundary": "Built 3.0.0 stdio readonly refresh: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
-      "status": "pending",
-      "reason": "Integration-environment mutation acceptance and cleanup have not been executed."
+      "status": "scoped_out",
+      "reason": "Integration credentials are unavailable. No live mutation or cleanup was tested; mutations are experimental and require an explicit opt-in outside stable support.",
+      "requiredFor": "Stable support for write and delete workflows"
     },
     "liveSecondCompany": {
-      "status": "pending",
-      "reason": "Independent live-company acceptance has not been executed."
+      "status": "scoped_out",
+      "reason": "No independent company is available for live acceptance. Company isolation is fixture-tested; each installation requires separate configuration, readiness checks, and report validation.",
+      "requiredFor": "Independent live-company compatibility certification"
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Full synthetic Node 22/24 latency/load and retained-memory measurements describe baseline commit 3c48432 before diagnostic-redaction hardening; later regression checks are not replacement latency measurements. No production capacity or latency SLA; Node 22 benchmark-client warning remains documented.",
+      "boundary": "Final 3.0.0 runtime: full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory refresh passed. Runtime JavaScript identity was unchanged before and after measurement. No production capacity or latency SLA; the documented Node 22 benchmark-client listener warnings remain.",
+      "javascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
       "summary": "../BENCHMARKS.md"
     }
   },
-  "releaseDisposition": "release candidate; publication blocked by pending live acceptance gates"
+  "releaseDisposition": "stable-readonly"
 }

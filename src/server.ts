@@ -3,6 +3,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
+import { assertWritePolicy } from "./config.js";
 import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
 import { ToolRegistry } from "./registry.js";
@@ -15,6 +16,7 @@ declare const __PACKAGE_VERSION__: string | undefined;
 export const VERSION = typeof __PACKAGE_VERSION__ === "string" ? __PACKAGE_VERSION__ : (createRequire(import.meta.url)("../package.json") as { version: string }).version;
 
 export async function createMcpServer(config: ServiceTitanConfig, options: { client?: ServiceTitanClient; logger?: Logger } = {}) {
+  assertWritePolicy(config);
   const client = options.client ?? new ServiceTitanClient(config);
   const logger = options.logger ?? new Logger(config.logLevel, [config.clientSecret, config.appKey]);
   const server = new McpServer({ name: "ServiceTitan", version: VERSION });
@@ -52,7 +54,7 @@ export async function createMcpServer(config: ServiceTitanConfig, options: { cli
   return { server, registry, client, logger };
 }
 
-export { loadConfig } from "./config.js";
+export { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 export type { ServiceTitanConfig } from "./config.js";
 export { ServiceTitanClient } from "./client.js";
 export { checkReadiness } from "./readiness.js";

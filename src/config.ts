@@ -5,6 +5,8 @@ export interface ServiceTitanConfig {
   tenantId: string;
   environment: "integration" | "production";
   readonlyMode: boolean;
+  /** Mutations require an explicit opt-in; readonlyMode always takes priority. */
+  experimentalWrites?: boolean;
   confirmWrites: boolean;
   maxResponseChars: number;
   enabledDomains: string[] | null;
@@ -19,6 +21,18 @@ export interface ServiceTitanConfig {
   maxConcurrentToolCalls?: number;
   toolTimeoutMs?: number;
   mcpClientId?: string;
+}
+
+export class ExperimentalWritesDisabledError extends Error {
+  constructor() {
+    super("Mutating tools are experimental and have not been verified against a live ServiceTitan Integration environment. Set ST_READONLY=true for supported readonly use, or explicitly opt in with ST_EXPERIMENTAL_WRITES=true when ST_READONLY=false.");
+    this.name = "ExperimentalWritesDisabledError";
+  }
+}
+
+/** Also validate embedded configurations that did not pass through loadConfig. */
+export function assertWritePolicy(config: Pick<ServiceTitanConfig, "readonlyMode" | "experimentalWrites">): void {
+  if (config.readonlyMode !== true && config.experimentalWrites !== true) throw new ExperimentalWritesDisabledError();
 }
 
 const TOOL_PROFILES = ["full", "crm", "dispatch", "analytics"] as const;
@@ -205,6 +219,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
 
   const maxResponseChars = parsePositiveInteger(env.ST_MAX_RESPONSE_CHARS, "ST_MAX_RESPONSE_CHARS", 100_000);
   if (maxResponseChars < 256) throw new Error("ST_MAX_RESPONSE_CHARS must be at least 256");
+  const readonlyMode = parseBoolean(env.ST_READONLY, "ST_READONLY", true);
+  const experimentalWrites = parseBoolean(env.ST_EXPERIMENTAL_WRITES, "ST_EXPERIMENTAL_WRITES", false);
+  assertWritePolicy({ readonlyMode, experimentalWrites });
 
   return {
     clientId: requiredValue(env, "ST_CLIENT_ID"),
@@ -212,7 +229,8 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServiceTitanCo
     appKey: requiredValue(env, "ST_APP_KEY"),
     tenantId: requiredValue(env, "ST_TENANT_ID"),
     environment: parseEnvironment(env.ST_ENVIRONMENT),
-    readonlyMode: parseBoolean(env.ST_READONLY, "ST_READONLY", true),
+    readonlyMode,
+    experimentalWrites,
     confirmWrites: parseBoolean(env.ST_CONFIRM_WRITES, "ST_CONFIRM_WRITES", false),
     maxResponseChars,
     enabledDomains: parseDomains(env.ST_DOMAINS),

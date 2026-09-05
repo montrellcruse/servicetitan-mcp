@@ -6,9 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
-## [3.0.0-rc.1] - 2026-09-04
+This branch prepares `3.0.0`; the earlier release candidate was not published.
 
 ### Changed
+- Prepares stable `3.0.0` under the `readonly-v1` support policy: 264 documented, contract-checked read adapters are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
+- The 194 mutation adapters are experimental, hidden by default, and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`.
+- Integration-environment and independent-company live gates are explicitly scoped out because validation credentials were unavailable; neither is represented as passed. Representative live reads cover one production company, without dashboard-parity or Scheduling Pro certification.
 - Pinned ServiceTitan operation/request contracts replace guessed module routing; undocumented tools are excluded from discovery.
 - Readonly discovery, tool profiles and exact allowlists; shared side-effect-free server factory and TypeScript library entrypoint.
 - Lossless structured/text JSON, complete result retrieval within bounded storage, and explicit delivery errors.
@@ -32,7 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Reproducible v2/v3 protocol, client-load, report-cache, and retained-memory benchmarks with documented measurement limits.
 
 ### Release status
-- Release candidate. Live integration and second-company acceptance remain pending. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
+- Preparing stable 3.0.0 under the readonly support policy; it has not yet been published. Integration and independent-company validation are explicitly scoped out, not passed. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
 
 ## [2.6.4] - 2026-09-02
 

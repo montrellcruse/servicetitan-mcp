@@ -21,7 +21,7 @@ import type { ToolResponse } from "../../src/types.js";
 
 const config: ServiceTitanConfig = {
   clientId: "client-id", clientSecret: "secret", appKey: "app-key", tenantId: "42",
-  environment: "integration", readonlyMode: false, confirmWrites: false,
+  environment: "integration", readonlyMode: false, experimentalWrites: true, confirmWrites: false,
   maxResponseChars: 100_000, enabledDomains: null, logLevel: "error", timezone: "UTC",
   corsOrigin: "", allowedCallers: null,
 };

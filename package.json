@@ -1,6 +1,6 @@
 {
   "name": "@rowvyn/servicetitan-mcp",
-  "version": "3.0.0-rc.1",
+  "version": "3.0.0",
   "description": "ServiceTitan MCP server with verified API contracts, configurable company analytics, and read-only readiness checks",
   "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
   "license": "MIT",

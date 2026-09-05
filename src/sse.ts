@@ -20,7 +20,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
-import { loadConfig } from "./config.js";
+import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 import { createMcpServer, VERSION } from "./server.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
@@ -287,7 +287,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof ExperimentalWritesDisabledError
+    ? error.message : "Check required ServiceTitan and transport configuration.";
   process.stderr.write(
     `${JSON.stringify({
       level: "error",

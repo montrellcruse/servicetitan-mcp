@@ -6,7 +6,7 @@
 
 A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [Rowvyn](https://rowvyn.com). This branch prepares **3.0.0-rc.1**. Publication is gated by the [acceptance record](docs/releases/v3-acceptance.json); it is not a declaration that every live release gate has passed. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+Built by [Rowvyn](https://rowvyn.com). This branch prepares **3.0.0** for stable publication; it has not yet been published. Stable v3 support is the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
 
 ## Run from source
 
@@ -25,15 +25,16 @@ Keep the credential file outside source control, restrict it to the account runn
 
 Configure an MCP host to run `node` with `--env-file=/absolute/path/.env` and `/absolute/path/build/index.js`. Stdio reserves stdout for MCP protocol traffic. Logs and mutation audits go to stderr.
 
-The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints. The published stable npm version may remain v2 while v3 acceptance gates are pending.
+The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints. The published stable npm version remains v2 until 3.0.0 is published.
 
 ## Choose the tool surface
 
-The [generated catalog](TOOLS.md) lists 458 supported tools, including 264 reads. Discovery is filtered by configuration:
+The [generated catalog](TOOLS.md) lists 458 documented adapters: 264 contract-checked reads are eligible for stable readonly support, subject to each company's scopes/modules and readiness/report validation, and 194 mutations are experimental. Live verification sampled representative reads rather than all 264. Discovery is filtered by configuration:
 
 | Setting | Behavior |
 | --- | --- |
 | `ST_READONLY=true` | Default; mutating tools are absent from discovery and cannot execute. |
+| `ST_EXPERIMENTAL_WRITES=false` | Default; setting `ST_READONLY=false` without explicitly enabling experimental writes fails startup. |
 | `ST_TOOL_PROFILE=full` | All supported domains, still subject to readonly and other filters. |
 | `ST_TOOL_PROFILE=crm` | CRM tools. |
 | `ST_TOOL_PROFILE=dispatch` | Dispatch, scheduling, people, settings. |
@@ -43,7 +44,7 @@ The [generated catalog](TOOLS.md) lists 458 supported tools, including 264 reads
 
 System health, readiness, and result-retrieval tools remain accessible through the same authorization checks. Profiles do not grant upstream ServiceTitan scopes. Undocumented operations removed in v3 remain unavailable even in the full profile.
 
-To enable writes, set `ST_READONLY=false`. `ST_CONFIRM_WRITES=true` requires `_confirmed:true` for writes; deletes require `confirm:true`. These are safeguards against accidental changes, not independent human authorization. Uncertain write outcomes explicitly instruct checking ServiceTitan before retrying; the client does not blindly retry timeouts or 5xx writes.
+Writes are outside the stable v3 support commitment. To expose these experimental adapters, set both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. `ST_CONFIRM_WRITES=true` then requires `_confirmed:true` for writes; deletes separately require `confirm:true`. These are safeguards against accidental changes, not independent human authorization. Uncertain write outcomes explicitly instruct checking ServiceTitan before retrying; the client does not blindly retry timeouts or 5xx writes.
 
 ## Readiness and report compatibility
 
@@ -59,7 +60,7 @@ The keys are the logical report IDs used by analytics; the values select this co
 
 Analytics follows pagination and rejects missing/inconsistent required data. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
 
-Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Dashboard parity and a second live company remain separate acceptance checks.
+Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Representative readonly behavior has been exercised with one production company. V3 does not certify dashboard parity or independent-company compatibility; Scheduling Pro access returned 403 in that validation and remains unverified.
 
 ## Structured and bounded results
 
@@ -117,7 +118,7 @@ The contract generator uses the [pinned official September 4, 2026 snapshot](doc
 
 Packaging tests use synthetic credential files to verify npm and Docker exclusions. The Docker check captures the installed CLI's context against a local mock engine, requires no running daemon, and skips explicitly when the CLI is unavailable. It never sends the repository or live credentials to a builder.
 
-CI tests Node 22 and 24. Release publication additionally requires a current source fingerprint and passed live integration/second-company gates; pending gates deliberately fail `release:check`. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
+CI tests Node 22 and 24. The `readonly-v1` release policy requires maintenance, contracts, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load gates plus a current source fingerprint. Unavailable integration-environment and independent-company gates are recorded as scoped out, never as passed. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
 
 See the [validation summary](docs/releases/VALIDATION-v3.md) for coverage and remaining acceptance gates, and the [benchmark results](docs/BENCHMARKS.md) and [reproduction instructions](benchmarks/README.md) for latency, load, caching, and memory measurements.
 

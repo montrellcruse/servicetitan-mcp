@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loadConfig } from "../src/config.js";
+import { ExperimentalWritesDisabledError, loadConfig } from "../src/config.js";
 
 const validEnv: NodeJS.ProcessEnv = {
   ST_CLIENT_ID: "client-id",
@@ -20,6 +20,7 @@ describe("loadConfig", () => {
       tenantId: "tenant-id",
       environment: "integration",
       readonlyMode: true,
+      experimentalWrites: false,
       confirmWrites: false,
       maxResponseChars: 100000,
       enabledDomains: null,
@@ -93,6 +94,7 @@ describe("loadConfig", () => {
     const env: NodeJS.ProcessEnv = {
       ...validEnv,
       ST_READONLY: value,
+      ST_EXPERIMENTAL_WRITES: "true",
     };
 
     expect(loadConfig(env).readonlyMode).toBe(expected);
@@ -112,6 +114,23 @@ describe("loadConfig", () => {
     };
 
     expect(loadConfig(env).confirmWrites).toBe(expected);
+  });
+
+  it("requires a separate experimental opt-in when readonly is disabled", () => {
+    expect(loadConfig(validEnv).experimentalWrites).toBe(false);
+    for (const value of [undefined, "false", "0"]) {
+      expect(() => loadConfig({ ...validEnv, ST_READONLY: "false", ST_EXPERIMENTAL_WRITES: value })).toThrow(ExperimentalWritesDisabledError);
+      expect(() => loadConfig({ ...validEnv, ST_READONLY: "false", ST_EXPERIMENTAL_WRITES: value })).toThrow(/ST_EXPERIMENTAL_WRITES=true/);
+    }
+  });
+
+  it.each(["true", "TRUE", "1"])("accepts explicit experimental opt-in %s without changing readonly defaults", (value) => {
+    expect(loadConfig({ ...validEnv, ST_READONLY: "false", ST_EXPERIMENTAL_WRITES: value })).toMatchObject({ readonlyMode: false, experimentalWrites: true });
+    expect(loadConfig({ ...validEnv, ST_EXPERIMENTAL_WRITES: value })).toMatchObject({ readonlyMode: true, experimentalWrites: true });
+  });
+
+  it("rejects ambiguous experimental-write values", () => {
+    expect(() => loadConfig({ ...validEnv, ST_EXPERIMENTAL_WRITES: "yes" })).toThrow(/ST_EXPERIMENTAL_WRITES must be one of/);
   });
 
   it("parses ST_DOMAINS as comma-separated, trimmed, lowercased list", () => {

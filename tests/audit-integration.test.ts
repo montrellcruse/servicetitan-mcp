@@ -13,7 +13,7 @@ function fixture(handler: () => Promise<ToolResponse>) {
   const audit = { log: vi.fn() };
   const registry = new ToolRegistry({ registerTool: vi.fn() } as never, loadConfig({
     ST_CLIENT_ID: "fixture", ST_CLIENT_SECRET: "fixture-secret", ST_APP_KEY: "fixture-key", ST_TENANT_ID: "42",
-    ST_READONLY: "false", ST_CONFIRM_WRITES: "false", ST_MAX_RESPONSE_CHARS: "256",
+    ST_READONLY: "false", ST_EXPERIMENTAL_WRITES: "true", ST_CONFIRM_WRITES: "false", ST_MAX_RESPONSE_CHARS: "256",
   }), logger, audit as unknown as AuditLogger);
   registry.register({ name: "audit_fixture_create", domain: "_system", operation: "write", schema: {}, handler });
   return { call: () => registry.getRegisteredTools()[0]!.handler({}), audit };

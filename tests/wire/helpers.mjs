@@ -26,7 +26,7 @@ export function childEnvironment(overrides = {}) {
     .filter(key => typeof process.env[key] === "string").map(key => [key, process.env[key]]));
   return {
     ...inherited, ST_CLIENT_ID: "wire-fixture-client", ST_CLIENT_SECRET: "wire-fixture-secret", ST_APP_KEY: "wire-fixture-app-key",
-    ST_TENANT_ID: "42", ST_ENVIRONMENT: "integration", ST_READONLY: "true", ST_TOOL_PROFILE: "crm", ST_TIMEZONE: "UTC",
+    ST_TENANT_ID: "42", ST_ENVIRONMENT: "integration", ST_READONLY: "true", ST_EXPERIMENTAL_WRITES: "false", ST_TOOL_PROFILE: "crm", ST_TIMEZONE: "UTC",
     ST_MAX_RESPONSE_CHARS: "1024", ST_LOG_LEVEL: "error", ST_MCP_HOST: "127.0.0.1", ST_MCP_API_KEY: API_KEY,
     ST_MAX_SESSIONS: "2", ST_MAX_CONCURRENT_TOOLS: "2", ST_TOOL_TIMEOUT_MS: "2000",
     // Defense in depth: a future accidental OAuth prewarm cannot connect to ServiceTitan.
@@ -62,6 +62,10 @@ export function assertCatalog(tools, { readonly = true, crmOnly = true } = {}) {
     for (const tool of tools) assert.equal(tool.annotations?.readOnlyHint, true, `${tool.name} must be readonly`);
   } else {
     assert(names.has("crm_customers_create"));
+    for (const tool of tools.filter(value => value.annotations?.readOnlyHint === false)) {
+      assert(tool.description.startsWith("EXPERIMENTAL:"), `${tool.name} lacks its experimental notice`);
+      assert(tool.description.includes("live ServiceTitan Integration"), `${tool.name} lacks its validation boundary`);
+    }
   }
   if (crmOnly) for (const tool of tools) assert(tool.name.startsWith("crm_") || tool.name.startsWith("st_"), `Profile leaked ${tool.name}`);
   for (const tool of tools) {

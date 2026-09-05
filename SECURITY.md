@@ -4,7 +4,7 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 3.0 RC  | Release candidate; acceptance gates apply |
+| 3.0     | Stable readonly support; preparing publication |
 | 2.x     | Stable line; security fixes only |
 | < 2     | ❌ Not supported        |
 
@@ -41,7 +41,7 @@ You should receive an acknowledgment within 48 hours.
 ### Data Safety
 
 - Read-only mode is **enabled by default** (`ST_READONLY=true`) — write and delete tools are omitted from discovery
-- Write and delete operations require explicit opt-in via `ST_READONLY=false`
+- Experimental write and delete adapters require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`; they are outside the stable v3 operational-compatibility commitment but remain covered by this security policy
 - Delete operations require `confirm: true` in the tool call payload
 - Write operations (when `ST_CONFIRM_WRITES=true`) require `_confirmed: true` in the tool call payload
 - Audit logging records all write/delete operations with sensitive fields (including composite names such as `clientSecret`, `apiKey`, `accessToken`, and `authorization`) sanitized

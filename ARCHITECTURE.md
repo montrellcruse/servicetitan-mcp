@@ -30,6 +30,7 @@ The main optional controls are:
 
 - `ST_ENVIRONMENT`: `integration` by default; `production` is explicit.
 - `ST_READONLY`: `true` by default. Mutation tools are omitted from discovery while enabled.
+- `ST_EXPERIMENTAL_WRITES`: `false` by default. Mutation adapters require this and `ST_READONLY=false`; they are outside stable v3 support.
 - `ST_CONFIRM_WRITES`: requires `_confirmed: true` for visible write tools when enabled.
 - `ST_TOOL_PROFILE`: `full`, `crm`, `dispatch`, or `analytics`.
 - `ST_TOOLS` and `ST_DOMAINS`: explicit tool and domain selection.
@@ -59,7 +60,7 @@ Run `npm run contracts:generate` only after deliberately replacing the pinned in
 
 `src/domains/loader.ts` loads 15 domain modules explicitly. Each tool supplies a stable name, domain, operation classification, description, Zod input shape, and handler to `ToolRegistry.register()`.
 
-The registry applies unsupported-operation exclusion, readonly mode, profiles, explicit tool selection, and domain filters before MCP registration. In readonly mode, mutation tools are absent from discovery. For enabled mutations, deletes require `confirm: true`; writes can require `_confirmed: true`. Confirmation is an accidental-action safeguard and does not replace transport authorization.
+The registry applies unsupported-operation exclusion, readonly mode, experimental-write opt-in, profiles, explicit tool selection, and domain filters before MCP registration. The 264 contract-checked read adapters are eligible for stable `readonly-v1` support, subject to each company's scopes/modules and readiness/report validation, with a separate runtime/configuration per company; live checks sampled representative reads. The 194 mutation adapters require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true` and remain experimental. For enabled mutations, deletes require `confirm: true`; writes can require `_confirmed: true`. Confirmation is an accidental-action safeguard and does not replace transport authorization.
 
 All calls share a bounded concurrency guard and deadline. Write and delete outcomes are audited with sensitive values redacted. MCP annotations derive from the operation classification; `readOnlyHint` cannot be overridden.
 

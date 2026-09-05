@@ -23,7 +23,15 @@ assert(Number.isInteger(count) && count >= 16 && count <= 1000);
 assert(Number.isInteger(repeats) && repeats >= 1 && repeats <= 10);
 assert(soakSeconds >= 1 && soakSeconds <= 120);
 const temporary = await mkdtemp(join(tmpdir(), 'st-protocol-bench-'));
-const variants = [{ label: 'v2.6.4', directory: baseline }, { label: 'v3.0.0-rc.1', directory: root }];
+async function packageLabel(directory) {
+  const packageJson = JSON.parse(await readFile(join(directory, 'package.json'), 'utf8'));
+  assert.equal(typeof packageJson.version, 'string');
+  return `v${packageJson.version}`;
+}
+const variants = [
+  { label: await packageLabel(baseline), directory: baseline },
+  { label: await packageLabel(root), directory: root },
+];
 let sequence = 0;
 const watchdog = setTimeout(() => { console.error('Benchmark timed out'); process.exit(1); }, 12 * 60_000); watchdog.unref();
 const results = { schemaVersion: 1, at: new Date().toISOString(), environment: { node: process.version, platform: platform(), architecture: arch(), osRelease: release(), cpu: cpus()[0].model, logicalCpus: cpus().length, totalMemoryBytes: totalmem() }, sourceFingerprint: execFileSync(process.execPath, ['scripts/check-release.mjs', '--fingerprint'], { cwd: root, encoding: 'utf8' }).trim(), baselineCommit: execFileSync('git', ['rev-parse', 'f6becd5'], { cwd: root, encoding: 'utf8' }).trim(), parameters: { count, repeats, soakSeconds, rowsPerResponse: 50, warmupPerScenario: 16, upstreamDelaysMs: [0, 20], steadyConcurrency: [1, 8, 16], safety: 'Synthetic credentials, Axios adapter replaces all upstream calls, only loopback HTTP is real' }, startup: [], steady: [], overload: [], arrivalLoad: [], soak: [], sessionChurn: [], assertions: {} };

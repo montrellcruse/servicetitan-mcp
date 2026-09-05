@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { loadConfig } from "./config.js";
+import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { createMcpServer } from "./server.js";
 
 async function main(): Promise<void> {
@@ -12,7 +12,9 @@ async function main(): Promise<void> {
   process.once("SIGTERM", () => { void shutdown(); });
   logger.info("Stdio server ready", registry.getStats());
 }
-main().catch(() => {
-  process.stderr.write("Fatal startup error. Check required ServiceTitan configuration.\n");
+main().catch((error: unknown) => {
+  process.stderr.write(error instanceof ExperimentalWritesDisabledError
+    ? `${error.message}\n`
+    : "Fatal startup error. Check required ServiceTitan configuration.\n");
   process.exitCode = 1;
 });
