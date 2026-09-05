@@ -1,7 +1,7 @@
 {
   "name": "@rowvyn/servicetitan-mcp",
-  "version": "2.6.4",
-  "description": "MCP server for the ServiceTitan API — 483 tools across 15 domains with 10 intelligence tools for business analytics",
+  "version": "3.0.0",
+  "description": "ServiceTitan MCP server with verified API contracts, configurable company analytics, and read-only readiness checks",
   "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
   "license": "MIT",
   "repository": {
@@ -30,32 +30,47 @@
     "node": ">=22.0.0"
   },
   "type": "module",
-  "main": "build/index.js",
+  "main": "build/server.js",
   "bin": {
     "servicetitan-mcp": "./build/index.js",
     "servicetitan-mcp-sse": "./build/sse.js",
-    "servicetitan-mcp-http": "./build/streamable-http.js"
+    "servicetitan-mcp-http": "./build/streamable-http.js",
+    "servicetitan-mcp-check": "./build/readiness-cli.js"
   },
   "files": [
     "build/",
     "LICENSE",
     "README.md",
     "CHANGELOG.md",
-    ".env.example"
+    ".env.example",
+    "docs/MIGRATION-v3.md",
+    "TOOLS.md",
+    "CONTRIBUTING.md",
+    "docs/contracts/README.md",
+    "docs/BENCHMARKS.md",
+    "docs/releases/VALIDATION-v3.md",
+    "docs/releases/v3-acceptance.json",
+    "benchmarks/README.md"
   ],
   "scripts": {
     "build": "node ./scripts/build.mjs",
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "lint": "eslint src/",
-    "prepublishOnly": "npm run typecheck && npm run lint && npm run test && npm run build",
+    "prepublishOnly": "npm run release:check && npm run contracts:check && npm run typecheck && npm run lint && npm run test && npm run test:wire && npm run test:packaging",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "contracts:generate": "node scripts/generate-contract-manifest.mjs",
+    "contracts:check": "node scripts/check-contracts.mjs",
     "test:watch": "vitest",
     "docker:build": "docker build -t servicetitan-mcp .",
-    "docs:tools": "bash scripts/generate-tool-catalog.sh",
+    "docs:tools": "npm run build && node scripts/generate-tool-catalog.mjs",
     "start:sse": "node build/sse.js",
-    "start:streamable-http": "node build/streamable-http.js"
+    "start:streamable-http": "node build/streamable-http.js",
+    "test:wire": "npm run build && node --test tests/wire/*.test.mjs",
+    "test:packaging": "node --test tests/packaging/*.test.mjs",
+    "test:coverage": "vitest run --coverage",
+    "release:check": "node scripts/check-release.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",
@@ -71,5 +86,13 @@
     "eslint": "^10.8.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.9"
+  },
+  "types": "build/types/server.d.ts",
+  "exports": {
+    ".": {
+      "types": "./build/types/server.d.ts",
+      "import": "./build/server.js"
+    },
+    "./package.json": "./package.json"
   }
 }

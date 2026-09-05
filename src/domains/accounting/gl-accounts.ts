@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -11,26 +12,8 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
-
-const glAccountCreateSchema = z.object({
-  name: z.string().describe("GL account name"),
-  number: z.string().describe("GL account number"),
-  description: z.string().optional().describe("GL account description"),
-  type: z.string().describe("GL account type"),
-  subtype: z.string().describe("GL account subtype"),
-  active: z.boolean().optional().describe("Whether account is active"),
-  isIntacctGroup: z
-    .boolean()
-    .optional()
-    .describe("Whether this is an Intacct group account"),
-  isIntacctBankAccount: z
-    .boolean()
-    .optional()
-    .describe("Whether this is an Intacct bank account"),
-});
-
-const glAccountUpdateSchema = glAccountCreateSchema.partial();
+const glAccountCreateSchema = officialRequestSchema("GlAccounts_CreateAccount") as z.ZodObject<z.ZodRawShape>;
+const glAccountUpdateSchema = officialRequestSchema("GlAccounts_UpdateAccount") as z.ZodObject<z.ZodRawShape>;
 
 const glAccountsListSchema = dateFilterParams(
   paginationParams(
@@ -121,7 +104,7 @@ export function registerGlAccountTools(
         const data = await client.get(`/tenant/{tenant}/gl-accounts/${input.accountId}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -139,7 +122,7 @@ export function registerGlAccountTools(
         const data = await client.post("/tenant/{tenant}/gl-accounts", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -179,7 +162,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -200,7 +183,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -233,7 +216,7 @@ export function registerGlAccountTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

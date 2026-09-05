@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import { equipmentPayloadSchema } from "./schemas.js";
 
@@ -59,7 +58,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
         const data = await client.get(`/tenant/{tenant}/equipment`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -90,7 +89,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -114,7 +113,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
         const data = await client.patch(`/tenant/{tenant}/equipment/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -134,7 +133,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
         await client.delete(`/tenant/{tenant}/equipment/${id}`);
         return toolResult({ success: true, message: "Equipment deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

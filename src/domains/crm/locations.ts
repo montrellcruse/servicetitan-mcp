@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -11,7 +12,6 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const locationAddressSchema = z.object({
   street: z.string().optional().describe("Street"),
@@ -82,18 +82,7 @@ const locationUpdateSchema = z.object({
   payload: locationUpdatePayloadSchema.optional().describe("Location patch payload"),
 });
 
-const locationCreateSchema = z.object({
-  taxZoneId: z.number().int().optional().describe("Tax zone ID"),
-  customerId: z.number().int().optional().describe("Customer ID"),
-  active: z.boolean().optional().describe("Active flag"),
-  name: z.string().optional().describe("Location name"),
-  address: locationAddressSchema.optional().describe("Address"),
-  customFields: z.array(locationCustomFieldSchema).optional().describe("Custom fields"),
-  zoneId: z.number().int().optional().describe("Zone ID"),
-  tagTypeIds: z.array(z.number().int()).optional().describe("Tag type IDs"),
-  externalData: z.array(locationExternalDataSchema).optional().describe("External data entries"),
-  contacts: z.array(locationContactSchema).optional().describe("Location contacts"),
-});
+const locationCreateSchema = officialRequestSchema("Locations_Create") as z.ZodObject<z.ZodRawShape>;
 
 const locationListSchema = dateFilterParams(
   paginationParams(
@@ -130,11 +119,7 @@ const locationNotesListSchema = dateFilterParams(
   ),
 );
 
-const locationCreateNoteSchema = z.object({
-  id: z.number().int().describe("Location ID"),
-  text: z.string().describe("Note text"),
-  isPinned: z.boolean().optional().describe("Pinned flag"),
-});
+const locationCreateNoteSchema = (officialRequestSchema("Locations_CreateNote") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
 
 const locationContactsListSchema = paginationParams(
   z.object({
@@ -142,23 +127,8 @@ const locationContactsListSchema = paginationParams(
   }),
 );
 
-const locationCreateContactSchema = z.object({
-  id: z.number().int().describe("Location ID"),
-  type: z.string().describe("Contact type"),
-  value: z.string().describe("Contact value"),
-  memo: z.string().optional().describe("Contact memo"),
-  phoneNumber: z.string().optional().describe("Phone number"),
-  doNotText: z.boolean().optional().describe("Do not text flag"),
-});
-
-const locationUpdateContactSchema = z.object({
-  id: z.number().int().describe("Location ID"),
-  contactId: z.number().int().describe("Contact ID"),
-  value: z.string().optional().describe("Contact value"),
-  memo: z.string().optional().describe("Contact memo"),
-  phoneNumber: z.string().optional().describe("Phone number"),
-  doNotText: z.boolean().optional().describe("Do not text flag"),
-});
+const locationCreateContactSchema = (officialRequestSchema("Locations_CreateContact") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
+const locationUpdateContactSchema = (officialRequestSchema("Locations_UpdateContact") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int(), contactId: z.number().int() });
 
 const locationModifiedContactsListSchema = dateFilterParams(
   paginationParams(
@@ -212,7 +182,7 @@ export function registerLocationTools(
         const data = await client.get(`/tenant/{tenant}/locations/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -230,7 +200,7 @@ export function registerLocationTools(
         const data = await client.patch(`/tenant/{tenant}/locations/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -242,28 +212,17 @@ export function registerLocationTools(
     description: "Create a location",
     schema: locationCreateSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof locationCreateSchema>;
+      const input = locationCreateSchema.parse(params);
 
       try {
         const data = await client.post(
           "/tenant/{tenant}/locations",
-          buildParams({
-            taxZoneId: input.taxZoneId,
-            customerId: input.customerId,
-            active: input.active,
-            name: input.name,
-            address: input.address,
-            customFields: input.customFields,
-            zoneId: input.zoneId,
-            tagTypeIds: input.tagTypeIds,
-            externalData: input.externalData,
-            contacts: input.contacts,
-          }),
+          input,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -309,7 +268,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -339,7 +298,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -351,17 +310,14 @@ export function registerLocationTools(
     description: "Create a note for a location",
     schema: locationCreateNoteSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof locationCreateNoteSchema>;
+      const input = locationCreateNoteSchema.parse(params); const { id, ...body } = input;
 
       try {
-        const data = await client.post(`/tenant/{tenant}/locations/${input.id}/notes`, {
-          text: input.text,
-          isPinned: input.isPinned ?? false,
-        });
+        const data = await client.post(`/tenant/{tenant}/locations/${id}/notes`, body);
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -382,7 +338,7 @@ export function registerLocationTools(
           message: "Location note deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -407,7 +363,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -419,30 +375,16 @@ export function registerLocationTools(
     description: "Create a contact for a location",
     schema: locationCreateContactSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof locationCreateContactSchema>;
+      const input = locationCreateContactSchema.parse(params); const { id, ...body } = input;
 
       try {
-        const phoneSettings =
-          input.phoneNumber !== undefined || input.doNotText !== undefined
-            ? locationPhoneSettingsSchema.parse({
-                phoneNumber: input.phoneNumber,
-                doNotText: input.doNotText,
-              })
-            : undefined;
-
         const data = await client.post(
-          `/tenant/{tenant}/locations/${input.id}/contacts`,
-          buildParams({
-            type: input.type,
-            value: input.value,
-            memo: input.memo,
-            phoneSettings,
-          }),
+          `/tenant/{tenant}/locations/${id}/contacts`, body,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -463,7 +405,7 @@ export function registerLocationTools(
           message: "Location contact deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -475,29 +417,16 @@ export function registerLocationTools(
     description: "Patch a location contact",
     schema: locationUpdateContactSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof locationUpdateContactSchema>;
+      const input = locationUpdateContactSchema.parse(params); const { id, contactId, ...body } = input;
 
       try {
-        const phoneSettings =
-          input.phoneNumber !== undefined || input.doNotText !== undefined
-            ? locationPhoneSettingsSchema.parse({
-                phoneNumber: input.phoneNumber,
-                doNotText: input.doNotText,
-              })
-            : undefined;
-
         const data = await client.patch(
-          `/tenant/{tenant}/locations/${input.id}/contacts/${input.contactId}`,
-          buildParams({
-            value: input.value,
-            memo: input.memo,
-            phoneSettings,
-          }),
+          `/tenant/{tenant}/locations/${id}/contacts/${contactId}`, body,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -528,7 +457,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -548,7 +477,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -569,7 +498,7 @@ export function registerLocationTools(
           message: "Location tag deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -599,7 +528,7 @@ export function registerLocationTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -630,7 +559,7 @@ export function registerLocationTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -1,400 +1,127 @@
 # ServiceTitan MCP Server
 
 [![CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml/badge.svg)](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml)
-[![npm version](https://img.shields.io/npm/v/@rowvyn/servicetitan-mcp.svg)](https://www.npmjs.com/package/@rowvyn/servicetitan-mcp)
+[![npm](https://img.shields.io/npm/v/@rowvyn/servicetitan-mcp.svg)](https://www.npmjs.com/package/@rowvyn/servicetitan-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![MCP](https://img.shields.io/badge/MCP-Compatible-green.svg)](https://modelcontextprotocol.io)
-[![Tools](https://img.shields.io/badge/tools-483-blue.svg)](#tool-catalog)
-[![Domains](https://img.shields.io/badge/domains-15-purple.svg)](#tool-catalog)
 
-The only MCP server for the ServiceTitan API — 483 tools across 15 domains, plus 10 intelligence tools that turn raw API data into business decisions.
+A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [**Rowvyn**](https://rowvyn.com) — [See the case study →](https://rowvyn.com/case-studies/servicetitan-mcp)
+Built by [Rowvyn](https://rowvyn.com). Version **3.0.0** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
 
-<p align="center">
-  <em>Connect any AI assistant to ServiceTitan's full API — CRM, dispatch, invoicing, payroll, and operational intelligence — through the Model Context Protocol.</em>
-</p>
+## Run from source
 
----
+Use Node 22 or 24. Install the locked dependencies, build, and put credentials in an ignored `.env` copied from `.env.example`:
 
-## Why
-
-- **ServiceTitan has no official MCP server** or developer tooling beyond REST docs
-- **Raw API access is friction-heavy** — OAuth token management, module-prefix routing, pagination, and response parsing all fall on you
-- **This server handles all of that** and adds 10 intelligence tools that aggregate multiple endpoints into operational insights
-- **Dashboard-matched revenue** — verified on production data using the same Reporting API source that powers ST's own dashboard
-
----
-
-## Features
-
-- **483 tools across 15 domains** — CRM, dispatch, accounting, payroll, inventory, marketing, and more
-- **10 intelligence tools** — composite analytics that aggregate multiple API calls into revenue summaries, ops snapshots, technician scorecards, and more
-- **Dashboard-matched revenue** — `intel_revenue_summary` pulls from the same source as ST's own dashboard
-- **Read-only by default** — `ST_READONLY=true` out of the box; write tools only activate when you're ready
-- **Safety layer** — confirmation workflow for writes/deletes, audit logging with sensitive field redaction
-- **Tool annotations** — every tool advertises conservative MCP `readOnlyHint` / `destructiveHint` / `idempotentHint` hints derived from its operation, so hosts can badge read-only tools and gate destructive ones
-- **Domain filtering** — expose only the tool groups you need via `ST_DOMAINS`
-- **Name-based filtering** — pass `businessUnitName` or `technicianName` instead of numeric IDs; resolved via 30-minute cache
-- **LLM-optimized responses** — response shaping trims API noise and structures data for AI consumption
-- **Streamable HTTP remote deployment** — deploy to Fly.io (or anywhere) and connect via `mcp-remote`
-- **Built-in health check** — `st_health_check` validates auth and tenant access (no config details exposed)
-
----
-
-## Quick Start
-
-### Prerequisites
-
-- Node.js 22 or newer
-- ServiceTitan API credentials: Client ID, Client Secret, App Key, Tenant ID
-
-### npx (recommended)
-
-No install needed — runs directly:
-
-```json
-{
-  "mcpServers": {
-    "servicetitan": {
-      "command": "npx",
-      "args": ["-y", "@rowvyn/servicetitan-mcp"],
-      "env": {
-        "ST_CLIENT_ID": "your-client-id",
-        "ST_CLIENT_SECRET": "your-client-secret",
-        "ST_APP_KEY": "your-app-key",
-        "ST_TENANT_ID": "your-tenant-id",
-        "ST_ENVIRONMENT": "production"
-      }
-    }
-  }
-}
-```
-
-> ⚠️ **`ST_ENVIRONMENT` defaults to `integration`.** If you're connecting to a live ServiceTitan account, you **must** set `ST_ENVIRONMENT` to `production` or you'll get silent auth failures and empty results.
-
-### Install globally
-
-```bash
-npm install -g @rowvyn/servicetitan-mcp
-servicetitan-mcp       # stdio transport (for Claude Desktop)
-servicetitan-mcp-sse     # SSE transport (legacy remote)
-servicetitan-mcp-http    # Streamable HTTP transport (recommended remote)
-```
-
-### From source
-
-```bash
-npm install
+```sh
+npm ci
 npm run build
+node --env-file=.env build/readiness-cli.js
+node --env-file=.env build/index.js
 ```
 
-### Claude Desktop
+Required values are `ST_CLIENT_ID`, `ST_CLIENT_SECRET`, `ST_APP_KEY`, and `ST_TENANT_ID`. Select `ST_ENVIRONMENT=production` for a live company; the default is `integration`. Set the company's IANA timezone explicitly, such as `America/New_York`.
 
-For a local checkout, point Claude Desktop at the built stdio entrypoint:
+Keep the credential file outside source control, restrict it to the account running the server, and never paste credentials or access tokens into logs, issues, pull requests, benchmark output, or MCP prompts. Integration and production credentials are environment-specific; keep each set with its matching auth/API environment. Grant only the ServiceTitan scopes needed by the selected tools, and replace credentials through the ServiceTitan Developer Portal if exposure is suspected. ServiceTitan recommends developing in integration before production and requires the client secret for OAuth plus the app key on resource calls. See [Make Your First API Call](https://developer.servicetitan.io/docs/get-going-first-api-call), [ServiceTitan's customer credential guidance](https://developer.servicetitan.io/docs/faqs-customers), and the [API Terms](https://www.servicetitan.com/legal/api-terms).
 
-Add to your `claude_desktop_config.json`:
+Configure an MCP host to run `node` with `--env-file=/absolute/path/.env` and `/absolute/path/build/index.js`. Stdio reserves stdout for MCP protocol traffic. Logs and mutation audits go to stderr.
 
-```json
-{
-  "mcpServers": {
-    "servicetitan": {
-      "command": "node",
-      "args": ["/absolute/path/to/servicetitan-mcp/build/index.js"],
-      "env": {
-        "ST_CLIENT_ID": "your-client-id",
-        "ST_CLIENT_SECRET": "your-client-secret",
-        "ST_APP_KEY": "your-app-key",
-        "ST_TENANT_ID": "your-tenant-id",
-        "ST_TIMEZONE": "America/New_York"
-      }
-    }
-  }
-}
+The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints.
+
+## Choose the tool surface
+
+The [generated catalog](TOOLS.md) lists 458 tools: 261 ServiceTitan-facing read tools backed by pinned API contracts, three built-in system tools, and 194 experimental mutations. The 264-tool readonly discovery surface is eligible for stable support subject to each company's scopes/modules and readiness/report validation. Live verification sampled representative reads rather than every tool. Discovery is filtered by configuration:
+
+| Setting | Behavior |
+| --- | --- |
+| `ST_READONLY=true` | Default; mutating tools are absent from discovery and cannot execute. |
+| `ST_EXPERIMENTAL_WRITES=false` | Default; setting `ST_READONLY=false` without explicitly enabling experimental writes fails startup. |
+| `ST_TOOL_PROFILE=full` | All supported domains, still subject to readonly and other filters. |
+| `ST_TOOL_PROFILE=crm` | CRM tools. |
+| `ST_TOOL_PROFILE=dispatch` | Dispatch, scheduling, people, settings. |
+| `ST_TOOL_PROFILE=analytics` | Intelligence, reporting, settings. |
+| `ST_DOMAINS=crm,reporting` | Intersects the profile with selected domains. |
+| `ST_TOOLS=crm_customers_get,...` | Exact tool-name allowlist; unknown or unavailable selections fail startup. |
+
+System health, readiness, and result-retrieval tools remain accessible through the same authorization checks. Profiles do not grant upstream ServiceTitan scopes. Undocumented operations removed in v3 remain unavailable even in the full profile.
+
+Writes are outside the stable v3 support commitment. To expose these experimental adapters, set both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. `ST_CONFIRM_WRITES=true` then requires `_confirmed:true` for writes; deletes separately require `confirm:true`. These are safeguards against accidental changes, not independent human authorization. Uncertain write outcomes explicitly instruct checking ServiceTitan before retrying; the client does not blindly retry timeouts or 5xx writes.
+
+## Readiness and report compatibility
+
+`st_readiness_check` and the check CLI validate authentication, representative enabled-module reads, and configured report definitions. They return field/parameter metadata and definition fingerprints, not customer records. Missing scopes, missing reports, and incompatible fields are actionable failures. Representative read access does not certify every operation, write scope, or KPI amount.
+
+Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
+
+```dotenv
+ST_REPORT_BINDINGS={"166":{"category":"accounting","reportId":900166}}
 ```
 
-Works the same way in **Cursor**, **Windsurf**, and any other MCP-compatible host.
+The keys are the logical report IDs used by analytics; the values select this company's category and actual report ID. Required fields are validated by name and reordered before calculations. Default Report 166 provides hours but no gross pay; labor costs and hourly rates are `null` with explicit availability metadata. A compatible configured report that includes `GrossPay` can supply those metrics.
 
-### Generic stdio
+Analytics follows pagination and rejects missing/inconsistent required data. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
 
-```bash
-ST_CLIENT_ID=your-client-id \
-ST_CLIENT_SECRET=your-client-secret \
-ST_APP_KEY=your-app-key \
-ST_TENANT_ID=your-tenant-id \
-ST_TIMEZONE=America/New_York \
-node /absolute/path/to/servicetitan-mcp/build/index.js
+Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Representative readonly behavior has been exercised with one production company. V3 does not certify dashboard parity or independent-company compatibility; Scheduling Pro access returned 403 in that validation and remains unverified.
+
+## Structured and bounded results
+
+Successful tools provide the same JSON in `structuredContent` and the text content. Arrays/scalars are wrapped as `{data:...}`. Semantic fields, warnings, continuations, names, and precision are preserved. Timestamps may be rendered in the configured timezone without changing the instant; keys explicitly labeled UTC remain UTC.
+
+`ST_MAX_RESPONSE_CHARS` defaults to 100,000 and covers the final serialized tool envelope, including both representations. Large results can return an opaque handle for `st_result_read`: start at offset 0, concatenate each text chunk in `nextOffset` order, and parse the assembled JSON. Stored results belong to one server/session, expire after five minutes, and are bounded to four entries and 4 MB total. Restarting or closing the session removes them. A full store may evict older entries.
+
+Stored chunks and normal tool responses can contain customer content. Protect the MCP channel and any client-side transcripts or exports, retrieve only what the workflow needs, and delete locally retained validation output when it is no longer needed. Do not publish raw live responses as test evidence.
+
+If the result or retrieval metadata cannot fit configured storage/budget limits, the tool returns an explicit delivery error with source-pagination guidance. It never passes a cut JSON preview off as complete data. The minimum accepted response budget is 256 characters; useful result handles require a larger budget such as 1,024 or more. A delivery failure after a successful mutation is recorded separately in its audit and does not imply that the mutation should be retried.
+
+## Remote transports
+
+```sh
+node --env-file=.env build/streamable-http.js
 ```
 
-### Remote Deployment (Streamable HTTP)
+Set a strong `ST_MCP_API_KEY`; send it in `x-api-key` or a Bearer Authorization header. The server binds to loopback by default. Set `ST_MCP_HOST=0.0.0.0` only when needed, such as a container behind an HTTPS proxy. Streamable HTTP uses `/mcp`; `/health` is an unauthenticated liveness endpoint.
 
-Deploy to Fly.io or any server, then connect via `mcp-remote`:
+Requests with a browser Origin require an exact `ST_CORS_ORIGIN` match. Without a configured origin, native clients without Origin are allowed and browser origins are rejected. Wildcards are not accepted.
 
-```bash
-# On the server
-ST_CLIENT_ID=... ST_CLIENT_SECRET=... ST_APP_KEY=... ST_TENANT_ID=... \
-  ST_MCP_API_KEY=your-secret node build/streamable-http.js
+`ST_ALLOWED_CALLERS` uses authenticated SDK identity. Request `_meta` and arbitrary forwarded identity headers are ignored. With the built-in shared API key, the authenticated principal is `ST_MCP_CLIENT_ID` (default `api-key`); this is one credential identity, not per-user identity. Embedders needing user identities must provide validated SDK `authInfo` through an authenticated transport.
+
+HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
+
+Mutation audit events are emitted even when diagnostic log level is `error`; contact values, credentials, and free text are redacted. Configure durable stderr collection if durable audit retention is required.
+
+## Embed one company or separate company runtimes
+
+The import entrypoint has no transport startup side effects:
+
+```js
+import { createMcpServer, loadConfig } from '@rowvyn/servicetitan-mcp';
+const { server } = await createMcpServer(loadConfig(companyEnvironment));
+await server.connect(yourTransport);
 ```
 
-```json
-{
-  "mcpServers": {
-    "servicetitan": {
-      "command": "npx",
-      "args": [
-        "mcp-remote",
-        "https://your-instance.fly.dev/mcp",
-        "--header",
-        "x-api-key: YOUR_MCP_API_KEY"
-      ]
-    }
-  }
-}
+Create a separate client/runtime for each company. Caches and report queues use client identity; request timezone/budget/cancellation are scoped to the call. Sharing a ServiceTitan client across companies is unsupported. The package includes TypeScript declarations.
+
+## Development and release gates
+
+Run these commands from a repository checkout; the npm package contains the runtime and maintained documentation.
+
+```sh
+npm run contracts:check
+npm run typecheck
+npm run lint
+npm run test:coverage
+npm run test:wire
+npm run test:packaging
+npm run docs:tools
+npm pack --dry-run
+npm run release:check
 ```
 
-> SSE remains available at `build/sse.js` for backward compatibility, but it is deprecated. Prefer Streamable HTTP at `/mcp` for new deployments.
+The contract generator uses the [pinned official September 4, 2026 snapshot](docs/contracts/README.md); upstream changes require a reviewed manifest regeneration. Contract tests cover resolved paths and request payloads. The normal suite includes auth/retry, paging, cancellation, DST, schema/metric, configuration isolation, transport and response-budget regressions. Built-process tests use dummy credentials and do not execute ServiceTitan business reads or writes.
 
----
+Packaging tests use synthetic credential files to verify npm and Docker exclusions. The Docker check captures the installed CLI's context against a local mock engine, requires no running daemon, and skips explicitly when the CLI is unavailable. It never sends the repository or live credentials to a builder.
 
-## Tool Catalog
+CI tests Node 22 and 24. The required aggregate `ci` check passes only when both runtime jobs succeed. The `readonly-v1` release policy requires maintenance, contracts, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load gates plus a current source fingerprint. Unavailable integration-environment and independent-company gates are recorded as scoped out, never as passed. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
 
-483 tools registered across 15 domains:
+See the [validation summary](docs/releases/VALIDATION-v3.md) for coverage and remaining acceptance gates, and the [benchmark results](docs/BENCHMARKS.md) and [reproduction instructions](benchmarks/README.md) for latency, load, caching, and memory measurements.
 
-| Domain | Tools | Example Tools |
-|--------|------:|---------------|
-| `dispatch` | 79 | `dispatch_jobs_list`, `dispatch_appointments_get`, `dispatch_job_types_list` |
-| `crm` | 71 | `crm_customers_list`, `crm_contacts_get`, `crm_bookings_create` |
-| `export` | 49 | `export_invoices`, `export_customers`, `export_jobs` |
-| `inventory` | 37 | `inventory_purchase_orders_list`, `inventory_vendors_list`, `inventory_warehouses_list` |
-| `marketing` | 35 | `marketing_campaigns_list`, `marketing_calls_v3_list`, `marketing_reviews` |
-| `accounting` | 33 | `accounting_invoices_list`, `accounting_payments_list`, `accounting_gl_accounts_list` |
-| `pricebook` | 31 | `pricebook_services_list`, `pricebook_materials_list`, `pricebook_equipment_list` |
-| `payroll` | 27 | `payroll_payrolls_list`, `payroll_timesheets_job_list`, `payroll_gross_pay_items_list` |
-| `settings` | 23 | `settings_business_units_list`, `settings_tag_types_list`, `settings_user_roles_list` |
-| `people` | 22 | `people_technicians_list`, `people_employees_list`, `people_trucks_list` |
-| `memberships` | 21 | `memberships_list`, `memberships_types_list`, `memberships_recurring_services_list` |
-| `scheduling` | 17 | `scheduling_teams_list`, `scheduling_zones_list`, `scheduling_capacity_calculate` |
-| `estimates` | 22 | `estimates_list`, `estimates_get`, `estimates_items_list` |
-| **`intelligence`** | **10** | `intel_revenue_summary`, `intel_daily_snapshot`, `intel_technician_scorecard` |
-| `reporting` | 5 | `reporting_reports_list`, `reporting_report_categories_list` |
-| **Total** | **482** | *(+ 1 system tool: `st_health_check` = **483** total)* |
-
-> With `ST_READONLY=true` (default), all tools are registered but write and delete operations are blocked at execution time with a clear error message (`Readonly mode: operation not permitted`). Use `ST_CONFIRM_WRITES=true` to require `_confirmed: true` on write operations, or `confirm: true` on delete operations.
-
----
-
-## Intelligence Tools
-
-The real differentiator. These 10 tools aggregate multiple API calls and report endpoints into operational insights — the kind of answers that would otherwise require custom BI tooling.
-
-| Tool | What It Returns |
-|------|----------------|
-| `intel_revenue_summary` | Dashboard-matched revenue by business unit. Includes completed revenue, non-job revenue, adjustments, collections, and BU productivity rollups. |
-| `intel_daily_snapshot` | 6-metric same-day ops briefing: revenue-to-date, jobs in progress, call outcomes, bookings, open estimates, and upcoming next-day jobs. |
-| `intel_technician_scorecard` | Per-tech jobs, revenue, avg ticket, productivity, lead gen, membership close rate, and sales from both tech and marketing leads — with team averages. |
-| `intel_membership_health` | Active memberships, signups, cancellations, renewals, retention rate, invoiced revenue, and conversion by business unit. |
-| `intel_estimate_pipeline` | Open/sold/dismissed funnel, conversion rate, days-to-close, age buckets, stale opportunities, and tech sales funnel metrics. |
-| `intel_campaign_performance` | Campaign calls, bookings, conversion rate, total revenue context, and BU lead-gen metrics from Report 176. |
-| `intel_csr_performance` | CSR booking performance: jobs booked, revenue, avg ticket, top campaigns, job type mix, conversion metrics, and team averages. |
-| `intel_labor_cost` | Labor cost summary from the Master Pay File: employee hours, gross pay, hourly rates, activity mix, and BU breakdowns. |
-| `intel_invoice_tracking` | Invoice email tracking: sent vs not-sent counts, send rate, dollar impact, and unsent breakdowns by business unit and technician. |
-| `intel_lookup` | Cached reference data — technicians, business units, payment types, membership types with IDs and names. 30-minute TTL. |
-
-These tools are why this server exists. Raw CRUD tools are table stakes. Intelligence tools turn API data into business decisions.
-
-### Revenue Accuracy
-
-`intel_revenue_summary` uses ServiceTitan's **Reporting API** to calculate totals. This is the same source ST's own dashboard uses — which means it includes:
-
-- **Completed Revenue** — revenue from completed jobs
-- **Non-Job Revenue** — membership fees, add-ons, and other income not tied to a specific job
-- **Adjustment Revenue** — credits, adjustments, and corrections
-
-Raw invoice or job endpoint sums will not match the dashboard. Both miss non-job revenue. For dashboard-matching figures, use `intel_revenue_summary`. For invoice-level detail, use `accounting_invoices_list`.
-
-### Name-Based Filtering
-
-Most intelligence tools accept `businessUnitName` and `technicianName` as alternatives to numeric IDs:
-
-```
-# Instead of:
-intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitId=12345)
-
-# Use:
-intel_revenue_summary(startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC")
-```
-
-Business unit name matching uses exact → prefix → contains fallback. Technician name matching uses case-insensitive substring search. If no match is found, the tool returns all data with a warning.
-
----
-
-## Configuration
-
-Copy `.env.example` to `.env` and fill in your credentials.
-
-**Required**
-
-| Variable | Description |
-|----------|-------------|
-| `ST_CLIENT_ID` | ServiceTitan OAuth client ID |
-| `ST_CLIENT_SECRET` | ServiceTitan OAuth client secret |
-| `ST_APP_KEY` | ServiceTitan app key (`ST-App-Key` header) |
-| `ST_TENANT_ID` | ServiceTitan tenant identifier |
-| `ST_MCP_API_KEY` | API key for remote MCP clients *(required for remote HTTP deployment)* |
-
-**Optional**
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ST_ENVIRONMENT` | `integration` | ServiceTitan environment: `integration` or `production` |
-| `ST_READONLY` | `true` | Block write and delete operations at execution time |
-| `ST_CONFIRM_WRITES` | `false` | Require `_confirmed: true` to execute write tools |
-| `ST_MAX_RESPONSE_CHARS` | `100000` | Cap tool response size |
-| `ST_DOMAINS` | *(all)* | Comma-separated domain allowlist (e.g. `crm,dispatch,reporting`) |
-| `ST_LOG_LEVEL` | `info` | Log level: `debug`, `info`, `warn`, `error` |
-| `ST_TIMEZONE` | `UTC` | IANA timezone for the tenant (e.g. `America/New_York`) — used for date-bound intelligence queries and local-time display conversion in all tool responses |
-| `ST_RESPONSE_SHAPING` | `true` | Set to `false` to disable intelligence response transformation |
-| `ST_CORS_ORIGIN` | _(none)_ | Allowed CORS origin for Streamable HTTP / SSE. Required for browser access. |
-| `ST_ALLOWED_CALLERS` | _(none)_ | Comma-separated caller identity allowlist (e.g. `alice@example.com,svc-user`) |
-| `ST_INTEL_CACHE_TTL_MS` | `300000` | Intelligence result cache TTL in milliseconds (default: 5 minutes) |
-| `ST_MCP_PORT` / `PORT` | `3100` | HTTP server port for Streamable HTTP and SSE transports |
-| `ST_MCP_API_KEY` | _(none)_ | API key for authenticating remote MCP clients (required for HTTP transports) |
-
-> **Set `ST_TIMEZONE`** to your tenant's local timezone. Without it, date-only queries (e.g. `startDate: "2026-02-01"`) are interpreted as UTC midnight — which can miss or include invoices and jobs near day boundaries for non-UTC tenants, and tool responses will keep timestamps in UTC instead of your local display timezone.
-
-Boolean env vars accept: `true`, `false`, `1`, `0` (case-insensitive).
-
----
-
-## Architecture
-
-The server is built as a layered system: **Config → OAuth Client → Domain Registry → MCP Server**.
-
-- **Domain module pattern** — each domain lives in `src/domains/<domain>/` and exports a loader that registers its tools
-- **Dynamic discovery** — `src/domains/loader.ts` scans `src/domains/*/index.ts` and imports each domain at runtime
-- **Central registry** — `ToolRegistry` handles domain filtering, read-only enforcement, confirmation wrapping, and audit logging
-- **OAuth client** — `ServiceTitanClient` manages client-credentials auth, token refresh, retry-on-401/429, and `{tenant}` path injection
-- **Response shaping** — transformer layer strips API noise and structures responses for LLM consumption
-- **Intelligence layer** — composite tools fan out to multiple endpoints and report IDs, then aggregate results
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for the full deep-dive: route table, response shaping pipeline, intelligence layer design, and safety system.
-
----
-
-## CLI Companion
-
-If you prefer working from the terminal directly, [servicetitan-cli](https://github.com/montrellcruse/servicetitan-cli) is a companion `st` binary built from the same auth and intelligence layer:
-
-```bash
-# Install
-npm install -g @rowvyn/servicetitan-cli
-
-# Same intelligence — no MCP required
-st revenue --period ytd --compact
-st snapshot --compact
-
-# Pipe into your agent
-st customers list --all --json | your-agent process
-```
-
-The CLI and this MCP server share the same design philosophy: push the business question into the tool name, minimize schema overhead, and shape responses for AI consumption.
-
----
-
-## Comparison
-
-| Feature | This Server | Community MCP Servers |
-|---------|------------|----------------------|
-| Revenue accuracy | ✅ Dashboard-matched | ❌ $17–21K off per period |
-| Intelligence tools | ✅ 10 tools | ❌ None |
-| Domain coverage | ✅ 483 tools, 15 domains | ⚠️ 10–50 tools |
-| Safety layer | ✅ Read-only default, audit log | ❌ None |
-| Response shaping | ✅ LLM-optimized | ❌ Raw API responses |
-| Name-based filtering | ✅ Resolve names to IDs automatically | ❌ Numeric IDs required |
-| Remote deployment | ✅ Streamable HTTP + `mcp-remote` | ⚠️ Varies |
-
----
-
-## Development
-
-```bash
-npm run dev        # tsc --watch
-npm run test       # vitest run
-npm run lint       # eslint src/
-npm run typecheck  # tsc --noEmit
-npm run build      # compile to build/
-npm run start      # run compiled server
-```
-
----
-
-## Safety
-
-- **Read-only mode** (`ST_READONLY=true` by default) — all tools are registered but write and delete operations are blocked at execution time
-- **Confirmation workflow** — delete tools require `confirm: true` (returns preview payload when missing); write tools optionally require `_confirmed: true` via `ST_CONFIRM_WRITES=true` (returns error when missing)
-- **Audit logging** — all write/delete executions emit `[AUDIT]` log records with timestamp, tool, operation, resource, and sanitized params (secrets/tokens redacted)
-
----
-
-## Troubleshooting
-
-### npm permission errors (EACCES)
-
-If you see `EACCES: permission denied` errors when Claude Desktop tries to start the server, your npm cache directory is likely owned by root (common when Node was installed with `sudo`).
-
-**Fix:**
-
-```bash
-sudo chown -R $(whoami) ~/.npm
-```
-
-Then restart Claude Desktop.
-
-### Server won't start / "Could not connect to MCP server"
-
-1. **Test outside Claude Desktop first:**
-   ```bash
-   npx -y @rowvyn/servicetitan-mcp
-   ```
-   If this fails, the issue is with Node, npm, or your environment — not Claude Desktop.
-
-2. **Check Node version:** `node -v` — requires Node 22 or newer.
-
-3. **Check for conflicting MCP installs:** If you previously installed a different ServiceTitan MCP server, remove it:
-   ```bash
-   npm ls -g --depth=0 | grep -i servicetitan
-   npm uninstall -g <old-package-name>
-   npx clear-npx-cache
-   ```
-
-4. **Verify your `claude_desktop_config.json`** has no leftover entries from a previous MCP server. Only one `servicetitan` entry should exist under `mcpServers`.
-
-### Auth failures / $0 revenue / empty results
-
-- **Set `ST_ENVIRONMENT` to `production`.** This is the #1 cause. The default is `integration`, which authenticates against ServiceTitan's sandbox — not your live account. You'll get valid auth tokens that return zero data.
-- **Verify credentials match:** `ST_CLIENT_ID` and `ST_CLIENT_SECRET` must be from the same ServiceTitan app. You can't mix credentials from different apps.
-- **Check `ST_TENANT_ID`:** Must match the tenant associated with your app in the ServiceTitan developer portal.
-
-### Claude Desktop logs
-
-Claude Desktop writes MCP server logs to:
-- **macOS:** `~/Library/Logs/Claude/mcp*.log`
-- **Windows:** `%APPDATA%\Claude\logs\mcp*.log`
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
----
-
-## Security
-
-See [SECURITY.md](SECURITY.md) for the vulnerability disclosure policy.
-
----
-
-## License
-
-MIT
+Official sources: [ServiceTitan API catalog](https://developer.servicetitan.io/api/docs/apis), [Reporting API](https://developer.servicetitan.io/docs/apis/tenant-reporting-v2), and [API rate limits](https://help.servicetitan.com/v1/docs/default-api-rate-limitsfor-regular-apis-and-reporting-apis).

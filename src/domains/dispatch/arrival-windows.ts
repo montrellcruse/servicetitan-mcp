@@ -2,43 +2,33 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
-  dateFilterParams,
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const hourRangeSchema = z.object({
   fromHour: z.number().int().describe("Starting hour of availability block (0-23)"),
   toHour: z.number().int().describe("Ending hour of availability block (0-23)"),
 });
+const arrivalWindowConfigurationSchema = officialRequestSchema("ArrivalWindows_UpdatedConfiguration") as z.ZodObject<z.ZodRawShape>;
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
-  return dateFilterParams(schema).extend({
+  return schema.extend({
     createdBefore: z
       .string()
-      .datetime()
+      .datetime({ offset: true })
       .optional()
       .describe("Return items created before this UTC timestamp"),
     createdOnOrAfter: z
       .string()
-      .datetime()
+      .datetime({ offset: true })
       .optional()
       .describe("Return items created on or after this UTC timestamp"),
-    modifiedBefore: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Return items modified before this UTC timestamp"),
-    modifiedOnOrAfter: z
-      .string()
-      .datetime()
-      .optional()
-      .describe("Return items modified on or after this UTC timestamp"),
   });
 }
 const arrivalWindowListSchema = paginationParams(
@@ -84,7 +74,7 @@ export function registerDispatchArrivalWindowTools(
         });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -104,7 +94,7 @@ export function registerDispatchArrivalWindowTools(
         const data = await client.get(`/tenant/{tenant}/arrival-windows/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -116,7 +106,7 @@ export function registerDispatchArrivalWindowTools(
     description: "List arrival windows",
     schema: arrivalWindowListSchema.shape,
     handler: async (params) => {
-      const typed = params as z.infer<typeof arrivalWindowListSchema>;
+      const typed = arrivalWindowListSchema.parse(params);
 
       try {
         const data = await client.get(
@@ -125,7 +115,7 @@ export function registerDispatchArrivalWindowTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -137,15 +127,16 @@ export function registerDispatchArrivalWindowTools(
     description: "Activate an arrival window",
     schema: {
       id: z.number().int().describe("Arrival window ID"),
+      isActive: z.boolean().describe("Whether the arrival window is active"),
     },
     handler: async (params) => {
-      const { id } = params as { id: number };
+      const { id, isActive } = params as { id: number; isActive: boolean };
 
       try {
-        const data = await client.put(`/tenant/{tenant}/arrival-windows/${id}/activated`);
+        const data = await client.put(`/tenant/{tenant}/arrival-windows/${id}/activated`, { isActive });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -161,7 +152,7 @@ export function registerDispatchArrivalWindowTools(
         const data = await client.get("/tenant/{tenant}/arrival-windows/configuration");
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -171,37 +162,9 @@ export function registerDispatchArrivalWindowTools(
     domain: "dispatch",
     operation: "write",
     description: "Update arrival window configuration",
-    schema: {
-      enabled: z
-        .boolean()
-        .optional()
-        .describe("Whether arrival windows are enabled for dispatching"),
-      defaultArrivalWindowId: z
-        .number()
-        .int()
-        .optional()
-        .describe("Default arrival window ID used for scheduling"),
-      weekdays: z
-        .array(hourRangeSchema)
-        .optional()
-        .describe("Weekday availability blocks in local business hours"),
-      saturday: z
-        .array(hourRangeSchema)
-        .optional()
-        .describe("Saturday availability blocks in local business hours"),
-      sunday: z
-        .array(hourRangeSchema)
-        .optional()
-        .describe("Sunday availability blocks in local business hours"),
-    },
+    schema: arrivalWindowConfigurationSchema.shape,
     handler: async (params) => {
-      const typed = params as {
-        enabled?: boolean;
-        defaultArrivalWindowId?: number;
-        weekdays?: Array<{ fromHour: number; toHour: number }>;
-        saturday?: Array<{ fromHour: number; toHour: number }>;
-        sunday?: Array<{ fromHour: number; toHour: number }>;
-      };
+      const typed = arrivalWindowConfigurationSchema.parse(params);
 
       try {
         const data = await client.post(
@@ -210,7 +173,7 @@ export function registerDispatchArrivalWindowTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -246,7 +209,7 @@ export function registerDispatchArrivalWindowTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

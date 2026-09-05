@@ -37,7 +37,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     appKey: "app-key",
     tenantId: "tenant-id",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,
@@ -229,6 +229,8 @@ describe("crm domain", () => {
     const result = await handler({
       name: "New Customer Inc",
       type: "Residential",
+      address: { street: "1 Main St", city: "Phoenix", state: "AZ", zip: "85001", country: "US" },
+      locations: [{ name: "Main", address: { street: "1 Main St", city: "Phoenix", state: "AZ", zip: "85001", country: "US" } }],
     });
     const payload = parsePayload(result);
 
@@ -270,21 +272,13 @@ describe("crm domain", () => {
 
   // ── readonly mode enforcement ──
 
-  it("crm_customers_list is available in readonly mode and write tools are blocked", async () => {
+  it("registers only read tools in readonly mode", () => {
     const { handlers } = createContext({ readonlyMode: true });
     // Read tools should be registered
     expect(handlers.has("crm_customers_list")).toBe(true);
     expect(handlers.has("crm_customers_get")).toBe(true);
-    // Write tools stay registered and are blocked by middleware
-    expect(handlers.has("crm_customers_create")).toBe(true);
-    expect(handlers.has("crm_customers_update")).toBe(true);
-    // Delete tools also stay registered and are blocked by middleware
-    expect(handlers.has("crm_customers_notes_delete")).toBe(true);
-
-    const createResult = await getHandler(handlers, "crm_customers_create")({
-      name: "Read Only Customer",
-    });
-    expect(createResult.isError).toBe(true);
-    expect(createResult.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(handlers.has("crm_customers_create")).toBe(false);
+    expect(handlers.has("crm_customers_update")).toBe(false);
+    expect(handlers.has("crm_customers_notes_delete")).toBe(false);
   });
 });

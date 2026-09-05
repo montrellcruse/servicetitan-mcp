@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const apCreditsListSchema = dateFilterParams(
   paginationParams(
@@ -18,10 +17,10 @@ const apCreditsListSchema = dateFilterParams(
 );
 
 const apCreditsMarkAsExportedSchema = z.object({
-  ids: z
-    .array(z.number().int().describe("AP credit ID"))
+  items: z
+    .array(z.object({ apCreditId: z.number().int().describe("AP credit ID") }))
     .min(1)
-    .describe("AP credit IDs to mark as exported"),
+    .describe("AP credits to mark as exported (sent as the API's top-level array)"),
 });
 
 export function registerApCreditTools(
@@ -38,12 +37,10 @@ export function registerApCreditTools(
       const input = apCreditsMarkAsExportedSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/ap-credits/markasexported", {
-          ids: input.ids,
-        });
+        const data = await client.post("/tenant/{tenant}/ap-credits/markasexported", input.items);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -74,7 +71,7 @@ export function registerApCreditTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

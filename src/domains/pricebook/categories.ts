@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import { categoryPayloadSchema } from "./schemas.js";
 
@@ -44,7 +43,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
         const data = await client.post(`/tenant/{tenant}/categories`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -64,7 +63,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/categories/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -82,7 +81,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/categories`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -106,7 +105,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
         const data = await client.patch(`/tenant/{tenant}/categories/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -126,7 +125,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
         await client.delete(`/tenant/{tenant}/categories/${id}`);
         return toolResult({ success: true, message: "Category deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

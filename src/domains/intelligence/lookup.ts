@@ -143,7 +143,7 @@ export function registerIntelligenceLookupTool(
           _cache: "Results cached for 30 minutes. Subsequent lookups are instant.",
         });
       } catch (error: unknown) {
-        return toolError(error instanceof Error ? error.message : String(error));
+        return toolError(error);
       }
     },
   });

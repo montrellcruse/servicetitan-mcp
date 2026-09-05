@@ -37,25 +37,31 @@ export async function resolveBusinessUnitId(
   const query = businessUnitName.trim().toLowerCase();
   const businessUnits = toMatchSet(await referenceCache.getBusinessUnits(client));
 
-  // Exact match first, then prefix, then contains
+  // Exact match first, then require a unique fuzzy match. Analytics must not
+  // silently broaden or select an arbitrary tenant record.
   for (const matcher of [
     (name: string) => name === query,
     (name: string) => name.startsWith(query),
     (name: string) => name.includes(query),
   ]) {
-    const match = businessUnits.data.find((bu) => {
+    const matches = businessUnits.data.filter((bu) => {
       const name = extractName(bu)?.toLowerCase();
       return name ? matcher(name) : false;
     });
 
+    if (matches.length > 1) {
+      throw new Error(`Business unit name "${businessUnitName}" is ambiguous. Use intel_lookup and pass businessUnitId.`);
+    }
+    const match = matches[0];
     if (match) {
       const id = extractId(match);
       const name = extractName(match);
-      return id !== undefined ? { id, resolvedName: name ?? undefined } : { id: undefined, resolvedName: undefined };
+      if (id === undefined) throw new Error(`Business unit "${businessUnitName}" has no valid numeric ID`);
+      return { id, resolvedName: name ?? undefined };
     }
   }
 
-  return { id: undefined, resolvedName: undefined };
+  throw new Error(`Business unit "${businessUnitName}" was not found. Use intel_lookup to select a valid businessUnitId.`);
 }
 
 /**
@@ -77,13 +83,26 @@ export async function resolveTechnicianId(
 
   const results = toMatchSet(await referenceCache.findTechniciansByName(client, technicianName));
 
-  if (results.count > 0) {
-    const id = extractId(results.data[0]);
-    const name = extractName(results.data[0]);
-    return id !== undefined ? { id, resolvedName: name ?? undefined } : { id: undefined, resolvedName: undefined };
+  const query = businessUnitNameForComparison(technicianName);
+  const exact = results.data.filter((record) =>
+    businessUnitNameForComparison(extractName(record) ?? "") === query
+  );
+  const candidates = exact.length > 0 ? exact : results.data;
+  if (candidates.length > 1) {
+    throw new Error(`Technician name "${technicianName}" is ambiguous. Use intel_lookup and pass technicianId.`);
+  }
+  if (candidates.length === 1) {
+    const id = extractId(candidates[0]);
+    const name = extractName(candidates[0]);
+    if (id === undefined) throw new Error(`Technician "${technicianName}" has no valid numeric ID`);
+    return { id, resolvedName: name ?? undefined };
   }
 
-  return { id: undefined, resolvedName: undefined };
+  throw new Error(`Technician "${technicianName}" was not found. Use intel_lookup to select a valid technicianId.`);
+}
+
+function businessUnitNameForComparison(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function extractId(record: Record<string, unknown>): number | undefined {
@@ -93,8 +112,10 @@ function extractId(record: Record<string, unknown>): number | undefined {
   }
 
   if (typeof raw === "string" && raw.trim().length > 0) {
-    const parsed = Number.parseInt(raw, 10);
-    return Number.isFinite(parsed) ? parsed : undefined;
+    const trimmed = raw.trim();
+    if (!/^\d+$/.test(trimmed)) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isSafeInteger(parsed) ? parsed : undefined;
   }
 
   return undefined;

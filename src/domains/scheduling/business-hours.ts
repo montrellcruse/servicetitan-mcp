@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { toolError, toolResult } from "../../utils.js";
 
 const hourRangeSchema = z.object({
   fromHour: z.number().int().describe("Starting hour (0-23)"),
@@ -23,7 +23,7 @@ export function registerSchedulingBusinessHourTools(
         const data = await client.get("/tenant/{tenant}/business-hours");
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -59,7 +59,7 @@ export function registerSchedulingBusinessHourTools(
         });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

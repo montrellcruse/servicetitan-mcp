@@ -2,9 +2,10 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { toolError, toolResult } from "../../utils.js";
 
 const phoneNumbersShapeSchema = z.object({
+  optOutType: z.enum(["Unknown", "Global", "Marketing", "Other"]),
   contact_numbers: z
     .array(z.string())
     .optional()
@@ -54,7 +55,7 @@ function registerOptOutListTool(
         const data = await client.get("/v3/tenant/{tenant}/optinouts/optouts");
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -77,11 +78,12 @@ function registerOptOutCreateTool(
 
       try {
         const data = await client.post("/v3/tenant/{tenant}/optinouts/optouts", {
+          optOutType: input.optOutType,
           contactNumbers: getNumbers(input),
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -109,7 +111,7 @@ function registerOptOutLookupTool(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

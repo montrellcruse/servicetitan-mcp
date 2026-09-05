@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, sortParam, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
 
 const campaignCostPayloadSchema = z.object({
   year: z.number().int().optional().describe("Cost year"),
@@ -66,7 +66,7 @@ function registerCampaignCostListTool(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -96,7 +96,7 @@ export function registerMarketingCampaignCostTools(
         const data = await client.post("/tenant/{tenant}/costs", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -114,7 +114,7 @@ export function registerMarketingCampaignCostTools(
         const data = await client.get(`/tenant/{tenant}/costs/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -132,7 +132,7 @@ export function registerMarketingCampaignCostTools(
         const data = await client.patch(`/tenant/{tenant}/costs/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -150,7 +150,7 @@ export function registerMarketingCampaignCostTools(
         const data = await client.delete(`/tenant/{tenant}/costs/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

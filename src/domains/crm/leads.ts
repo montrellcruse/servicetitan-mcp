@@ -10,7 +10,6 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const leadStatusSchema = z.enum(["Open", "Dismissed", "Converted"]);
 
@@ -107,7 +106,11 @@ const leadListSchema = dateFilterParams(
 );
 
 const leadFormSubmitSchema = z.object({
-  id: z.number().int().optional().describe("Lead form ID"),
+  name: z.string().describe("Customer name"),
+  email: z.string().nullable().optional(),
+  phoneNumber: z.string().nullable().optional(),
+  address: z.object({}).passthrough().nullable().optional(),
+  summary: z.string().nullable().optional(),
 });
 
 
@@ -119,13 +122,13 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     description: "Get a lead by ID",
     schema: leadIdSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof leadIdSchema>;
+      const input = leadIdSchema.parse(params);
 
       try {
         const data = await client.get(`/tenant/{tenant}/leads/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -143,7 +146,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.patch(`/tenant/{tenant}/leads/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -161,7 +164,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.post("/tenant/{tenant}/leads", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -184,7 +187,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -206,7 +209,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -236,7 +239,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -279,7 +282,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -289,15 +292,15 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     domain: "crm",
     operation: "write",
     description: "Dismiss a lead",
-    schema: leadIdSchema.shape,
+    schema: leadIdSchema.extend({ dismissingReasonId: z.number().int() }).shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof leadIdSchema>;
+      const input = leadIdSchema.extend({ dismissingReasonId: z.number().int() }).parse(params);
 
       try {
-        const data = await client.post(`/tenant/{tenant}/leads/${input.id}/dismiss`);
+        const data = await client.post(`/tenant/{tenant}/leads/${input.id}/dismiss`, { dismissingReasonId: input.dismissingReasonId });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -309,18 +312,17 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     description: "Submit a lead form",
     schema: leadFormSubmitSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof leadFormSubmitSchema>;
+      const input = leadFormSubmitSchema.parse(params);
 
       try {
         const data = await client.post(
           "/tenant/{tenant}/leads/form",
-          {},
-          buildParams({ id: input.id }),
+          buildParams(input),
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -4,7 +4,45 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [3.0.0] - 2026-09-05
+
+### Changed
+- Defines stable `3.0.0` support under the `readonly-v1` policy: 261 ServiceTitan-facing read tools backed by pinned API contracts plus three built-in system tools are eligible subject to each company's scopes/modules, separate runtime/configuration, and readiness/report validation. Live verification was representative rather than exhaustive.
+- The 194 mutation adapters are experimental, hidden by default, and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`.
+- Integration-environment and independent-company live gates are explicitly scoped out because validation credentials were unavailable; neither is represented as passed. Representative live reads cover one production company, without dashboard-parity or Scheduling Pro certification.
+- Pinned ServiceTitan operation/request contracts replace guessed module routing; undocumented tools are excluded from discovery.
+- Readonly discovery, tool profiles and exact allowlists; shared side-effect-free server factory and TypeScript library entrypoint.
+- Lossless structured/text JSON, complete result retrieval within bounded storage, and explicit delivery errors.
+- Corrected analytics labels and populations; configurable report bindings, field-name mapping, complete pagination, per-client caches and report scheduling.
+- HTTP defaults to loopback; browser origins and authenticated caller identity are enforced.
+
+### Fixed
+- OAuth failures cannot replay token requests through a business client or expose token payloads in tool results; concurrent stale 401s reuse fresh tokens.
+- Ambiguous write failures return `outcomeUnknown: true` and `retryable: false`, including size-limited error responses, and are not automatically replayed.
+- Completed mutations retain `mutationCompleted: true` and `retryable: false` when their results exceed delivery/storage limits or cannot be encoded. Stored-result expiry no longer suggests replaying the original operation; audit success uses internal delivery provenance rather than an error-code string.
+- Mutation auditing makes exactly one best-effort attempt outside business-result handling. Synchronous exceptions and rejected promises cannot replace the original result or trigger replay; pending audit promises are not awaited, and fallback diagnostic failures are contained.
+- Standard creation/modification filters match pinned query contracts across stable read tools; unsupported filters are removed from arrival windows, job attachments, templates, payment types, and payroll-adjustment exports. Payroll reads also forward the documented creation-date filters.
+- Official-operation lookup prefers literal routes over parameter placeholders when paths overlap.
+- Reporting data execution remains a read operation even though the official endpoint uses POST.
+- Report page failures preserve API status, trace ID, and retry metadata when adding report/page context.
+- Default warning removal, silent page loss, failed-result caching, ambiguous name broadening, and DST date boundaries.
+- Report 166 hours/layout, missing gross-pay semantics, CSR/upcoming date keys, and technician BU filtering.
+- Accounting export arrays and multiple documented write/action bodies, including gross pay and technician shifts.
+- Official request shapes for CRM/customer memberships, people, dispatch actions, task management, accounting actions, and inventory; explicit null/false/zero values are preserved.
+- Cache isolation across timezone/budget contexts, independent cancellation, bounded memory, and rejection of incomplete reference-data pages.
+- Typed contact/audit redaction, final response-size bounds, malformed Host handling, and transport/session cleanup.
+- Diagnostic messages and nested error data redact configured secrets and common credential forms; legacy SSE request logs omit query strings.
+- Docker contexts exclude environment-specific credential files, private audit output, and local review archives.
+
+### Added
+- A stable aggregate `ci` check that requires both Node 22 and 24 jobs to pass.
+- Maintained validation, acceptance, contract-provenance, and benchmark documentation in the npm package so its relative documentation links resolve after installation.
+- Readonly readiness CLI/tool with company report definition fingerprints and compatibility diagnostics.
+- Auth/cancellation/pagination/schema/metric/identity/budget regressions, real MCP protocol tests, Node 22/24 CI, and explicit release acceptance gates.
+- Reproducible v2/v3 protocol, client-load, report-cache, and retained-memory benchmarks with documented measurement limits.
+
+### Support scope
+- Stable 3.0.0 supports readonly use under the `readonly-v1` policy. Integration and independent-company validation are explicitly scoped out, not passed. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
 
 ## [2.6.4] - 2026-09-02
 

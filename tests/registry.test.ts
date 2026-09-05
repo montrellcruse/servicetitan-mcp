@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuditLogger } from "../src/audit.js";
 import type { ServiceTitanConfig } from "../src/config.js";
-import { ToolRegistry, type ToolDefinition } from "../src/registry.js";
+import { EXPERIMENTAL_MUTATION_NOTICE, ToolRegistry, type ToolDefinition } from "../src/registry.js";
 
 const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
 
@@ -85,7 +85,7 @@ describe("ToolRegistry", () => {
 
   it("registers a tool when domain matches and mode allows", () => {
     const { registry, server } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(createTool());
@@ -100,7 +100,7 @@ describe("ToolRegistry", () => {
 
   it("registers conservative annotations and preserves the read-only invariant", () => {
     const { registry, server } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(
@@ -115,7 +115,7 @@ describe("ToolRegistry", () => {
 
     const [, config] = server.registerTool.mock.calls[0] ?? [];
     expect(config).toMatchObject({
-      description: "Get a customer by ID",
+      description: EXPERIMENTAL_MUTATION_NOTICE + "Get a customer by ID",
       annotations: {
         readOnlyHint: false,
         destructiveHint: false,
@@ -127,7 +127,7 @@ describe("ToolRegistry", () => {
 
   it("getRegisteredTools returns registered tool definitions", () => {
     const { registry } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(createTool({ name: "crm_customers_list" }));
@@ -142,7 +142,7 @@ describe("ToolRegistry", () => {
 
   it("throws when attempting to register the same tool name twice", () => {
     const { registry } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(createTool({ name: "crm_customers_get" }));
@@ -159,7 +159,7 @@ describe("ToolRegistry", () => {
   it("always enables _system domain even when ST_DOMAINS is filtered", () => {
     const { registry, server } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
         enabledDomains: ["crm"],
       },
     });
@@ -180,7 +180,7 @@ describe("ToolRegistry", () => {
       content: [{ type: "text", text: "deleted" }],
     });
     const { registry, server, auditLogger } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(
@@ -210,7 +210,7 @@ describe("ToolRegistry", () => {
       content: [{ type: "text", text: "deleted" }],
     });
     const { registry, server, auditLogger } = createRegistry({
-      config: { readonlyMode: false },
+      config: { readonlyMode: false, experimentalWrites: true },
     });
 
     registry.register(
@@ -224,7 +224,7 @@ describe("ToolRegistry", () => {
     const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     await wrappedHandler({ id: 42, confirm: true, token: "secret-token" });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, undefined);
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
     expect(auditLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -243,7 +243,7 @@ describe("ToolRegistry", () => {
     });
     const { registry, server } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
         confirmWrites: true,
       },
     });
@@ -275,7 +275,7 @@ describe("ToolRegistry", () => {
     });
     const { registry, server, auditLogger } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
         confirmWrites: false,
       },
     });
@@ -293,11 +293,11 @@ describe("ToolRegistry", () => {
 
     await wrappedHandler({ id: 42 });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 }, undefined);
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
   });
 
-  it("registers write tools in readonly mode and blocks execution in middleware", async () => {
+  it("hides write tools from readonly discovery", async () => {
     const handlerSpy = vi.fn().mockResolvedValue({
       content: [{ type: "text", text: "updated" }],
     });
@@ -315,18 +315,13 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.registerTool).toHaveBeenCalledTimes(1);
-
-    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
-    const result = await wrappedHandler({ id: 42 });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(server.registerTool).not.toHaveBeenCalled();
+    expect(registry.getRegisteredTools()).toHaveLength(0);
     expect(handlerSpy).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
 
-  it("registers delete tools in readonly mode and blocks execution in middleware", async () => {
+  it("hides delete tools from readonly discovery", async () => {
     const handlerSpy = vi.fn().mockResolvedValue({
       content: [{ type: "text", text: "deleted" }],
     });
@@ -344,13 +339,8 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.registerTool).toHaveBeenCalledTimes(1);
-
-    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
-    const result = await wrappedHandler({ id: 42, confirm: true });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(server.registerTool).not.toHaveBeenCalled();
+    expect(registry.getRegisteredTools()).toHaveLength(0);
     expect(handlerSpy).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
@@ -361,7 +351,7 @@ describe("ToolRegistry", () => {
     });
     const { registry, server } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
         allowedCallers: ["alice@example.com"],
       },
     });
@@ -377,7 +367,7 @@ describe("ToolRegistry", () => {
     const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const unauthorized = await wrappedHandler(
       { id: 42 },
-      { requestInfo: { headers: { "x-user-email": "mallory@example.com" } } },
+      { authInfo: { clientId: "mallory@example.com" } },
     );
 
     expect(unauthorized.isError).toBe(true);
@@ -386,13 +376,13 @@ describe("ToolRegistry", () => {
 
     await wrappedHandler(
       { id: 42 },
-      { requestInfo: { headers: { "x-user-email": "Alice@Example.com" } } },
+      { authInfo: { clientId: "Alice@Example.com" } },
     );
 
     expect(handlerSpy).toHaveBeenCalledWith(
       { id: 42 },
       expect.objectContaining({
-        requestInfo: { headers: { "x-user-email": "Alice@Example.com" } },
+        authInfo: { clientId: "Alice@Example.com" },
       }),
     );
   });
@@ -403,7 +393,7 @@ describe("ToolRegistry", () => {
     });
     const { registry, server } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
         allowedCallers: ["alice@example.com"],
       },
     });
@@ -430,7 +420,7 @@ describe("ToolRegistry", () => {
     });
     const { registry, server, auditLogger } = createRegistry({
       config: {
-        readonlyMode: false,
+        readonlyMode: false, experimentalWrites: true,
       },
     });
 

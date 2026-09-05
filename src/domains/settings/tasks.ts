@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,7 +11,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const taskGetSchema = z.object({
@@ -69,49 +69,9 @@ const taskListSchema = dateFilterParams(
   ),
 );
 
-const taskCreateSchema = z.object({
-  reportedById: z.number().int().optional().describe("ID of the person who reported the task"),
-  assignedToId: z.number().int().optional().describe("ID of the assignee"),
-  isClosed: z.boolean().optional().describe("Whether the task is already closed"),
-  status: z.string().optional().describe("Task status"),
-  name: z.string().describe("Task name"),
-  businessUnitId: z.number().int().optional().describe("Business unit ID"),
-  employeeTaskTypeId: z.number().int().optional().describe("Employee task type ID"),
-  employeeTaskSourceId: z.number().int().optional().describe("Employee task source ID"),
-  employeeTaskResolutionId: z.number().int().optional().describe("Employee task resolution ID"),
-  reportedDate: z.string().optional().describe("Date the task was reported"),
-  completeBy: z.string().optional().describe("Target completion date"),
-  startedOn: z.string().optional().describe("Task start date"),
-  involvedEmployeeIdList: z
-    .array(z.number().int())
-    .optional()
-    .describe("List of involved employee IDs"),
-  customerId: z.number().int().optional().describe("Customer ID"),
-  jobId: z.number().int().optional().describe("Job ID"),
-  projectId: z.number().int().optional().describe("Project ID"),
-  description: z.string().optional().describe("Task description"),
-  priority: z.string().optional().describe("Task priority"),
-  customerName: z.string().optional().describe("Customer name"),
-  jobNumber: z.string().optional().describe("Job number"),
-  refundIssued: z.number().optional().describe("Refund issued amount"),
-});
+const taskCreateSchema = officialRequestSchema("Tasks_Create") as z.ZodObject<z.ZodRawShape>;
 
-const taskCreateSubtaskSchema = z.object({
-  id: z.number().int().describe("Parent task ID"),
-  body: z
-    .object({
-      name: z.string().optional().describe("Subtask name"),
-      description: z.string().optional().describe("Subtask description"),
-      assignedToId: z.number().int().optional().describe("Assigned employee ID"),
-      status: z.string().optional().describe("Subtask status"),
-      priority: z.string().optional().describe("Subtask priority"),
-      completeBy: z.string().optional().describe("Target completion date"),
-      isClosed: z.boolean().optional().describe("Whether the subtask is closed"),
-    })
-    .passthrough()
-    .optional()
-    .describe("Subtask payload"),
-});
+const taskCreateSubtaskSchema = (officialRequestSchema("Tasks_CreateSubtask") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
 export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
     name: "settings_tasks_get",
@@ -129,7 +89,7 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -182,7 +142,7 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -200,7 +160,7 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.post("/tenant/{tenant}/tasks", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -213,15 +173,15 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
     schema: taskCreateSubtaskSchema.shape,
     handler: async (params) => {
       const input = taskCreateSubtaskSchema.parse(params);
+      const { id, ...body } = input;
 
       try {
         const data = await client.post(
-          `/tenant/{tenant}/tasks/${input.id}/subtasks`,
-          input.body ? buildParams(input.body) : undefined,
+          `/tenant/{tenant}/tasks/${id}/subtasks`, body,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

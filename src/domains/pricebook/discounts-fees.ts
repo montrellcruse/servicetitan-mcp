@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import { discountAndFeePayloadSchema } from "./schemas.js";
 
@@ -79,7 +78,7 @@ export function registerDiscountAndFeeTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -97,7 +96,7 @@ export function registerDiscountAndFeeTools(
         const data = await client.get(`/tenant/{tenant}/discounts-and-fees`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -117,7 +116,7 @@ export function registerDiscountAndFeeTools(
         const data = await client.post(`/tenant/{tenant}/discounts-and-fees`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -144,7 +143,7 @@ export function registerDiscountAndFeeTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -164,7 +163,7 @@ export function registerDiscountAndFeeTools(
         await client.delete(`/tenant/{tenant}/discounts-and-fees/${id}`);
         return toolResult({ success: true, message: "Discount and fee deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

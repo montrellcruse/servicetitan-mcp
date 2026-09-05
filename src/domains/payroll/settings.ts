@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const employeeTypeSchema = z.enum(["Technician", "Employee"]);
@@ -91,7 +90,7 @@ export function registerPayrollSettingsTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -112,7 +111,7 @@ export function registerPayrollSettingsTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -143,7 +142,7 @@ export function registerPayrollSettingsTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -163,7 +162,7 @@ export function registerPayrollSettingsTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -184,7 +183,7 @@ export function registerPayrollSettingsTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

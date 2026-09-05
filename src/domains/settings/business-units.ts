@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const businessUnitUpdateSchema = z.object({
@@ -73,7 +72,7 @@ export function registerBusinessUnitTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -91,7 +90,7 @@ export function registerBusinessUnitTools(
         const data = await client.get(`/tenant/{tenant}/business-units`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -115,7 +114,7 @@ export function registerBusinessUnitTools(
         const data = await client.patch(`/tenant/{tenant}/business-units/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

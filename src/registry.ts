@@ -6,11 +6,16 @@ import { z } from "zod";
 import { type AuditEntry, AuditLogger, sanitizeParams } from "./audit.js";
 import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
+import { assertWritePolicy, ExperimentalWritesDisabledError } from "./config.js";
+import { isUnsupportedTool, UNSUPPORTED_TOOLS } from "./contracts/index.js";
+import { withRequestContext } from "./request-context.js";
+import { ResultStore } from "./result-store.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
-import { toolError, toolResult } from "./utils.js";
+import { getResponseDeliveryFailure, toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
+export const EXPERIMENTAL_MUTATION_NOTICE = "EXPERIMENTAL: This mutation has not been verified against a live ServiceTitan Integration environment. ";
 export type ToolAnnotationOverrides = Omit<ToolAnnotations, "readOnlyHint">;
 
 /**
@@ -63,6 +68,7 @@ export interface ToolHandlerExtra {
     clientId?: string;
     extra?: Record<string, unknown>;
   };
+  signal?: AbortSignal;
   sessionId?: string;
   _meta?: Record<string, unknown>;
   requestInfo?: {
@@ -78,13 +84,17 @@ export class ToolRegistry {
   private readonly registeredTools: ToolDefinition[] = [];
   private readonly registeredToolNames = new Set<string>();
   private client: ServiceTitanClient | null = null;
+  private activeCalls = 0;
+  private readonly resultStore = new ResultStore();
+  private readonly unavailableTools: Record<string, string> = {};
+  private readonly seenToolNames = new Set<string>();
 
   constructor(
     private readonly server: McpServer,
     private readonly config: ServiceTitanConfig,
     private readonly logger: Logger,
     private readonly auditLogger: AuditLogger = new AuditLogger(logger),
-  ) {}
+  ) { assertWritePolicy(config); }
 
   attachClient(client: ServiceTitanClient): void {
     this.client = client;
@@ -98,8 +108,45 @@ export class ToolRegistry {
     return this.config.timezone;
   }
 
+  get reportBindings(): NonNullable<ServiceTitanConfig["reportBindings"]> {
+    return this.config.reportBindings ?? {};
+  }
+
+  getUnavailableTools(): Record<string, string> { return { ...this.unavailableTools }; }
+
+  clearResults(): void { this.resultStore.clear(); }
+  readResult(resultId: string, offset: number): Record<string, unknown> {
+    // Worst-case JSON escaping and duplicated text/structured content stay within the response budget.
+    return this.resultStore.read(resultId, offset, Math.max(1, Math.floor((this.config.maxResponseChars - 180) / 16)));
+  }
+
+
+  validateSelection(): void {
+    const missing = (this.config.enabledTools ?? []).filter(name => !this.seenToolNames.has(name));
+    if (missing.length) throw new Error(`ST_TOOLS includes unknown tools: ${missing.join(", ")}`);
+    const unavailable = (this.config.enabledTools ?? []).filter(name => this.unavailableTools[name]);
+    if (unavailable.length) throw new Error(`ST_TOOLS includes unavailable tools: ${unavailable.map(name => `${name} (${this.unavailableTools[name]})`).join(", ")}`);
+  }
+
   register(tool: ToolDefinition): void {
+    assertWritePolicy(this.config);
     const domain = tool.domain.toLowerCase();
+    this.seenToolNames.add(tool.name);
+    const profiles: Record<string, readonly string[]> = {
+      crm: ["crm"], dispatch: ["dispatch", "scheduling", "people", "settings"],
+      analytics: ["intelligence", "reporting", "settings"],
+    };
+    const profileDomains = profiles[this.config.toolProfile ?? "full"];
+    const reason = isUnsupportedTool(tool.name) ? UNSUPPORTED_TOOLS[tool.name].reason
+      : this.config.readonlyMode && tool.operation !== "read" ? "Readonly mode: mutation not available"
+      : domain !== "_system" && profileDomains && !profileDomains.includes(domain) ? "Excluded by tool profile"
+      : domain !== "_system" && this.config.enabledTools && !this.config.enabledTools.includes(tool.name) ? "Excluded by tool allowlist"
+      : null;
+    if (reason) {
+      this.unavailableTools[tool.name] = reason;
+      this.skipped += 1;
+      return;
+    }
 
     if (
       domain !== "_system" &&
@@ -118,6 +165,7 @@ export class ToolRegistry {
     const wrappedTool = this.wrapTool({
       ...tool,
       domain,
+      description: tool.operation === "read" ? tool.description : EXPERIMENTAL_MUTATION_NOTICE + tool.description,
     });
 
     if (this.registeredToolNames.has(wrappedTool.name)) {
@@ -131,6 +179,7 @@ export class ToolRegistry {
       {
         description: wrappedTool.description,
         inputSchema: wrappedTool.schema,
+        outputSchema: z.object({}).passthrough(),
         annotations: {
           ...defaultAnnotations,
           ...wrappedTool.annotations,
@@ -229,7 +278,7 @@ export class ToolRegistry {
      * transport or proxy layer. ST_ALLOWED_CALLERS adds a narrow allowlist check
      * against caller identity only when the MCP transport exposes one.
      */
-    const wrappedHandler = async (
+    const executeHandler = async (
       params: unknown,
       extra?: ToolHandlerExtra,
     ): Promise<ToolResponse> => {
@@ -250,6 +299,10 @@ export class ToolRegistry {
         return toolError("Readonly mode: operation not permitted");
       }
 
+      if (isMutating && this.config.experimentalWrites !== true) {
+        return toolError(new ExperimentalWritesDisabledError());
+      }
+
       if (isWrite && this.config.confirmWrites && paramRecord._confirmed !== true) {
         return toolError(
           "Write confirmation required. Re-call with _confirmed: true to proceed.",
@@ -260,38 +313,37 @@ export class ToolRegistry {
         return toolResult(this.buildConfirmationPreview(tool, paramRecord));
       }
 
+      let result: ToolResponse;
       try {
-        const result = await originalHandler(executionParams, extra);
-
-        if (shouldAudit) {
-          this.auditLogger.log(
-            this.buildAuditEntry(tool, executionParams, !result.isError, result),
-          );
-        }
-
-        return result;
+        result = isMutating
+          ? await withRequestContext({ mutatingOperation: true }, () => originalHandler(executionParams, extra))
+          : await originalHandler(executionParams, extra);
       } catch (error: unknown) {
-        if (shouldAudit) {
-          this.auditLogger.log(
-            this.buildAuditEntry(
-              tool,
-              executionParams,
-              false,
-              undefined,
-              error instanceof Error ? error.message : String(error),
-            ),
-          );
-        }
-
-        throw error;
+        result = toolError(error);
       }
+      // Auditing observes the business outcome; it must never replace that
+      // outcome or re-enter the handler failure path after a committed write.
+      if (shouldAudit) this.auditResult(tool, executionParams, result);
+      return result;
     };
 
-    return {
-      ...tool,
-      schema,
-      handler: wrappedHandler,
+    const wrappedHandler = async (params: unknown, extra?: ToolHandlerExtra): Promise<ToolResponse> => {
+      const deadline = new AbortController();
+      const timer = setTimeout(() => deadline.abort(new Error("Tool execution deadline exceeded")), this.config.toolTimeoutMs ?? 900_000);
+      timer.unref();
+      const signal = extra?.signal ? AbortSignal.any([extra.signal, deadline.signal]) : deadline.signal;
+      try {
+        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, storeOversized: payload => this.resultStore.put(payload) }, async () => {
+          if (signal.aborted) return toolError("Tool execution cancelled");
+          if (this.activeCalls >= (this.config.maxConcurrentToolCalls ?? 16)) return toolError("Server is busy; retry after active tool calls complete");
+          this.activeCalls += 1;
+          try { return await executeHandler(params, { ...extra, signal }); }
+          finally { this.activeCalls -= 1; }
+        });
+      } finally { clearTimeout(timer); }
     };
+
+    return { ...tool, schema, handler: wrappedHandler };
   }
 
   private toRecord(params: unknown): Record<string, unknown> {
@@ -331,8 +383,6 @@ export class ToolRegistry {
 
   private extractCallerIdentity(extra?: ToolHandlerExtra): string | null {
     const authExtra = this.toRecord(extra?.authInfo?.extra);
-    const requestMeta = this.toRecord(extra?._meta);
-    const headers = this.normalizeHeaders(extra?.requestInfo?.headers);
 
     const candidates = [
       extra?.authInfo?.clientId,
@@ -341,16 +391,6 @@ export class ToolRegistry {
       this.readString(authExtra, "username"),
       this.readString(authExtra, "email"),
       this.readString(authExtra, "sub"),
-      this.readString(requestMeta, "caller"),
-      this.readString(requestMeta, "user"),
-      this.readString(requestMeta, "username"),
-      this.readString(requestMeta, "email"),
-      headers["x-caller-id"],
-      headers["x-user-id"],
-      headers["x-user-email"],
-      headers["x-forwarded-user"],
-      headers["x-auth-request-email"],
-      headers["x-ms-client-principal-name"],
     ];
 
     for (const candidate of candidates) {
@@ -361,21 +401,6 @@ export class ToolRegistry {
     }
 
     return null;
-  }
-
-  private normalizeHeaders(
-    headers: Record<string, string | string[] | undefined> | undefined,
-  ): Record<string, string | undefined> {
-    if (!headers) {
-      return {};
-    }
-
-    return Object.fromEntries(
-      Object.entries(headers).map(([key, value]) => [
-        key.toLowerCase(),
-        Array.isArray(value) ? value[0] : value,
-      ]),
-    );
   }
 
   private readString(record: Record<string, unknown>, key: string): string | undefined {
@@ -411,6 +436,25 @@ export class ToolRegistry {
     };
   }
 
+  private auditResult(tool: ToolDefinition, params: Record<string, unknown>, result: ToolResponse): void {
+    try {
+      // Entry construction can fail too (for example, an embedder's getter).
+      // Observe asynchronous adapters without delaying the business response.
+      const pending = this.auditLogger.log(this.buildAuditEntry(tool, params, !result.isError, result));
+      void Promise.resolve(pending).catch(() => this.reportAuditFailure());
+    } catch {
+      this.reportAuditFailure();
+    }
+  }
+
+  private reportAuditFailure(): void {
+    try {
+      // Do not forward sink errors, entry data, or results to another sink.
+      // A broken diagnostic adapter must not recurse or reject unhandled.
+      void Promise.resolve(this.logger.error("Audit recording failed; business result preserved.")).catch(() => {});
+    } catch { /* No functioning diagnostic sink is available. */ }
+  }
+
   private buildAuditEntry(
     tool: ToolDefinition,
     params: Record<string, unknown>,
@@ -418,6 +462,8 @@ export class ToolRegistry {
     result?: ToolResponse,
     thrownError?: string,
   ): AuditEntry {
+    const deliveryFailure = result ? getResponseDeliveryFailure(result) : undefined;
+    const outcomeUnknown = (result?.structuredContent as { error?: { outcomeUnknown?: boolean } } | undefined)?.error?.outcomeUnknown === true;
     return {
       timestamp: new Date().toISOString(),
       tool: tool.name,
@@ -426,7 +472,9 @@ export class ToolRegistry {
       resource: this.extractResource(tool.name),
       resourceId: this.extractResourceId(params),
       params: sanitizeParams(params),
-      success,
+      success: deliveryFailure?.mutationCompleted === true ? true : success,
+      ...(deliveryFailure ? { deliveryError: deliveryFailure.code } : {}),
+      ...(outcomeUnknown ? { outcomeUnknown: true } : {}),
       error: thrownError ?? this.extractResultError(result),
     };
   }

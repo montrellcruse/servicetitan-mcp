@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
   dateFilterParams,
-  getErrorMessage,
   paginationParams,
   sortParam,
   toolError,
@@ -135,26 +135,8 @@ const customerNotesListSchema = dateFilterParams(
   ),
 );
 
-const customerCreateNoteSchema = z.object({
-  id: z.number().int().describe("Customer ID"),
-  text: z.string().describe("Note text"),
-  isPinned: z.boolean().optional().describe("Pinned flag"),
-  createdById: z.number().int().optional().describe("Created by user ID"),
-});
-
-const customerCreateSchema = z.object({
-  name: z.string().describe("Customer name"),
-  type: z.string().optional().describe("Customer type"),
-  address: customerAddressSchema.optional().describe("Customer address"),
-  customFields: z.array(customerCustomFieldSchema).optional().describe("Custom fields"),
-  balance: z.number().optional().describe("Customer balance"),
-  tagTypeIds: z.array(z.number().int()).optional().describe("Tag type IDs"),
-  doNotMail: z.boolean().optional().describe("Do not mail flag"),
-  doNotService: z.boolean().optional().describe("Do not service flag"),
-  externalData: z.array(externalDataSchema).optional().describe("External data entries"),
-  locations: z.array(customerLocationSchema).optional().describe("Locations"),
-  contacts: z.array(customerContactSchema).optional().describe("Contacts"),
-});
+const customerCreateNoteSchema = (officialRequestSchema("Customers_CreateNote") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
+const customerCreateSchema = officialRequestSchema("Customers_Create") as z.ZodObject<z.ZodRawShape>;
 
 const customerContactsListSchema = paginationParams(
   z.object({
@@ -162,13 +144,7 @@ const customerContactsListSchema = paginationParams(
   }),
 );
 
-const customerCreateContactSchema = z.object({
-  id: z.number().int().describe("Customer ID"),
-  type: z.string().optional().describe("Contact type"),
-  value: z.string().optional().describe("Contact value"),
-  memo: z.string().optional().describe("Contact memo"),
-  phoneSettings: phoneSettingsSchema.optional().describe("Phone settings"),
-});
+const customerCreateContactSchema = (officialRequestSchema("Customers_CreateContact") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
 
 const customerModifiedContactsListSchema = dateFilterParams(
   paginationParams(
@@ -204,7 +180,7 @@ export function registerCustomerTools(
         const data = await client.get(`/tenant/{tenant}/customers/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -222,7 +198,7 @@ export function registerCustomerTools(
         const data = await client.patch(`/tenant/{tenant}/customers/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -269,7 +245,7 @@ export function registerCustomerTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -299,7 +275,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -311,21 +287,17 @@ export function registerCustomerTools(
     description: "Create a note for a customer",
     schema: customerCreateNoteSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof customerCreateNoteSchema>;
+      const input = customerCreateNoteSchema.parse(params);
+      const { id, ...body } = input;
 
       try {
         const data = await client.post(
-          `/tenant/{tenant}/customers/${input.id}/notes`,
-          buildParams({
-            text: input.text,
-            isPinned: input.isPinned,
-            createdById: input.createdById,
-          }),
+          `/tenant/{tenant}/customers/${id}/notes`, body,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -337,29 +309,17 @@ export function registerCustomerTools(
     description: "Create a customer",
     schema: customerCreateSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof customerCreateSchema>;
+      const input = customerCreateSchema.parse(params);
 
       try {
         const data = await client.post(
           "/tenant/{tenant}/customers",
-          buildParams({
-            name: input.name,
-            type: input.type,
-            address: input.address,
-            customFields: input.customFields,
-            balance: input.balance,
-            tagTypeIds: input.tagTypeIds,
-            doNotMail: input.doNotMail,
-            doNotService: input.doNotService,
-            externalData: input.externalData,
-            locations: input.locations,
-            contacts: input.contacts,
-          }),
+          input,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -380,7 +340,7 @@ export function registerCustomerTools(
           message: "Customer note deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -406,7 +366,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -427,7 +387,7 @@ export function registerCustomerTools(
           message: "Customer contact deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -439,27 +399,17 @@ export function registerCustomerTools(
     description: "Create a customer contact",
     schema: customerCreateContactSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof customerCreateContactSchema>;
+      const input = customerCreateContactSchema.parse(params);
+      const { id, ...body } = input;
 
       try {
         const data = await client.post(
-          `/tenant/{tenant}/customers/${input.id}/contacts`,
-          buildParams({
-            type: input.type,
-            value: input.value,
-            memo: input.memo,
-            phoneSettings: input.phoneSettings
-              ? buildParams({
-                  phoneNumber: input.phoneSettings.phoneNumber,
-                  doNotText: input.phoneSettings.doNotText,
-                })
-              : undefined,
-          }),
+          `/tenant/{tenant}/customers/${id}/contacts`, body,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -479,7 +429,7 @@ export function registerCustomerTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -510,7 +460,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -531,7 +481,7 @@ export function registerCustomerTools(
           message: "Customer tag deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -562,7 +512,7 @@ export function registerCustomerTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

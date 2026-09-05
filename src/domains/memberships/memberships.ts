@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,7 +11,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 const membershipStatusEnum = z.enum([
   "Active",
@@ -34,38 +34,7 @@ const membershipCustomFieldSchema = z.object({
   value: z.string().optional().describe("Custom field value"),
 });
 
-const membershipPayloadSchema = z.object({
-  customerId: z.number().int().optional().describe("Customer ID for membership sale"),
-  locationId: z.number().int().optional().describe("Location ID for membership sale"),
-  membershipTypeId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Membership type ID to sell"),
-  soldOn: z.string().optional().describe("Date/time when the membership was sold"),
-  soldById: z.number().int().optional().describe("User ID who sold the membership"),
-  campaignId: z.number().int().optional().describe("Campaign ID attributed to the sale"),
-  businessUnitId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Business unit ID associated with the membership"),
-  duration: z
-    .number()
-    .int()
-    .optional()
-    .describe("Membership duration in months for fixed-term memberships"),
-  billingFrequency: billingFrequencyEnum
-    .optional()
-    .describe("Billing frequency for recurring membership billing"),
-  active: z.boolean().optional().describe("Whether the membership is active"),
-  autoRenew: z.boolean().optional().describe("Whether the membership auto-renews"),
-  memo: z.string().optional().describe("Internal memo for the membership"),
-  customFields: z
-    .array(membershipCustomFieldSchema)
-    .optional()
-    .describe("Custom field values for the membership"),
-});
+const membershipPayloadSchema = officialRequestSchema("CustomerMemberships_Create") as z.ZodObject<z.ZodRawShape>;
 
 const membershipsListSchema = dateFilterParams(
   paginationParams(
@@ -91,12 +60,7 @@ const membershipIdSchema = z.object({
   id: z.number().int().describe("Customer membership ID"),
 });
 
-const membershipUpdateSchema = membershipPayloadSchema.extend({
-  id: z.number().int().describe("Customer membership ID"),
-  status: membershipStatusEnum
-    .optional()
-    .describe("Updated membership status value"),
-});
+const membershipUpdateSchema = (officialRequestSchema("CustomerMemberships_Update") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
 
 const membershipCustomFieldsListSchema = dateFilterParams(
   paginationParams(
@@ -136,7 +100,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -167,7 +131,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -185,7 +149,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
         const data = await client.get(`/tenant/{tenant}/memberships/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -207,7 +171,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -230,7 +194,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -248,7 +212,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
         const data = await client.get(`/tenant/{tenant}/memberships/${id}/status-changes`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

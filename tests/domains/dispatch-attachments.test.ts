@@ -13,7 +13,7 @@ function createConfig(): ServiceTitanConfig {
     appKey: "app-key",
     tenantId: "tenant-id",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,

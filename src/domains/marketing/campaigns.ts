@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const campaignPayloadSchema = z
@@ -78,7 +77,7 @@ export function registerMarketingCampaignTools(
         const data = await client.post("/tenant/{tenant}/campaigns", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -96,7 +95,7 @@ export function registerMarketingCampaignTools(
         const data = await client.get(`/tenant/{tenant}/campaigns/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -131,7 +130,7 @@ export function registerMarketingCampaignTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -149,7 +148,7 @@ export function registerMarketingCampaignTools(
         const data = await client.patch(`/tenant/{tenant}/campaigns/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -177,7 +176,7 @@ export function registerMarketingCampaignTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

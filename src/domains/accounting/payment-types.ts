@@ -5,24 +5,22 @@ import type { ToolRegistry } from "../../registry.js";
 import {
   activeFilterParam,
   buildParams,
-  dateFilterParams,
   paginationParams,
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const paymentTypeGetSchema = z.object({
   id: z.number().int().describe("Payment type ID"),
 });
 
 const paymentTypesListSchema = paginationParams(
-  dateFilterParams(
-    z.object({
-      ids: z.string().optional().describe("Comma-delimited payment type IDs (max 50)"),
-      ...activeFilterParam(),
-    }),
-  ),
+  z.object({
+    ids: z.string().optional().describe("Comma-delimited payment type IDs (max 50)"),
+    ...activeFilterParam(),
+    createdBefore: z.string().datetime({ offset: true }).optional().describe("Return records created before this timestamp"),
+    createdOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return records created on or after this timestamp"),
+  }),
 );
 
 
@@ -43,7 +41,7 @@ export function registerPaymentTypeTools(
         const data = await client.get(`/tenant/{tenant}/payment-types/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -73,7 +71,7 @@ export function registerPaymentTypeTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

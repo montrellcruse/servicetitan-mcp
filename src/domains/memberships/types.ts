@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 const billingFrequencyEnum = z.enum([
   "OneTime",
@@ -68,7 +67,7 @@ export function registerMembershipTypeTools(
         const data = await client.get(`/tenant/{tenant}/membership-types/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -103,7 +102,7 @@ export function registerMembershipTypeTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -123,7 +122,7 @@ export function registerMembershipTypeTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -141,7 +140,7 @@ export function registerMembershipTypeTools(
         const data = await client.get(`/tenant/{tenant}/membership-types/${id}/discounts`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -163,7 +162,7 @@ export function registerMembershipTypeTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

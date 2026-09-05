@@ -235,7 +235,8 @@ beforeAll(async () => {
     ServiceTitanClient: class MockServiceTitanClient {},
   }));
 
-  vi.doMock("../src/config.js", () => ({
+  vi.doMock("../src/config.js", async () => ({
+    ...await vi.importActual<typeof import("../src/config.js")>("../src/config.js"),
     loadConfig: () => ({
       clientId: "test-client-id",
       clientSecret: "test-client-secret",
@@ -269,6 +270,8 @@ beforeAll(async () => {
         return { registered: MOCK_TOOL_COUNT };
       }
       logSummary(): void {}
+      validateSelection(): void {}
+      clearResults(): void {}
     },
   }));
 
@@ -290,6 +293,17 @@ afterEach(() => {
 });
 
 describe("SSE transport HTTP handler", () => {
+  it("logs only pathnames for health and rejected requests, without query credentials", async () => {
+    const health = await dispatch({ url: "/health?api_key=QUERY_CANARY&data=OPAQUE_CANARY" });
+    const rejected = await dispatch({ url: "/sse?access_token=TOKEN_CANARY" });
+    expect(health.res.statusCode).toBe(200);
+    expect(rejected.res.statusCode).toBe(401);
+    const log = loggerInstances[0]!.info;
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/\] GET \/health$/));
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/\] GET \/sse$/));
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/QUERY_CANARY|OPAQUE_CANARY|TOKEN_CANARY|\?/);
+  });
+
   it("GET /sse creates a transport and sets SSE headers", async () => {
     const { req, res } = await dispatch({
       method: "GET",
@@ -451,6 +465,7 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("ignores a stale disconnect from the previously active transport", async () => {
+    const closeSpy = vi.spyOn(serverInstances[0]!, "close");
     await dispatch({
       method: "GET",
       url: "/sse",
@@ -470,11 +485,11 @@ describe("SSE transport HTTP handler", () => {
     expect(secondTransport).toBeDefined();
     expect(secondTransport?.sessionId).not.toBe(firstTransport?.sessionId);
 
-    const closeCallsBefore = serverInstances[0]?.close.mock.calls.length ?? 0;
+    const closeCallsBefore = closeSpy.mock.calls.length ?? 0;
     firstTransport!.emitClose();
     await Promise.resolve();
 
-    expect(serverInstances[0]?.close.mock.calls.length).toBe(closeCallsBefore);
+    expect(closeSpy.mock.calls.length).toBe(closeCallsBefore);
 
     const { res } = await dispatch({
       method: "POST",

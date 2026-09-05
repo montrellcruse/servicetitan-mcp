@@ -1,0 +1,438 @@
+{
+  "retrievedOn": "2026-09-04",
+  "catalog": "https://developer.servicetitan.io/api/docs/apis",
+  "documents": [
+    {
+      "file": "tenant-accounting-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-accounting-v2",
+      "sha256": "434277e30f034c2b2adad00acf60094431d41a4fff1cb5290bc31fed1bc9634f",
+      "bytes": 582770,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/accounting/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/accounting/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 71
+    },
+    {
+      "file": "tenant-crm-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-crm-v2",
+      "sha256": "0366828a0238217d37818754b69a42462c54c04f18c8d91c491ca533e063e450",
+      "bytes": 522495,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/crm/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/crm/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 86
+    },
+    {
+      "file": "tenant-customer-interactions-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-customer-interactions-v2",
+      "sha256": "eae01afa3788db2aa51ecfd821df4af5c925a8f4a75e816bf67e099e0d36f577",
+      "bytes": 21979,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/customer-interactions/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/customer-interactions/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 4
+    },
+    {
+      "file": "tenant-dispatch-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-dispatch-v2",
+      "sha256": "81711d1e3ee83b062890813c543fd1fc25656be2091d6f6053be3dda58411f4f",
+      "bytes": 213118,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/dispatch/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/dispatch/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 41
+    },
+    {
+      "file": "tenant-equipment-systems-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-equipment-systems-v2",
+      "sha256": "f55903d88541202e6a4aa4ef0ebd5713d30a77dbf66020b011d72501a6676749",
+      "bytes": 145510,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/equipmentsystems/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/equipmentsystems/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 21
+    },
+    {
+      "file": "tenant-findings-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-findings-v2",
+      "sha256": "5a67a47f72f8ad64e23014dab18f7b671d24d06e1f323d4129f225941ce356eb",
+      "bytes": 63106,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/findings/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/findings/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 11
+    },
+    {
+      "file": "tenant-forms-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-forms-v2",
+      "sha256": "fd63366094f0f296295b2102965a61deea02cc5361b4984c46c90b82c52e5363",
+      "bytes": 44469,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/forms/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/forms/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 5
+    },
+    {
+      "file": "tenant-inventory-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-inventory-v2",
+      "sha256": "616bf422c5fe2aba547fcaeedb2bf7b3a661cf042ac7e782168b8798d592281b",
+      "bytes": 437618,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/inventory/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/inventory/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 51
+    },
+    {
+      "file": "tenant-jbce-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-jbce-v2",
+      "sha256": "4141c123036257d059b8a86a5a031f19828697d56a74197812058726b7da18fe",
+      "bytes": 10251,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/jbce/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/jbce/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 1
+    },
+    {
+      "file": "tenant-jpm-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-jpm-v2",
+      "sha256": "d33f82578921a912f9960498e8844c2742c7353dd0520f78fb5098878ae749cf",
+      "bytes": 414918,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/jpm/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/jpm/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 71
+    },
+    {
+      "file": "tenant-marketing-ads-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-marketing-ads-v2",
+      "sha256": "84a50e8c586d2aec6f97fcd08cf9ffa58a5b367aaa0cfa80c8340a69929b3de8",
+      "bytes": 52078,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/marketingads/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/marketingads/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 7
+    },
+    {
+      "file": "tenant-marketing-reputation-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-marketing-reputation-v2",
+      "sha256": "8f02a6b314a01f9fc64eca0c6a068572db43d5b662e4004d5afe445db1c49e30",
+      "bytes": 16951,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/marketingreputation/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/marketingreputation/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 1
+    },
+    {
+      "file": "tenant-marketing-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-marketing-v2",
+      "sha256": "b58041c53a5d829aa5202903e900c7da60b3db95c67ea761f21a3160c24a972a",
+      "bytes": 63824,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/marketing/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/marketing/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 16
+    },
+    {
+      "file": "tenant-memberships-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-memberships-v2",
+      "sha256": "fe593c4f5168abfc95a24bd259af8679c075b522782a130ac91937ff2bff6b01",
+      "bytes": 252011,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/memberships/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/memberships/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 30
+    },
+    {
+      "file": "tenant-payroll-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-payroll-v2",
+      "sha256": "752391543b361bc08cadbeca36639281474a6b997df21782b015a620a2ec492f",
+      "bytes": 244268,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/payroll/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/payroll/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 34
+    },
+    {
+      "file": "tenant-pricebook-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-pricebook-v2",
+      "sha256": "139b62b1963b8ee11aabc4ba6e7ed57a2785578512de373a81697b405f92b3d1",
+      "bytes": 475515,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/pricebook/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/pricebook/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 40
+    },
+    {
+      "file": "tenant-reporting-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-reporting-v2",
+      "sha256": "a6ba5b46e945c938dd0f278ea7abbc11d81dd73e4dabee9a19f003c5bfe8f47f",
+      "bytes": 48360,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/reporting/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/reporting/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 8
+    },
+    {
+      "file": "tenant-salestech-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-salestech-v2",
+      "sha256": "59a6e383ca777d70da8ecacb7f59dc2b68207b495dc6a48ddcd019ee892ae162",
+      "bytes": 155406,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/sales/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/sales/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 24
+    },
+    {
+      "file": "tenant-scheduling-pro-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-scheduling-pro-v2",
+      "sha256": "9e10b4a89b918793423e6b4e1cdac5e005ff8e0132fde75c47748a8db2f3d70e",
+      "bytes": 75416,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/schedulingpro/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/schedulingpro/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 5
+    },
+    {
+      "file": "tenant-service-agreements-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-service-agreements-v2",
+      "sha256": "eeb0daa7bcc4e2a02a25f35ed1eec533e43f3fcb1d695180ffcb71bc1ff77e1f",
+      "bytes": 66812,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/service-agreements/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/service-agreements/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 4
+    },
+    {
+      "file": "tenant-settings-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-settings-v2",
+      "sha256": "f2115c198ab6d97fca7c71561a32ca9fada0e184df12bbcd1d983d71aa2bf19e",
+      "bytes": 206876,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/settings/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/settings/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 22
+    },
+    {
+      "file": "tenant-task-management-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-task-management-v2",
+      "sha256": "e4cd31a82c40441d5107fd5d840b054af131e85f8cf068f812d436a4aecf59cb",
+      "bytes": 56203,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/taskmanagement/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/taskmanagement/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 5
+    },
+    {
+      "file": "tenant-telecom.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-telecom",
+      "sha256": "7472e8b928a7570243e515c580185b90be2e53a0ce6e8607448804a6b47cf414",
+      "bytes": 106394,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/telecom",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/telecom",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 10
+    },
+    {
+      "file": "tenant-timesheets-v2.json",
+      "url": "https://developer.servicetitan.io/api/docs/apis/tenant-timesheets-v2",
+      "sha256": "901a60b666e0127d57d7c719dd9f2729b8c67b63c68a7c002bf3728f08773332",
+      "bytes": 109150,
+      "openapi": "3.1.0",
+      "servers": [
+        {
+          "url": "https://api.servicetitan.io/timesheets/v2",
+          "description": "Production"
+        },
+        {
+          "url": "https://api-integration.servicetitan.io/timesheets/v2",
+          "description": "Integration"
+        }
+      ],
+      "operationCount": 12
+    }
+  ]
+}

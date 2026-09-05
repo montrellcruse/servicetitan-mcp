@@ -30,7 +30,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     appKey: "app-key",
     tenantId: "tenant-id",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,
@@ -241,16 +241,9 @@ describe("accounting domain", () => {
     const { handlers, patchMock } = createContext({ readonlyMode: true });
     // Read tools stay available in readonly mode.
     expect(handlers.has("accounting_invoices_list")).toBe(true);
-    // Write-operation tools stay registered and are blocked by middleware.
-    expect(handlers.has("accounting_invoices_update")).toBe(true);
+    // Readonly discovery omits mutating tools entirely.
+    expect(handlers.has("accounting_invoices_update")).toBe(false);
 
-    const result = await getHandler(handlers, "accounting_invoices_update")({
-      id: 55,
-      payload: { memo: "should not patch" },
-    });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
     expect(patchMock).not.toHaveBeenCalled();
   });
 });

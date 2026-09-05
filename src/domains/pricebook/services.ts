@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import { serviceCreateInputSchema, serviceUpdateInputSchema } from "./schemas.js";
 
@@ -72,7 +71,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -90,7 +89,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.get(`/tenant/{tenant}/services`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -141,7 +140,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
         });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -198,7 +197,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
         });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -218,7 +217,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
         await client.delete(`/tenant/{tenant}/services/${id}`);
         return toolResult({ success: true, message: "Service deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

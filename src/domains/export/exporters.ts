@@ -8,12 +8,6 @@ const exportSchema = {
   includeRecentChanges: z.boolean().optional().describe("Include recent changes not yet committed"),
 };
 
-const exportDateSchema = {
-  ...exportSchema,
-  modifiedBefore: z.string().optional().describe("Filter: modified before this date (ISO 8601)"),
-  modifiedOnOrAfter: z.string().optional().describe("Filter: modified on or after this date (ISO 8601)"),
-};
-
 function registerExportTool(
   registry: ToolRegistry,
   client: ServiceTitanClient,
@@ -30,10 +24,10 @@ function registerExportTool(
     schema,
     handler: async (params: unknown) => {
       try {
-        const data = await client.get(path, buildParams(params as Record<string, unknown>));
+        const data = await client.get(path, buildParams(z.object(schema).parse(params)));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(error instanceof Error ? error.message : String(error));
+        return toolError(error);
       }
     },
   });
@@ -47,7 +41,7 @@ export function registerExportTools(client: ServiceTitanClient, registry: ToolRe
   registerExportTool(registry, client, "export_payments", "Export payments", "/tenant/{tenant}/export/payments");
   registerExportTool(registry, client, "export_adjustments", "Export adjustments", "/tenant/{tenant}/export/adjustments");
   registerExportTool(registry, client, "export_inventory_bills", "Export inventory bills", "/tenant/{tenant}/export/inventory-bills");
-  registerExportTool(registry, client, "export_payroll_adjustments", "Export payroll adjustments", "/tenant/{tenant}/export/payroll-adjustments", exportDateSchema);
+  registerExportTool(registry, client, "export_payroll_adjustments", "Export payroll adjustments", "/tenant/{tenant}/export/payroll-adjustments");
 
   // CRM exports
   registerExportTool(registry, client, "export_customers", "Export customers", "/tenant/{tenant}/export/customers");

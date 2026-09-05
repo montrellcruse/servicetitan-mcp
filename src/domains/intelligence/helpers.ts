@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 
 import type { ServiceTitanClient } from "../../client.js";
+import { getRequestContext, throwIfAborted } from "../../request-context.js";
 import { buildParams } from "../../utils.js";
 
 const DEFAULT_PAGE_SIZE = 500;
@@ -15,6 +16,7 @@ const DEFAULT_INTELLIGENCE_TIMEZONE = process.env.ST_TIMEZONE || "UTC";
 // In-flight dedup prevents concurrent identical calls from hitting the API twice.
 
 const INTEL_CACHE_TTL_MS = Number(process.env.ST_INTEL_CACHE_TTL_MS) || 5 * 60 * 1000;
+const MAX_INTEL_CACHE_ENTRIES = 256;
 
 interface IntelCacheEntry {
   value: unknown;
@@ -25,7 +27,17 @@ const intelCache = new Map<string, IntelCacheEntry>();
 const intelInflight = new Map<string, Promise<unknown>>();
 
 function intelCacheKey(toolName: string, args: unknown): string {
-  const argsStr = JSON.stringify(args, Object.keys(args as Record<string, unknown>).sort());
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (!isRecord(value)) return value;
+    return Object.fromEntries(Object.keys(value).sort().map((key) => [key, canonical(value[key])]));
+  };
+  const context = getRequestContext();
+  const argsStr = JSON.stringify(canonical({
+    args,
+    timezone: context.timezone ?? "UTC",
+    maxResponseChars: context.maxResponseChars ?? null,
+  }));
   return `${toolName}:${createHash("sha256").update(argsStr).digest("hex").slice(0, 16)}`;
 }
 
@@ -40,32 +52,72 @@ export async function withIntelCache<T>(
   fn: () => Promise<T>,
   ttlMs: number = INTEL_CACHE_TTL_MS,
 ): Promise<T> {
+  throwIfAborted(getRequestContext().signal);
   const key = intelCacheKey(toolName, args);
+  // A loader inherits its caller's AbortSignal. Sharing that promise would let
+  // one cancelled MCP call cancel an unrelated waiter.
+  const deduplicateInflight = getRequestContext().signal === undefined && getRequestContext().storeOversized === undefined;
+
+  const now = Date.now();
+  for (const [cacheKey, entry] of intelCache) {
+    if (entry.expiresAt <= now) intelCache.delete(cacheKey);
+  }
 
   // Check cache
   const cached = intelCache.get(key);
-  if (cached && cached.expiresAt > Date.now()) {
+  if (cached && cached.expiresAt > now) {
     return cached.value as T;
   }
 
   // Check in-flight dedup
-  const inflight = intelInflight.get(key);
+  const inflight = deduplicateInflight ? intelInflight.get(key) : undefined;
   if (inflight) {
     return inflight as Promise<T>;
   }
 
   // Execute and cache
   const promise = fn().then((result) => {
-    intelCache.set(key, { value: result, expiresAt: Date.now() + ttlMs });
-    intelInflight.delete(key);
+    throwIfAborted(getRequestContext().signal);
+    if (isCompleteSuccessfulResult(result)) {
+      while (intelCache.size >= MAX_INTEL_CACHE_ENTRIES) {
+        const oldest = intelCache.keys().next().value as string | undefined;
+        if (!oldest) break;
+        intelCache.delete(oldest);
+      }
+      intelCache.set(key, { value: result, expiresAt: Date.now() + ttlMs });
+    }
+    if (intelInflight.get(key) === promise) intelInflight.delete(key);
     return result;
   }).catch((err) => {
-    intelInflight.delete(key);
+    if (intelInflight.get(key) === promise) intelInflight.delete(key);
     throw err;
   });
 
-  intelInflight.set(key, promise);
+  if (deduplicateInflight && intelInflight.size < MAX_INTEL_CACHE_ENTRIES) intelInflight.set(key, promise);
   return promise;
+}
+
+function isCompleteSuccessfulResult(result: unknown): boolean {
+  if (!isRecord(result)) return true;
+  if (result.isError === true) return false;
+  if (isRecord(result.structuredContent)) {
+    const structured = result.structuredContent;
+    if (Array.isArray(structured._warnings) || structured.complete === false || structured.retrievalTool === "st_result_read") return false;
+  }
+  const content = result.content;
+  if (!Array.isArray(content)) return true;
+  for (const block of content) {
+    if (!isRecord(block) || typeof block.text !== "string") continue;
+    try {
+      const payload: unknown = JSON.parse(block.text);
+      if (isRecord(payload) && (Array.isArray(payload._warnings) || payload.complete === false || payload.retrievalTool === "st_result_read")) {
+        return false;
+      }
+    } catch {
+      // Non-JSON successful tool content has no intelligence completeness marker.
+    }
+  }
+  return true;
 }
 
 /** Clear the intelligence cache (useful for testing). */
@@ -155,6 +207,7 @@ export async function fetchAllPagesWithTotal<T>(
   let truncated = false;
 
   while (page <= maxPages) {
+    throwIfAborted(getRequestContext().signal);
     const response = await client.get(
       path,
       buildParams({
@@ -164,6 +217,11 @@ export async function fetchAllPagesWithTotal<T>(
         includeTotal: true,
       }),
     );
+    throwIfAborted(getRequestContext().signal);
+
+    if (!Array.isArray(response) && !(isRecord(response) && Array.isArray(response.data))) {
+      throw new Error(`Malformed paginated response from ${path}; expected an array or an object with a data array`);
+    }
 
     // Capture totalCount from the first page response
     if (page === 1 && isRecord(response) && typeof response.totalCount === "number") {
@@ -174,15 +232,15 @@ export async function fetchAllPagesWithTotal<T>(
     allData.push(...items);
 
     const hasMore = isRecord(response) && response.hasMore === true;
-    if (!hasMore || items.length === 0) {
+    if (hasMore && items.length === 0) {
+      throw new Error(`Pagination returned an empty page with hasMore=true for ${path}; refusing to return incomplete analytics`);
+    }
+    if (!hasMore) {
       break;
     }
 
     if (page === maxPages) {
-      // We're at the last allowed page and there are more results
-      console.warn(`Pagination truncated at ${maxPages} pages (${allData.length} items fetched). Increase ST_INTEL_MAX_PAGES for full coverage.`);
-      truncated = true;
-      break;
+      throw new Error(`Pagination exceeded ${maxPages} pages for ${path}; refusing to return incomplete analytics`);
     }
 
     page += 1;
@@ -191,11 +249,7 @@ export async function fetchAllPagesWithTotal<T>(
   return { data: allData, totalCount, _truncated: truncated || undefined };
 }
 
-/**
- * Fetch all pages in parallel by first probing page 1 for totalCount,
- * then fetching remaining pages concurrently.
- * Falls back to sequential if totalCount isn't available.
- */
+/** Compatibility name for bounded sequential pagination with visible failures. */
 export async function fetchAllPagesParallel<T>(
   client: ServiceTitanClient,
   path: string,
@@ -203,83 +257,12 @@ export async function fetchAllPagesParallel<T>(
   maxPages: number = DEFAULT_MAX_PAGES,
   warnings?: string[],
 ): Promise<T[]> {
-  // Fetch page 1 to get totalCount
-  const firstResponse = await client.get(
-    path,
-    buildParams({
-      ...params,
-      page: 1,
-      pageSize: DEFAULT_PAGE_SIZE,
-      includeTotal: true,
-    }),
-  );
-
-  const firstItems = extractItems<T>(firstResponse);
-  if (firstItems.length === 0) return [];
-
-  const hasMore = isRecord(firstResponse) && firstResponse.hasMore === true;
-  if (!hasMore) return firstItems;
-
-  // Calculate remaining pages
-  const totalCount = isRecord(firstResponse) && typeof firstResponse.totalCount === "number"
-    ? (firstResponse.totalCount as number)
-    : undefined;
-
-  let totalPages: number;
-  if (totalCount !== undefined) {
-    totalPages = Math.min(Math.ceil(totalCount / DEFAULT_PAGE_SIZE), maxPages);
-  } else {
-    // Fallback to sequential
-    return fetchAllPages<T>(client, path, params, maxPages, warnings);
-  }
-
-  if (totalPages <= 1) return firstItems;
-
-  // Fetch pages 2..N in parallel, tracking failures
-  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
-  for (let page = 2; page <= totalPages; page++) {
-    pagePromises.push(
-      client
-        .get(
-          path,
-          buildParams({
-            ...params,
-            page,
-            pageSize: DEFAULT_PAGE_SIZE,
-          }),
-        )
-        .then((response) => ({ items: extractItems<T>(response) }))
-        .catch((error) => ({ items: [] as T[], error: error as Error })),
-    );
-  }
-
-  const remainingPages = await Promise.all(pagePromises);
-  
-  // Log and surface page fetch failures
-  const failedPages = remainingPages.filter((r) => r.error);
-  if (failedPages.length > 0) {
-    const msg = `Failed to fetch ${failedPages.length}/${remainingPages.length} pages from ${path}. Results may be incomplete.`;
-    console.warn(msg);
-    warnings?.push(msg);
-  }
-
-  // Warn if pagination was truncated at max page limit
-  if (totalCount !== undefined && totalPages === maxPages && totalCount > maxPages * DEFAULT_PAGE_SIZE) {
-    const msg = `Pagination truncated: fetched ${maxPages * DEFAULT_PAGE_SIZE} of ${totalCount} items from ${path}. Increase ST_INTEL_MAX_PAGES for full coverage.`;
-    console.warn(msg);
-    warnings?.push(msg);
-  }
-
-  return [firstItems, ...remainingPages.map((r) => r.items)].flat();
+  // Preserve the compatibility export. Sequential pagination is deliberate:
+  // it stops at hasMore=false and never turns failed pages into missing rows.
+  return fetchAllPages<T>(client, path, params, maxPages, warnings);
 }
 
-/**
- * Fetch all pages blindly in parallel — fires pages 1..maxPages simultaneously
- * without a probe step to determine totalCount first.
- * Pages that return empty results are ignored.
- * Saves 1 sequential round-trip vs fetchAllPagesParallel.
- * Use only when you know roughly how many pages to expect.
- */
+/** Compatibility name; v3 follows hasMore and never performs blind fan-out. */
 export async function fetchAllPagesBlind<T>(
   client: ServiceTitanClient,
   path: string,
@@ -287,36 +270,9 @@ export async function fetchAllPagesBlind<T>(
   maxPages: number = DEFAULT_MAX_PAGES,
   warnings?: string[],
 ): Promise<T[]> {
-  // Fire all maxPages pages simultaneously
-  const pagePromises: Promise<{ items: T[]; error?: Error }>[] = [];
-  for (let page = 1; page <= maxPages; page++) {
-    pagePromises.push(
-      client
-        .get(
-          path,
-          buildParams({
-            ...params,
-            page,
-            pageSize: DEFAULT_PAGE_SIZE,
-          }),
-        )
-        .then((response) => ({ items: extractItems<T>(response) }))
-        .catch((error) => ({ items: [] as T[], error: error as Error })),
-    );
-  }
-
-  const results = await Promise.all(pagePromises);
-
-  // Log and surface page fetch failures
-  const failedPages = results.filter((r) => r.error);
-  if (failedPages.length > 0) {
-    const msg = `Failed to fetch ${failedPages.length}/${results.length} pages from ${path}. Results may be incomplete.`;
-    console.warn(msg);
-    warnings?.push(msg);
-  }
-
-  // Collect all non-empty pages in order
-  return results.flatMap((r) => r.items);
+  // Preserve the public helper while using the bounded, page-aware implementation.
+  // Blind fan-out hid page failures and made every request consume maxPages calls.
+  return fetchAllPages<T>(client, path, params, maxPages, warnings);
 }
 
 function extractItems<T>(response: unknown): T[] {
@@ -475,33 +431,23 @@ function parseDateInput(value: string, endOfDay: boolean, timezone = "UTC"): Dat
   }
 
   // For date-only values (YYYY-MM-DD), interpret as local midnight in the configured timezone.
-  const utcMidnight = new Date(
-    `${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}Z`,
-  );
+  const utcMidnight = new Date(`${value}T00:00:00.000Z`);
 
   if (Number.isNaN(utcMidnight.getTime())) {
     throw new Error(`Invalid date: ${value}`);
   }
 
   if (timezone === "UTC") {
-    return utcMidnight;
+    return endOfDay ? new Date(utcMidnight.getTime() + DAY_MS - 1) : utcMidnight;
   }
 
-  // Use start-of-day for offset calculation to avoid millisecond precision loss.
-  // getTimezoneOffsetMs reconstructs local time with second precision only,
-  // so computing the offset from the start-of-day instant avoids the 999ms drift
-  // that occurs when reconstructing from 23:59:59.999.
-  const startOfDay = new Date(`${value}T00:00:00.000Z`);
-  const offsetMs = getTimezoneOffsetMs(timezone, startOfDay);
-
-  // For end-of-day: compute start-of-next-day and subtract 1ms.
-  // This guarantees the boundary is exactly 23:59:59.999 in local time.
-  if (endOfDay) {
-    const nextDayUtc = new Date(startOfDay.getTime() + DAY_MS);
-    return new Date(nextDayUtc.getTime() - offsetMs - 1);
-  }
-
-  return new Date(startOfDay.getTime() - offsetMs);
+  const boundaryDate = endOfDay ? incrementDateString(value) : value;
+  const wallClockUtc = new Date(`${boundaryDate}T00:00:00.000Z`);
+  // Resolve the offset at the resulting instant, then repeat once because the
+  // first estimate can cross a DST boundary.
+  let instant = new Date(wallClockUtc.getTime() - getTimezoneOffsetMs(timezone, wallClockUtc));
+  instant = new Date(wallClockUtc.getTime() - getTimezoneOffsetMs(timezone, instant));
+  return endOfDay ? new Date(instant.getTime() - 1) : instant;
 }
 
 function incrementDateString(value: string): string {

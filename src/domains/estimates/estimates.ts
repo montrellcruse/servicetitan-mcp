@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import {
   estimateItemRequestSchema,
@@ -141,6 +140,9 @@ const estimateUpdateSchema = estimateInputSchema.extend({
 const estimateActionSchema = z.object({
   id: z.number().int().describe("Estimate ID"),
 });
+const estimateSellSchema = estimateActionSchema.extend({
+  soldBy: z.number().int().describe("ID of the employee who sold the estimate"),
+});
 
 const estimateExportSchema = z.object({
   from: z
@@ -167,7 +169,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/estimates/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -213,7 +215,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -238,7 +240,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         const data = await client.post("/tenant/{tenant}/estimates", payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -263,7 +265,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         const data = await client.put(`/tenant/{tenant}/estimates/${id}`, payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -273,15 +275,15 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     domain: "estimates",
     operation: "write",
     description: "Mark an estimate as sold",
-    schema: estimateActionSchema.shape,
+    schema: estimateSellSchema.shape,
     handler: async (params) => {
-      const { id } = estimateActionSchema.parse(params);
+      const { id, soldBy } = estimateSellSchema.parse(params);
 
       try {
-        const data = await client.put(`/tenant/{tenant}/estimates/${id}/sell`);
+        const data = await client.put(`/tenant/{tenant}/estimates/${id}/sell`, { soldBy });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -299,7 +301,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         const data = await client.put(`/tenant/{tenant}/estimates/${id}/unsell`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -317,7 +319,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         const data = await client.put(`/tenant/{tenant}/estimates/${id}/dismiss`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -341,7 +343,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

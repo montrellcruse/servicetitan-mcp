@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -14,6 +13,7 @@ import {
   toText,
 } from "./helpers.js";
 import { resolveBusinessUnitId } from "./resolvers.js";
+import { executeReport } from "./report-executor.js";
 
 const csrPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
@@ -174,8 +174,8 @@ export function registerIntelligenceCsrPerformanceTool(
           warnings.push(`Resolved "${input.businessUnitName}" → ${buResolved.resolvedName} (ID: ${effectiveBuId})`);
         }
 
-        const reportParams: Array<{ name: string; value: string }> = [
-          { name: "DateType", value: "Job Completion Date" },
+        const reportParams: Array<{ name: string; value: unknown }> = [
+          { name: "DateType", value: 1 },
           { name: "From", value: input.startDate },
           { name: "To", value: input.endDate },
         ];
@@ -191,9 +191,7 @@ export function registerIntelligenceCsrPerformanceTool(
           warnings,
           "CSR performance report (Report 162)",
           () =>
-            client.post("/tenant/{tenant}/report-category/operations/reports/162/data", {
-              parameters: reportParams,
-            }),
+            executeReport(client, "162", reportParams, registry.reportBindings),
           null,
         );
 
@@ -320,7 +318,7 @@ export function registerIntelligenceCsrPerformanceTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

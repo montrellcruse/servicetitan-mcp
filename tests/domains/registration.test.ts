@@ -45,7 +45,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     tenantId: "tenant-id",
     environment: "integration",
     // Non-readonly + no confirmWrites → all tool types (read, write, delete) register
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,

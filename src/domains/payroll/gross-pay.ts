@@ -2,23 +2,20 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const grossPayItemCreateSchema = z.object({
-  name: z.string().describe("Gross pay item name"),
-  description: z.string().optional().describe("Gross pay item description"),
+  payrollId: z.number().int().describe("Payroll ID"),
   amount: z.number().describe("Gross pay amount"),
-  is_active: z.boolean().optional().describe("Whether the gross pay item is active"),
+  activityCodeId: z.number().int().describe("Activity code ID"),
+  date: z.string().datetime().describe("Gross pay date/time"),
+  invoiceId: z.number().int().nullable().optional(),
+  budgetCodeId: z.number().int().nullable().optional(),
+  businessUnitId: z.number().int().nullable().optional(),
+  memo: z.string().nullable().optional(),
 });
 
-const grossPayItemPayloadSchema = z
-  .object({
-    name: z.string().optional().describe("Gross pay item name"),
-    description: z.string().optional().describe("Gross pay item description"),
-    amount: z.number().optional().describe("Gross pay amount"),
-    is_active: z.boolean().optional().describe("Whether the gross pay item is active"),
-  })
-  .passthrough();
+const grossPayItemPayloadSchema = grossPayItemCreateSchema;
 
 const grossPayItemUpdateSchema = z.object({
   id: z.number().int().describe("Gross pay item ID"),
@@ -66,7 +63,7 @@ export function registerPayrollGrossPayTools(
         const data = await client.post("/tenant/{tenant}/gross-pay-items", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -87,7 +84,7 @@ export function registerPayrollGrossPayTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -105,7 +102,7 @@ export function registerPayrollGrossPayTools(
         await client.delete(`/tenant/{tenant}/gross-pay-items/${input.id}`);
         return toolResult({ success: true, message: "Gross pay item deleted successfully." });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -135,7 +132,7 @@ export function registerPayrollGrossPayTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

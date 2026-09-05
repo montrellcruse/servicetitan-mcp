@@ -2,12 +2,12 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -154,7 +154,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, retention rate, and business-unit membership conversion metrics. Set includeServiceRevenue=true to also fetch tenant-wide totalServiceRevenue from invoices (adds ~1-2s latency)." +
+      "Membership health summary with active counts, signups, cancellations, renewals, an active-to-cancellation ratio, and business-unit membership conversion metrics. Set includeServiceRevenue=true to also fetch tenant-wide totalServiceRevenue from invoices." +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
@@ -179,21 +179,14 @@ export function registerIntelligenceMembershipHealthTool(
             warnings,
             "Membership summary report (Report 182)",
             () =>
-              client.post("/tenant/{tenant}/report-category/marketing/reports/182/data", {
-                parameters: reportParams,
-              }),
+              executeReport(client, "182", reportParams, registry.reportBindings),
             null,
           ),
           fetchWithWarning(
             warnings,
             "Business unit memberships report (Report 178)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data",
-                {
-                  parameters: reportParams,
-                },
-              ),
+              executeReport(client, "178", reportParams, registry.reportBindings),
             null,
           ),
           input.includeServiceRevenue
@@ -266,10 +259,13 @@ export function registerIntelligenceMembershipHealthTool(
           suspended,
           reactivated,
           deleted,
-          retentionRate: round(
+          activeToCancellationRatio: round(
             safeDivide(activeMemberships, activeMemberships + cancellations),
             3,
           ),
+          metricDefinitions: {
+            activeToCancellationRatio: "Active memberships at period end divided by active-at-end plus cancellations during the period; this is not cohort retention.",
+          },
           totalServiceRevenue,
           conversionTotals: {
             opportunities: conversionOpportunities,
@@ -289,7 +285,7 @@ export function registerIntelligenceMembershipHealthTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

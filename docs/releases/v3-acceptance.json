@@ -1,0 +1,80 @@
+{
+  "version": "3.0.0",
+  "supportPolicy": {
+    "id": "readonly-v1",
+    "stableOperations": [
+      "read"
+    ],
+    "experimentalOperations": [
+      "write",
+      "delete"
+    ],
+    "independentCompanyCertification": false,
+    "dashboardParity": false
+  },
+  "sourceFingerprint": "d90f58ac0a74b1ab5076e386edb498984141830648bacff7007cb97eba5037e5",
+  "gates": {
+    "maintenance": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md"
+    },
+    "contracts": {
+      "status": "passed",
+      "coverage": "All operation associations and 210 official schemas; standard date-filter schemas checked for 102 stable reads with seven captured-dispatch cases. Captured request dispatch covers corrected high-risk adapters, not every write handler or query parameter.",
+      "summary": "VALIDATION-v3.md"
+    },
+    "analytics": {
+      "status": "passed",
+      "boundary": "Independent company fixtures and source-row reconciliation; dashboard parity is not certified",
+      "summary": "VALIDATION-v3.md"
+    },
+    "interface": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md"
+    },
+    "runtimeMatrix": {
+      "status": "passed",
+      "runtimes": [
+        "22.23.2",
+        "24.20.0"
+      ],
+      "platform": "darwin-arm64",
+      "testsPerRuntime": 581,
+      "testFiles": 42,
+      "wireTestsPerRuntime": 15,
+      "summary": "VALIDATION-v3.md",
+      "packagingTestsPerRuntime": 2
+    },
+    "packageSmoke": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md",
+      "boundary": "Fresh 154-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed. The six added files are maintained public documentation; relative Markdown file links resolve in the archive, while raw evidence, scripts, and credential files remain excluded.",
+      "javascriptBuildSha256": "4d2447f7ac853d6c40fde562e57fc0dfacc3b4aa063aedb59e256bd579660c00"
+    },
+    "liveProduction": {
+      "status": "passed",
+      "boundary": "Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery, query-filter, and audit-isolation changes; those were validated with deterministic adapters, built MCP processes, and built-factory SDK checks.",
+      "summary": "VALIDATION-v3.md"
+    },
+    "liveIntegration": {
+      "status": "scoped_out",
+      "reason": "Integration credentials are unavailable. No live mutation or cleanup was tested; mutations are experimental and require an explicit opt-in outside stable support.",
+      "requiredFor": "Stable support for write and delete workflows"
+    },
+    "liveSecondCompany": {
+      "status": "scoped_out",
+      "reason": "No independent company is available for live acceptance. Company isolation is fixture-tested; each installation requires separate configuration, readiness checks, and report validation.",
+      "requiredFor": "Independent live-company compatibility certification"
+    },
+    "latencyAndLoad": {
+      "status": "passed",
+      "boundary": "Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. Focused client-load and analytics refresh passed on both runtimes at d4801c6, including explicit unknown-write nonretryability assertions. Those measurements were not repeated for the later audit-sink isolation fix, which is covered by direct/SDK and built-package callback-failure tests; custom audit-sink latency and delivery are not measured. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
+      "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
+      "summary": "../BENCHMARKS.md",
+      "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
+      "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
+      "focusedMatrixCommit": "d4801c6d49d53c8f518d1087685c321cbe6e92a3"
+    }
+  },
+  "releaseDisposition": "stable-readonly"
+}

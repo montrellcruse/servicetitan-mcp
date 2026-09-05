@@ -15,29 +15,15 @@
  *   POST /messages     → MCP message endpoint (used by SSE transport)
  *   GET  /health       → Health check (no auth required)
  */
-import { timingSafeEqual } from "node:crypto";
 import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createRequire } from "node:module";
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
-import { AuditLogger } from "./audit.js";
-import { ServiceTitanClient } from "./client.js";
-import { loadConfig } from "./config.js";
-import { loadDomainModules } from "./domains/loader.js";
+import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
-import { ToolRegistry } from "./registry.js";
-import { setDisplayTimezone, setMaxResponseChars, toolResult } from "./utils.js";
-
-// Catch crashes that would otherwise exit silently
-process.on("uncaughtException", (err) => {
-  process.stderr.write(`UNCAUGHT EXCEPTION: ${err.stack ?? err.message}\n`);
-});
-process.on("unhandledRejection", (reason) => {
-  process.stderr.write(`UNHANDLED REJECTION: ${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}\n`);
-});
+import { createMcpServer, VERSION } from "./server.js";
+import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
 
 const PORT = Number(process.env.PORT ?? process.env.ST_MCP_PORT ?? 3100);
 const API_KEY = process.env.ST_MCP_API_KEY ?? "";
@@ -45,28 +31,6 @@ const API_KEY = process.env.ST_MCP_API_KEY ?? "";
 if (!API_KEY) {
   process.stderr.write("Fatal: ST_MCP_API_KEY is required for remote access.\n");
   process.exit(1);
-}
-
-// ── Constant-time string comparison (timing-attack resistant) ──
-
-function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-// ── Auth middleware ──
-
-function authenticate(req: IncomingMessage): boolean {
-  const key = req.headers["x-api-key"];
-  if (typeof key === "string" && safeCompare(key, API_KEY)) {
-    return true;
-  }
-  // Also check Authorization: Bearer <key>
-  const auth = req.headers.authorization;
-  if (typeof auth === "string" && auth.startsWith("Bearer ") && safeCompare(auth.slice(7), API_KEY)) {
-    return true;
-  }
-  return false;
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -84,64 +48,22 @@ function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  setMaxResponseChars(config.maxResponseChars);
-  setDisplayTimezone(config.timezone);
-
-  // Read version from package.json
-  const _require = createRequire(import.meta.url);
-  const pkg = _require("../package.json") as { version: string };
-  const version = pkg.version;
-
-  const logger = new Logger(config.logLevel);
-  const server = new McpServer({ name: "ServiceTitan", version });
-  const client = new ServiceTitanClient(config);
-  const auditLogger = new AuditLogger(logger);
-  const registry = new ToolRegistry(server, config, logger, auditLogger);
-  registry.attachClient(client);
-
-  // Register health check tool
-  registry.register({
-    name: "st_health_check",
-    domain: "_system",
-    operation: "read",
-    description:
-      "Verify ServiceTitan API connectivity, authentication, tenant access, and server config",
-    schema: {},
-    handler: async () => {
-      const checks: Record<string, string> = {};
-      try {
-        await client.ensureToken();
-        checks.authentication = "OK";
-      } catch (error: unknown) {
-        checks.authentication = "FAILED";
-      }
-      try {
-        await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
-        checks.tenant_access = "OK";
-      } catch (error: unknown) {
-        checks.tenant_access = "FAILED";
-      }
-      return toolResult(checks);
-    },
-  });
-
-  await loadDomainModules(registry, logger);
+  const version = VERSION;
+  const logger = new Logger(config.logLevel, [config.clientSecret, config.appKey, API_KEY]);
+  const { server, registry } = await createMcpServer(config, { logger });
   registry.logSummary();
-
   const stats = registry.getStats();
 
-  // ── Startup banner ──
-
-  // Track active SSE transports by session ID
   const transports = new Map<string, SSEServerTransport>();
   let activeTransportId = 0;
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();
-    if (config.corsOrigin) {
-      sendCorsHeaders(res, config.corsOrigin);
-    }
     try {
+      let url: URL;
+      try { url = requestUrl(req); } catch { sendJson(res, 400, { error: "Invalid request URL or Host", requestId }); return; }
+      if (!allowedOrigin(req, config.corsOrigin)) { sendJson(res, 403, { error: "Origin not permitted", requestId }); return; }
+      if (config.corsOrigin) sendCorsHeaders(res, config.corsOrigin);
       // Handle CORS preflight
       if (req.method === "OPTIONS") {
         res.writeHead(204);
@@ -149,9 +71,8 @@ async function main(): Promise<void> {
         return;
       }
 
-      const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
 
-      logger.info(`[${requestId}] ${req.method} ${req.url}`);
+      logger.info(`[${requestId}] ${req.method} ${url.pathname}`);
 
       // Health endpoint (no auth)
       if (url.pathname === "/health" && req.method === "GET") {
@@ -165,10 +86,12 @@ async function main(): Promise<void> {
       }
 
       // Auth required for everything else
-      if (!authenticate(req)) {
+      if (!authenticated(req, API_KEY)) {
         sendJson(res, 401, { error: "Unauthorized", requestId });
         return;
       }
+
+      attachAuthenticatedPrincipal(req, config.mcpClientId ?? "api-key");
 
       // SSE connection endpoint
       if (url.pathname === "/sse" && req.method === "GET") {
@@ -266,7 +189,8 @@ async function main(): Promise<void> {
           cleanupTransport("response-close");
         });
 
-        await server.connect(transport);
+        try { await server.connect(transport); }
+        catch (error) { cleanupTransport("transport-close"); await transport.close().catch(() => {}); throw error; }
         return;
       }
 
@@ -338,7 +262,7 @@ async function main(): Promise<void> {
     }
   });
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, process.env.ST_MCP_HOST ?? "127.0.0.1", () => {
     logger.info(`ServiceTitan MCP Server v${version}`);
     logger.info(`Transport: SSE on port ${PORT}`);
     logger.info(`Read-only: ${config.readonlyMode ? "yes" : "no"}`);
@@ -349,6 +273,8 @@ async function main(): Promise<void> {
 
   const shutdown = () => {
     logger.info("Shutdown signal received, closing server...");
+    for (const transport of transports.values()) { void transport.close(); }
+    void server.close();
     httpServer.close(() => {
       logger.info("HTTP server closed");
       process.exit(0);
@@ -361,7 +287,8 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof Error ? error.message : String(error);
+  const message = error instanceof ExperimentalWritesDisabledError
+    ? error.message : "Check required ServiceTitan and transport configuration.";
   process.stderr.write(
     `${JSON.stringify({
       level: "error",

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,37 +11,8 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const vendorAddressSchema = z.object({
-  street: z.string().optional().describe("Street address line"),
-  unit: z.string().optional().describe("Address unit or suite"),
-  city: z.string().optional().describe("Address city"),
-  state: z.string().optional().describe("Address state or province"),
-  postalCode: z.string().optional().describe("Address postal code"),
-  country: z.string().optional().describe("Address country"),
-});
-
-const vendorPayloadSchema = z.object({
-  name: z.string().optional().describe("Vendor name"),
-  code: z.string().optional().describe("Vendor internal code"),
-  contactName: z.string().optional().describe("Primary vendor contact name"),
-  phone: z.string().optional().describe("Vendor phone number"),
-  email: z.string().optional().describe("Vendor email address"),
-  website: z.string().optional().describe("Vendor website URL"),
-  accountNumber: z.string().optional().describe("Vendor account number"),
-  taxId: z.string().optional().describe("Vendor tax ID"),
-  memo: z.string().optional().describe("Internal vendor memo"),
-  active: z.boolean().optional().describe("Whether the vendor is active"),
-  address: vendorAddressSchema.optional().describe("Vendor mailing address"),
-  remitToAddress: vendorAddressSchema
-    .optional()
-    .describe("Vendor remit-to address"),
-  businessUnitIds: z
-    .array(z.number().int().describe("Business unit ID associated with this vendor"))
-    .optional()
-    .describe("Business units associated with this vendor"),
-});
+const vendorPayloadSchema = officialRequestSchema("Vendors_Create") as z.AnyZodObject;
 
 const vendorIdSchema = z.object({
   id: z.number().int().describe("Vendor ID"),
@@ -62,7 +34,7 @@ const vendorGetSchema = vendorIdSchema.extend({
     .describe("External data values used with externalDataKey"),
 });
 
-const vendorUpdateSchema = vendorPayloadSchema.extend({
+const vendorUpdateSchema = (officialRequestSchema("Vendors_Update") as z.AnyZodObject).extend({
   id: z.number().int().describe("Vendor ID"),
 });
 
@@ -104,10 +76,10 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
       const parsed = vendorPayloadSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/vendors", buildParams(parsed));
+        const data = await client.post("/tenant/{tenant}/vendors", parsed);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -133,7 +105,7 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -169,7 +141,7 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -187,12 +159,12 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
       try {
         const data = await client.patch(
           `/tenant/{tenant}/vendors/${id}`,
-          buildParams(payload),
+          payload,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

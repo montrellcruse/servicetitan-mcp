@@ -13,7 +13,7 @@ function createConfig(): ServiceTitanConfig {
     appKey: "app-key",
     tenantId: "tenant-id",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,
@@ -143,15 +143,16 @@ describe("dispatch job creation", () => {
   it("rejects job creation without required fields", async () => {
     const { post, handlers } = createContext();
 
-    await expect(
-      getHandler(handlers, "dispatch_jobs_create")({
+    const result = await getHandler(handlers, "dispatch_jobs_create")({
         customerId: 30118932,
         locationId: 32126671,
         businessUnitId: 26835039,
         jobTypeId: 57477915,
         campaignId: 56079032,
-      }),
-    ).rejects.toThrow("appointments");
+      });
+
+    expect(result.isError).toBe(true);
+    expect(result.content[0]?.text).toContain("appointments");
 
     expect(post).not.toHaveBeenCalled();
   });

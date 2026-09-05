@@ -9,7 +9,6 @@ import {
   fetchAllPagesWithTotal,
   fetchWithWarning,
   firstValue,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -19,6 +18,7 @@ import {
   toText,
 } from "./helpers.js";
 import { sumReport175TotalRevenue } from "./revenue.js";
+import { executeReport } from "./report-executor.js";
 
 const campaignPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
@@ -211,31 +211,19 @@ export function registerIntelligenceCampaignPerformanceTool(
             fetchWithWarning(
               warnings,
               "Revenue report (Report 175)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
-                  {
-                    parameters: [
+              () => executeReport(client, "175", [
                       { name: "From", value: input.startDate },
                       { name: "To", value: input.endDate },
-                    ],
-                  },
-                ),
+                    ], registry.reportBindings),
               null,
             ),
             fetchWithWarning(
               warnings,
               "Lead generation report (Report 176)",
-              () =>
-                client.post(
-                  "/tenant/{tenant}/report-category/business-unit-dashboard/reports/176/data",
-                  {
-                    parameters: [
+              () => executeReport(client, "176", [
                       { name: "From", value: input.startDate },
                       { name: "To", value: input.endDate },
-                    ],
-                  },
-                ),
+                    ], registry.reportBindings),
               null,
             ),
           ]);
@@ -258,9 +246,9 @@ export function registerIntelligenceCampaignPerformanceTool(
           name: string;
           calls: number;
           bookings: number;
-          conversionRate: number;
-          revenue: number;
-          revenuePerCall: number;
+          bookingsPerCallRatio: number;
+          revenue: null;
+          revenuePerCall: null;
         }> = [];
 
         for (const campaign of campaigns) {
@@ -279,9 +267,9 @@ export function registerIntelligenceCampaignPerformanceTool(
             name,
             calls: callCount,
             bookings: bookingCount,
-            conversionRate: round(safeDivide(bookingCount, callCount), 3),
-            revenue: 0,
-            revenuePerCall: 0,
+            bookingsPerCallRatio: round(safeDivide(bookingCount, callCount), 3),
+            revenue: null,
+            revenuePerCall: null,
           });
         }
 
@@ -298,9 +286,10 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         warnings.push(PER_CAMPAIGN_REVENUE_WARNING);
 
-        // Sum calls attributed to campaigns (not all calls — totalCount includes non-campaign)
-        const totalsCalls = limitedCampaignRows.reduce((total, row) => total + row.calls, 0);
-        const totalsBookings = limitedCampaignRows.reduce((total, row) => total + row.bookings, 0);
+        const totalsCalls = campaignRows.reduce((total, row) => total + row.calls, 0);
+        const totalsBookings = campaignRows.reduce((total, row) => total + row.bookings, 0);
+        const unattributedCalls = calls.length - totalsCalls;
+        const unattributedBookings = bookings.length - totalsBookings;
 
         // Extract total revenue from Report 175 instead of paginating all invoices
         const totalsRevenue = revenueReport === null ? 0 : sumReport175TotalRevenue(revenueReport);
@@ -314,15 +303,20 @@ export function registerIntelligenceCampaignPerformanceTool(
           totals: {
             calls: totalsCalls,
             bookings: totalsBookings,
-            conversionRate: round(safeDivide(totalsBookings, totalsCalls), 3),
-            revenue: totalsRevenue,
+            bookingsPerCallRatio: round(safeDivide(totalsBookings, totalsCalls), 3),
+            unattributedCalls,
+            unattributedBookings,
+            tenantRevenueForPeriod: totalsRevenue,
+          },
+          metricDefinitions: {
+            bookingsPerCallRatio: "Campaign-attributed bookings divided by campaign-attributed calls; booking attribution is independent and this is not a funnel conversion rate.",
+            tenantRevenueForPeriod: "Total tenant revenue for the period from Report 175; it is not attributed to the listed campaigns.",
           },
           leadGeneration,
         };
 
         if (campaignRows.length > maxCampaigns) {
-          result.totalsNote =
-            "Revenue represents the full period; calls and bookings reflect only the top N listed campaigns.";
+          result.totalsNote = "Totals include every campaign; the campaigns array is limited to the top N.";
         }
 
         if (warnings.length > 0) {
@@ -331,7 +325,7 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

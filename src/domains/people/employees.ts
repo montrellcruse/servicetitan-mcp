@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z
@@ -120,7 +119,7 @@ export function registerPeopleEmployeeTools(
         const data = await client.post("/tenant/{tenant}/employees", input.body);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -138,7 +137,7 @@ export function registerPeopleEmployeeTools(
         const data = await client.get(`/tenant/{tenant}/employees/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -171,7 +170,7 @@ export function registerPeopleEmployeeTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -189,7 +188,7 @@ export function registerPeopleEmployeeTools(
         const data = await client.patch(`/tenant/{tenant}/employees/${id}`, body);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -199,15 +198,20 @@ export function registerPeopleEmployeeTools(
     domain: "people",
     operation: "write",
     description: "Run account actions for an employee",
-    schema: employeeIdSchema.shape,
+    schema: {
+      ...employeeIdSchema.shape,
+      action: z.enum(["Activate", "Deactivate", "SendInvite", "SendPasswordResetLink"]),
+    },
     handler: async (params) => {
-      const { id } = employeeIdSchema.parse(params);
+      const { id, action } = employeeIdSchema.extend({
+        action: z.enum(["Activate", "Deactivate", "SendInvite", "SendPasswordResetLink"]),
+      }).parse(params);
 
       try {
-        const data = await client.post(`/tenant/{tenant}/employees/${id}/account-actions`);
+        const data = await client.post(`/tenant/{tenant}/employees/${id}/account-actions`, { action });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -231,7 +235,7 @@ export function registerPeopleEmployeeTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

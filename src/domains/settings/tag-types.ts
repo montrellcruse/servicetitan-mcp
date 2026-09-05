@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z
@@ -79,7 +78,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.get(`/tenant/{tenant}/tag-types/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -110,7 +109,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -128,7 +127,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.post("/tenant/{tenant}/tag-types", buildParams(input.body));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -146,7 +145,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.patch(`/tenant/{tenant}/tag-types/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -164,7 +163,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         await client.delete(`/tenant/{tenant}/tag-types/${id}`);
         return toolResult({ success: true, message: "Tag type deleted" });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -188,7 +187,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

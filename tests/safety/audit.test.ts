@@ -11,7 +11,7 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
     appKey: "key",
     tenantId: "tenant",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100000,
     enabledDomains: null,

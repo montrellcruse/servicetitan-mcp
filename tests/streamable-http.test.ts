@@ -243,7 +243,8 @@ beforeAll(async () => {
     ServiceTitanClient: class MockServiceTitanClient {},
   }));
 
-  vi.doMock("../src/config.js", () => ({
+  vi.doMock("../src/config.js", async () => ({
+    ...await vi.importActual<typeof import("../src/config.js")>("../src/config.js"),
     loadConfig: () => ({
       clientId: "test-client-id",
       clientSecret: "test-client-secret",
@@ -283,6 +284,8 @@ beforeAll(async () => {
         return { registered: MOCK_TOOL_COUNT };
       }
       logSummary(): void {}
+      validateSelection(): void {}
+      clearResults(): void {}
     },
   }));
 

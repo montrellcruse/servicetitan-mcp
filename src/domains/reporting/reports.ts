@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const reportListSchema = paginationParams(
   z.object({
@@ -12,7 +12,7 @@ const reportListSchema = paginationParams(
 
 const reportParameterSchema = z.object({
   name: z.string().describe("Parameter name (from report definition)"),
-  value: z.string().describe("Parameter value"),
+  value: z.unknown().describe("Parameter value, using the data type declared by the report definition"),
 });
 
 const reportDataSchema = z.object({
@@ -20,7 +20,6 @@ const reportDataSchema = z.object({
   reportId: z.number().int().describe("Report ID"),
   parameters: z
     .array(reportParameterSchema)
-    .optional()
     .describe("Report parameters (name/value pairs from report definition)"),
   page: z.number().int().optional().describe("Page number (starts at 1)"),
   pageSize: z
@@ -54,7 +53,7 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -80,7 +79,7 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -100,12 +99,12 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
       try {
         const data = await client.post(
           `/tenant/{tenant}/report-category/${reportCategory}/reports/${reportId}/data`,
-          parameters ? { parameters } : {},
+          { parameters },
           buildParams(query),
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

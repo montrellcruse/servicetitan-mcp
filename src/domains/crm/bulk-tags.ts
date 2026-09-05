@@ -2,12 +2,9 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import { toolError, toolResult } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
-
-const bulkTagsAddSchema = z.object({
-  tags: z.array(z.string()).describe("Tags to add"),
-});
+const bulkTagsAddSchema = officialRequestSchema("BulkTags_AddTags") as z.ZodObject<z.ZodRawShape>;
 
 
 export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolRegistry): void {
@@ -18,16 +15,14 @@ export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolR
     description: "Add bulk tags",
     schema: bulkTagsAddSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof bulkTagsAddSchema>;
+      const input = bulkTagsAddSchema.parse(params);
 
       try {
-        const data = await client.put("/tenant/{tenant}/tags", {
-          tags: input.tags,
-        });
+        const data = await client.put("/tenant/{tenant}/tags", input);
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -43,7 +38,7 @@ export function registerBulkTagTools(client: ServiceTitanClient, registry: ToolR
         const data = await client.delete("/tenant/{tenant}/tags");
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

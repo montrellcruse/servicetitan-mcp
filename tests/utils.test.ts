@@ -30,20 +30,18 @@ describe("toolResult", () => {
           text: JSON.stringify(payload, null, 2),
         },
       ],
+      structuredContent: payload,
     });
   });
 
-  it("truncates oversized responses as valid JSON with pagination hint", () => {
-    setMaxResponseChars(80);
-    const payload = { data: "x".repeat(500) };
-    const result = toolResult(payload);
-    const text = result.content[0]?.text ?? "";
-
-    // Must be valid JSON
-    const parsed = JSON.parse(text);
-    expect(parsed._truncated).toBe(true);
-    expect(parsed._originalSize).toBeGreaterThan(80);
-    expect(parsed._message).toContain("Use pagination (page/pageSize)");
+  it("returns an explicit bounded error for oversized single records", () => {
+    setMaxResponseChars(1000);
+    const result = toolResult({ data: "x".repeat(5000) });
+    const parsed = JSON.parse(result.content[0]?.text ?? "");
+    expect(result.isError).toBe(true);
+    expect(parsed.error.code).toBe("RESPONSE_TOO_LARGE");
+    expect(result.structuredContent).toEqual(parsed);
+    expect(JSON.stringify(result).length).toBeLessThanOrEqual(1000);
   });
 
   it("can disable response shaping via env", () => {
@@ -59,21 +57,17 @@ describe("toolResult", () => {
           text: JSON.stringify(payload, null, 2),
         },
       ],
+      structuredContent: payload,
     });
   });
 });
 
 describe("toolError", () => {
-  it("wraps an error with isError flag", () => {
-    expect(toolError("Something failed")).toEqual({
-      content: [
-        {
-          type: "text",
-          text: "Error: Something failed",
-        },
-      ],
-      isError: true,
-    });
+  it("provides a consistent machine-readable error in both representations", () => {
+    const result = toolError("Something failed");
+    expect(result.isError).toBe(true);
+    expect(result.structuredContent).toEqual({ error: { code: "REQUEST_FAILED", message: "Something failed" } });
+    expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
   });
 });
 

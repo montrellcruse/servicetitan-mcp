@@ -14,7 +14,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     appKey: "key",
     tenantId: "tenant",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100000,
     enabledDomains: null,
@@ -91,11 +91,8 @@ describe("write middleware safety", () => {
 
     registry.register(createWriteTool({ handler }));
 
-    const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
-    const result = await wrapped({ id: 7 });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(server.registerTool).not.toHaveBeenCalled();
+    expect(registry.getRegisteredTools()).toHaveLength(0);
     expect(handler).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
@@ -118,7 +115,7 @@ describe("write middleware safety", () => {
     expect(handler).not.toHaveBeenCalled();
 
     await wrapped({ id: 7, _confirmed: true });
-    expect(handler).toHaveBeenCalledWith({ id: 7 }, undefined);
+    expect(handler).toHaveBeenCalledWith({ id: 7 }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
   it("audit logger is called for every successful write execution", async () => {
@@ -141,7 +138,7 @@ describe("write middleware safety", () => {
     );
   });
 
-  it("audits thrown write handler failures and rethrows the error", async () => {
+  it("audits thrown write handler failures and returns a structured tool error", async () => {
     const handler = vi.fn().mockRejectedValue(new Error("write exploded"));
     const { registry, server, auditLogger } = createRegistry();
 
@@ -149,7 +146,9 @@ describe("write middleware safety", () => {
 
     const [, , wrapped] = server.registerTool.mock.calls[0] ?? [];
 
-    await expect(wrapped({ id: 7 })).rejects.toThrow("write exploded");
+    const result = await wrapped({ id: 7 });
+    expect(result).toMatchObject({ isError: true, structuredContent: { error: { code: "REQUEST_FAILED", message: "write exploded" } } });
+    expect(JSON.parse(result.content[0].text)).toEqual(result.structuredContent);
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
     expect(auditLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -157,9 +156,13 @@ describe("write middleware safety", () => {
         operation: "write",
         resourceId: 7,
         success: false,
-        error: "write exploded",
+        error: result.content[0].text,
       }),
     );
+    const entry = auditLogger.log.mock.calls[0][0];
+    expect(JSON.parse(entry.error)).toEqual(result.structuredContent);
+    expect(entry).not.toHaveProperty("deliveryError");
+    expect(entry).not.toHaveProperty("outcomeUnknown");
   });
 
   it("hardened write schemas reject empty input", () => {
@@ -170,7 +173,6 @@ describe("write middleware safety", () => {
 
     const hardenedToolNames = [
       "scheduling_capacity_calculate",
-      "accounting_payments_create",
       "accounting_payments_update_status",
       "accounting_ap_credits_mark_as_exported",
       "accounting_ap_payments_mark_as_exported",

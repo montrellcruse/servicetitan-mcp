@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const payrollStatusSchema = z.enum(["Pending", "Expired", "Approved", "Paid", "Locked"]);
 const employeeTypeSchema = z.enum(["Technician", "Employee"]);
@@ -29,6 +29,8 @@ const payrollQueryFieldsSchema = z.object({
     .datetime()
     .optional()
     .describe("Filter payrolls modified on or after this UTC timestamp"),
+  createdBefore: z.string().datetime({ offset: true }).optional().describe("Filter payrolls created before this timestamp"),
+  createdOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Filter payrolls created on or after this timestamp"),
   approvedOnOrAfter: z
     .string()
     .datetime()
@@ -82,6 +84,8 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
             endedOnOrBefore: input.endedOnOrBefore,
             modifiedBefore: input.modifiedBefore,
             modifiedOnOrAfter: input.modifiedOnOrAfter,
+            createdBefore: input.createdBefore,
+            createdOnOrAfter: input.createdOnOrAfter,
             approvedOnOrAfter: input.approvedOnOrAfter,
             status: input.status,
             active: input.active,
@@ -89,7 +93,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -109,7 +113,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -134,6 +138,8 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
             endedOnOrBefore: input.endedOnOrBefore,
             modifiedBefore: input.modifiedBefore,
             modifiedOnOrAfter: input.modifiedOnOrAfter,
+            createdBefore: input.createdBefore,
+            createdOnOrAfter: input.createdOnOrAfter,
             approvedOnOrAfter: input.approvedOnOrAfter,
             status: input.status,
             active: input.active,
@@ -141,7 +147,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -166,6 +172,8 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
             endedOnOrBefore: input.endedOnOrBefore,
             modifiedBefore: input.modifiedBefore,
             modifiedOnOrAfter: input.modifiedOnOrAfter,
+            createdBefore: input.createdBefore,
+            createdOnOrAfter: input.createdOnOrAfter,
             approvedOnOrAfter: input.approvedOnOrAfter,
             status: input.status,
             active: input.active,
@@ -173,7 +181,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

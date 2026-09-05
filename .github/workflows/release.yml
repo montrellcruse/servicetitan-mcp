@@ -1,10 +1,9 @@
 name: Release
-
 on:
   push:
-    tags:
-      - 'v*'
-
+    tags: ['v*']
+permissions:
+  contents: read
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -18,13 +17,26 @@ jobs:
           node-version: '24.x'
           package-manager-cache: false
       - run: npm ci
-      - run: npm run build
-      - name: Publish to npm (skip if version already exists)
+      - name: Verify tag and every acceptance gate
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          node --input-type=module -e 'import fs from "node:fs"; const p=JSON.parse(fs.readFileSync("package.json")); if(process.env.RELEASE_TAG!==`v${p.version}`) process.exit(1);'
+          npm run release:check
+      - run: npm run contracts:check
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:wire
+      - run: npm run test:packaging
+      - name: Publish using npm Trusted Publishing
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")
           PKG_NAME=$(node -p "require('./package.json').name")
-          if npm view "${PKG_NAME}@${PKG_VERSION}" version 2>/dev/null | grep -q "${PKG_VERSION}"; then
-            echo "Version ${PKG_VERSION} already published — skipping."
+          if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+            echo "Version already published; skipping."
+          elif node -e 'process.exit(require("./package.json").version.includes("-") ? 0 : 1)'; then
+            npm publish --access public --tag next
           else
-            npm publish --access public
+            npm publish --access public --tag latest
           fi

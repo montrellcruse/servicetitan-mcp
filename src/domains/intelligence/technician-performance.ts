@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   countWeekdaysInclusive,
   fetchWithWarning,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -710,19 +710,19 @@ export function registerIntelligenceTechnicianPerformanceTool(
         ];
 
         if (effectiveBuId !== undefined) {
-          revenueParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
-          productivityParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
+          revenueParams.push({ name: "BusinessUnitId", value: String(effectiveBuId) });
+          productivityParams.push({ name: "BusinessUnitId", value: String(effectiveBuId) });
           leadGenerationParams.push({
             name: "BusinessUnitId",
             value: String(effectiveBuId),
           });
-          membershipsParams.push({ name: "BusinessUnitIds", value: String(effectiveBuId) });
+          membershipsParams.push({ name: "BusinessUnitId", value: String(effectiveBuId) });
           salesFromTechLeadsParams.push({
-            name: "BusinessUnitIds",
+            name: "BusinessUnitId",
             value: String(effectiveBuId),
           });
           salesFromMarketingLeadsParams.push({
-            name: "BusinessUnitIds",
+            name: "BusinessUnitId",
             value: String(effectiveBuId),
           });
         }
@@ -741,30 +741,21 @@ export function registerIntelligenceTechnicianPerformanceTool(
             warnings,
             "Technician revenue report (Report 168)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data",
-                { parameters: revenueParams },
-              ),
+              executeReport(client, "168", revenueParams, registry.reportBindings),
             null,
           ),
           fetchWithWarning(
             warnings,
             "Technician productivity report (Report 170)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data",
-                { parameters: productivityParams },
-              ),
+              executeReport(client, "170", productivityParams, registry.reportBindings),
             null,
           ),
           fetchWithWarning(
             warnings,
             "Technician lead generation report (Report 169)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data",
-                { parameters: leadGenerationParams },
-              ),
+              executeReport(client, "169", leadGenerationParams, registry.reportBindings),
             null,
           ),
           input.includeExtendedMetrics
@@ -772,10 +763,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
                 warnings,
                 "Technician memberships report (Report 171)",
                 () =>
-                  client.post(
-                    "/tenant/{tenant}/report-category/technician-dashboard/reports/171/data",
-                    { parameters: membershipsParams },
-                  ),
+                  executeReport(client, "171", membershipsParams, registry.reportBindings),
                 null,
               )
             : Promise.resolve(null),
@@ -784,10 +772,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
                 warnings,
                 "Technician sales from tech leads report (Report 173)",
                 () =>
-                  client.post(
-                    "/tenant/{tenant}/report-category/technician-dashboard/reports/173/data",
-                    { parameters: salesFromTechLeadsParams },
-                  ),
+                  executeReport(client, "173", salesFromTechLeadsParams, registry.reportBindings),
                 null,
               )
             : Promise.resolve(null),
@@ -796,10 +781,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
                 warnings,
                 "Technician sales from marketing leads report (Report 174)",
                 () =>
-                  client.post(
-                    "/tenant/{tenant}/report-category/technician-dashboard/reports/174/data",
-                    { parameters: salesFromMarketingLeadsParams },
-                  ),
+                  executeReport(client, "174", salesFromMarketingLeadsParams, registry.reportBindings),
                 null,
               )
             : Promise.resolve(null),
@@ -966,7 +948,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

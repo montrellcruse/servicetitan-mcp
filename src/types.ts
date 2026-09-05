@@ -2,6 +2,8 @@
 export interface ToolResponse {
   [key: string]: unknown;
   content: Array<{ type: "text"; text: string }>;
+  /** Mirrors the JSON text. Non-object API responses are wrapped as { data }. */
+  structuredContent?: Record<string, unknown>;
   isError?: boolean;
 }
 

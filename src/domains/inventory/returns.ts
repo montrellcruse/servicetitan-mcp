@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,79 +11,18 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const scalarCustomFieldValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-]);
-
-const customFieldMapSchema = z
-  .object({})
-  .catchall(scalarCustomFieldValueSchema)
-  .describe("Custom field key/value map");
-
-const returnLineItemSchema = z.object({
-  skuId: z.number().int().optional().describe("SKU ID for this return item"),
-  skuCode: z.string().optional().describe("SKU code for this return item"),
-  description: z.string().optional().describe("Return item description"),
-  quantity: z.number().optional().describe("Return quantity"),
-  unitCost: z.number().optional().describe("Unit cost"),
-  inventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Inventory location ID"),
-  purchaseOrderItemId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Purchase order item ID"),
-  taxCodeId: z.number().int().optional().describe("Tax code ID"),
-});
-
-const returnExternalLinkSchema = z.object({
-  name: z.string().optional().describe("External link label"),
-  url: z.string().optional().describe("External link URL"),
-});
-
-const returnPayloadSchema = z.object({
-  number: z.string().optional().describe("Return number"),
-  referenceNumber: z.string().optional().describe("Reference number"),
-  returnDate: z.string().optional().describe("Return date/time"),
-  vendorId: z.number().int().optional().describe("Vendor ID"),
-  jobId: z.number().int().optional().describe("Job ID"),
-  purchaseOrderId: z.number().int().optional().describe("Purchase order ID"),
-  batchId: z.number().int().optional().describe("Batch ID"),
-  businessUnitId: z.number().int().optional().describe("Business unit ID"),
-  inventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Inventory location ID"),
-  returnTypeId: z.number().int().optional().describe("Return type ID"),
-  status: z.string().optional().describe("Return status"),
-  syncStatus: z.string().optional().describe("Sync status"),
-  active: z.boolean().optional().describe("Whether return is active"),
-  summary: z.string().optional().describe("Return summary"),
-  memo: z.string().optional().describe("Return memo"),
-  items: z.array(returnLineItemSchema).optional().describe("Return line items"),
-  externalLinks: z
-    .array(returnExternalLinkSchema)
-    .optional()
-    .describe("External links for this return"),
-  customFields: customFieldMapSchema.optional().describe("Return custom fields"),
-});
+const returnPayloadSchema = officialRequestSchema("Returns_CreateReturn") as z.AnyZodObject;
 
 const returnIdSchema = z.object({
   id: z.number().int().describe("Return ID"),
 });
 
-const returnUpdateSchema = returnPayloadSchema.extend({
+const returnUpdateSchema = (officialRequestSchema("Returns_Update") as z.AnyZodObject).extend({
   id: z.number().int().describe("Return ID"),
 });
+
+const returnCancelSchema = (officialRequestSchema("Returns_Cancel") as z.AnyZodObject).extend({ id: z.number().int().describe("Return ID") });
 
 const returnsListSchema = dateFilterParams(
   paginationParams(
@@ -138,20 +78,10 @@ const returnsListSchema = dateFilterParams(
   ),
 );
 
-const updateCustomFieldsSchema = z.object({
-  customFields: customFieldMapSchema.describe("Custom fields payload"),
-});
+const updateCustomFieldsSchema = officialRequestSchema("Returns_UpdateCustomFields") as z.AnyZodObject;
 
-const returnTypePayloadSchema = z.object({
-  name: z.string().optional().describe("Return type name"),
-  active: z.boolean().optional().describe("Whether the return type is active"),
-  color: z.string().optional().describe("Color code for display"),
-  memo: z.string().optional().describe("Internal note"),
-});
-
-const returnTypeUpdateSchema = returnTypePayloadSchema.extend({
-  id: z.number().int().describe("Return type ID"),
-});
+const returnTypePayloadSchema = officialRequestSchema("ReturnTypes_Create") as z.AnyZodObject;
+const returnTypeUpdateSchema = officialRequestSchema("ReturnTypes_Update") as z.AnyZodObject;
 
 const returnTypesListSchema = dateFilterParams(
   paginationParams(
@@ -178,10 +108,10 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
       const input = returnPayloadSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/returns", buildParams(input));
+        const data = await client.post("/tenant/{tenant}/returns", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -198,11 +128,11 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
       try {
         const data = await client.patch(
           "/tenant/{tenant}/returns/custom-fields",
-          input.customFields,
+          input,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -218,10 +148,10 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
       const { id, ...payload } = parsed;
 
       try {
-        const data = await client.patch(`/tenant/{tenant}/returns/${id}`, buildParams(payload));
+        const data = await client.patch(`/tenant/{tenant}/returns/${id}`, payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -231,15 +161,15 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
     domain: "inventory",
     operation: "write",
     description: "Cancel a return",
-    schema: returnIdSchema.shape,
+    schema: returnCancelSchema.shape,
     handler: async (params) => {
-      const { id } = returnIdSchema.parse(params);
+      const { id, ...payload } = returnCancelSchema.parse(params);
 
       try {
-        const data = await client.patch(`/tenant/{tenant}/returns/${id}/cancellation`);
+        const data = await client.patch(`/tenant/{tenant}/returns/${id}/cancellation`, payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -287,7 +217,7 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -302,10 +232,10 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
       const input = returnTypePayloadSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/return-types", buildParams(input));
+        const data = await client.post("/tenant/{tenant}/return-types", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -318,16 +248,15 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
     schema: returnTypeUpdateSchema.shape,
     handler: async (params) => {
       const parsed = returnTypeUpdateSchema.parse(params);
-      const { id, ...payload } = parsed;
 
       try {
         const data = await client.patch(
-          `/tenant/{tenant}/return-types/${id}`,
-          buildParams(payload),
+          `/tenant/{tenant}/return-types/${parsed.id}`,
+          parsed,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -359,7 +288,7 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

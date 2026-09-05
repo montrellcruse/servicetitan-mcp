@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const callIdSchema = z.object({
@@ -116,7 +115,7 @@ export function registerMarketingCallTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -134,7 +133,7 @@ export function registerMarketingCallTools(
         const data = await client.get(`/v2/tenant/{tenant}/calls/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -152,7 +151,7 @@ export function registerMarketingCallTools(
         const data = await client.put(`/v2/tenant/{tenant}/calls/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -170,7 +169,7 @@ export function registerMarketingCallTools(
         const data = await client.get(`/v2/tenant/{tenant}/calls/${input.id}/recording`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -188,7 +187,7 @@ export function registerMarketingCallTools(
         const data = await client.get(`/v2/tenant/{tenant}/calls/${input.id}/voicemail`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -230,7 +229,7 @@ export function registerMarketingCallTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

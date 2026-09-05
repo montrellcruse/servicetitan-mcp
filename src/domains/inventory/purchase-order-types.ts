@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,20 +11,14 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const purchaseOrderTypePayloadSchema = z.object({
-  name: z.string().optional().describe("Purchase order type name"),
-  active: z.boolean().optional().describe("Whether the purchase order type is active"),
-  color: z.string().optional().describe("Color code used for this purchase order type"),
-  memo: z.string().optional().describe("Internal note for this purchase order type"),
-});
+const purchaseOrderTypePayloadSchema = officialRequestSchema("PurchaseOrderTypes_Create") as z.AnyZodObject;
 
 const purchaseOrderTypeIdSchema = z.object({
   id: z.number().int().describe("Purchase order type ID"),
 });
 
-const purchaseOrderTypeUpdateSchema = purchaseOrderTypePayloadSchema.extend({
+const purchaseOrderTypeUpdateSchema = (officialRequestSchema("PurchaseOrderTypes_Update") as z.AnyZodObject).extend({
   id: z.number().int().describe("Purchase order type ID"),
 });
 
@@ -52,12 +47,12 @@ export function registerPurchaseOrderTypeTools(
       try {
         const data = await client.post(
           "/tenant/{tenant}/purchase-order-types",
-          buildParams(parsed),
+          parsed,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -75,12 +70,12 @@ export function registerPurchaseOrderTypeTools(
       try {
         const data = await client.patch(
           `/tenant/{tenant}/purchase-order-types/${id}`,
-          buildParams(payload),
+          payload,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -112,7 +107,7 @@ export function registerPurchaseOrderTypeTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -12,9 +12,6 @@ import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
 
 const EMPTY_REPORT = { fields: [], data: [], hasMore: false };
-const REPORT_175_STRUCTURE_ERROR =
-  "Report 175 response structure changed — expected fields: Name, CompletedRevenue, OpportunityConversionRate, Opportunity, ConvertedJobs, AdjustmentRevenue, TotalRevenue, NonJobRevenue";
-
 function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig {
   return {
     clientId: "client-id",
@@ -151,7 +148,11 @@ describe("intelligence revenue validation", () => {
       endDate: "2026-01-31",
     });
 
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toBe(`Error: ${REPORT_175_STRUCTURE_ERROR}`);
+    expect(result.isError).not.toBe(true);
+    const payload = JSON.parse(result.content[0]?.text ?? "{}");
+    expect(payload.totalRevenue).toBe(0);
+    expect(payload._warnings).toContain(
+      "Revenue report (Report 175) unavailable: Report 175 is missing required fields: TotalRevenue",
+    );
   });
 });

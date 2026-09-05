@@ -1,0 +1,3 @@
+# Keep generated catalogs available while focusing pull-request review on source.
+src/contracts/*.generated.ts linguist-generated=true
+TOOLS.md linguist-generated=true

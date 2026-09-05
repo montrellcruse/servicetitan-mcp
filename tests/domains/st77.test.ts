@@ -15,7 +15,7 @@ function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitan
     appKey: "app-key",
     tenantId: "tenant-id",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100_000,
     enabledDomains: null,

@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const jobStatusSchema = z.enum([
@@ -178,12 +177,12 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
 }
 
 const jobAttachmentListSchema = paginationParams(
-  withDescribedDateFilters(
-    z.object({
-      ...sortParam(["Id", "CreatedOn"]),
-      jobId: z.number().int().describe("Job ID"),
-    }),
-  ),
+  z.object({
+    ...sortParam(["Id", "CreatedOn"]),
+    jobId: z.number().int().describe("Job ID"),
+    createdBefore: z.string().datetime({ offset: true }).optional().describe("Return items created before this UTC timestamp"),
+    createdOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return items created on or after this UTC timestamp"),
+  }),
 );
 
 const reasonListSchema = paginationParams(
@@ -335,7 +334,7 @@ export function registerDispatchJobTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -353,7 +352,7 @@ export function registerDispatchJobTools(
         const data = await client.get(`/forms/v2/tenant/{tenant}/jobs/attachment/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -375,7 +374,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -393,7 +392,7 @@ export function registerDispatchJobTools(
         const data = await client.get("/tenant/{tenant}/call-reasons", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -411,7 +410,7 @@ export function registerDispatchJobTools(
         const data = await client.get("/tenant/{tenant}/job-cancel-reasons", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -429,7 +428,7 @@ export function registerDispatchJobTools(
         const data = await client.get("/tenant/{tenant}/job-hold-reasons", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -452,7 +451,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -470,7 +469,7 @@ export function registerDispatchJobTools(
         const data = await client.get("/tenant/{tenant}/jobs", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -488,7 +487,7 @@ export function registerDispatchJobTools(
         const data = await client.get(`/tenant/{tenant}/jobs/${input.id}/equipment`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -508,7 +507,7 @@ export function registerDispatchJobTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -531,7 +530,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -551,7 +550,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -573,7 +572,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -596,7 +595,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -606,15 +605,19 @@ export function registerDispatchJobTools(
     domain: "dispatch",
     operation: "write",
     description: "Cancel a job",
-    schema: jobIdSchema.shape,
+    schema: {
+      ...jobIdSchema.shape,
+      reasonId: z.number().int().describe("Job cancellation reason ID"),
+      memo: z.string().describe("Job cancellation memo"),
+    },
     handler: async (params) => {
-      const input = jobIdSchema.parse(params);
+      const input = jobIdSchema.extend({ reasonId: z.number().int(), memo: z.string() }).parse(params);
 
       try {
-        const data = await client.put(`/tenant/{tenant}/jobs/${input.id}/cancel`);
+        const data = await client.put(`/tenant/{tenant}/jobs/${input.id}/cancel`, { reasonId: input.reasonId, memo: input.memo });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -632,7 +635,7 @@ export function registerDispatchJobTools(
         const data = await client.put(`/tenant/{tenant}/jobs/${input.id}/remove-cancellation`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -650,7 +653,7 @@ export function registerDispatchJobTools(
         const data = await client.put(`/tenant/{tenant}/jobs/${input.id}/hold`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -668,7 +671,7 @@ export function registerDispatchJobTools(
         const data = await client.put(`/tenant/{tenant}/jobs/${input.id}/complete`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -693,7 +696,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -713,7 +716,7 @@ export function registerDispatchJobTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -734,7 +737,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -752,7 +755,7 @@ export function registerDispatchJobTools(
         const data = await client.get(`/tenant/{tenant}/jobs/${input.id}/history`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -772,7 +775,7 @@ export function registerDispatchJobTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -797,7 +800,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -815,7 +818,7 @@ export function registerDispatchJobTools(
         const data = await client.get(`/tenant/{tenant}/jobs/${input.id}/booked-log`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -836,7 +839,7 @@ export function registerDispatchJobTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -855,7 +858,7 @@ export function registerDispatchJobTools(
         const data = await client.get(`/tenant/{tenant}/jobs/${jobId}/splits`, buildParams(query));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -873,7 +876,7 @@ export function registerDispatchJobTools(
         const data = await client.get("/tenant/{tenant}/jobs/splits", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

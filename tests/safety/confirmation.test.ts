@@ -13,7 +13,7 @@ function config(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig
     appKey: "key",
     tenantId: "tenant",
     environment: "integration",
-    readonlyMode: false,
+    readonlyMode: false, experimentalWrites: true,
     confirmWrites: false,
     maxResponseChars: 100000,
     enabledDomains: null,
@@ -97,7 +97,7 @@ describe("safety confirmation wrapper", () => {
     await wrapped({ id: 55, confirm: true });
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, expect.objectContaining({ signal: expect.any(AbortSignal) })]);
   });
 
   it("write tools require _confirmed=true when ST_CONFIRM_WRITES=true", async () => {
@@ -120,7 +120,7 @@ describe("safety confirmation wrapper", () => {
 
     await wrapped({ id: 55, _confirmed: true });
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, expect.objectContaining({ signal: expect.any(AbortSignal) })]);
   });
 
   it("write tools execute immediately when ST_CONFIRM_WRITES=false", async () => {
@@ -139,6 +139,6 @@ describe("safety confirmation wrapper", () => {
     await wrapped({ id: 55 });
 
     expect(handler).toHaveBeenCalledTimes(1);
-    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, undefined]);
+    expect(handler.mock.calls[0]).toEqual([{ id: 55 }, expect.objectContaining({ signal: expect.any(AbortSignal) })]);
   });
 });

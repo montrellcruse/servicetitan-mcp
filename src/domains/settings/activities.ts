@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const activityCodeIdSchema = z.object({
@@ -76,7 +75,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/activities/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -107,7 +106,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -131,7 +130,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -149,7 +148,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/activity-categories/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -180,7 +179,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -204,7 +203,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -222,7 +221,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/activity-types/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -253,7 +252,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -277,7 +276,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
