@@ -177,12 +177,12 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
 }
 
 const jobAttachmentListSchema = paginationParams(
-  withDescribedDateFilters(
-    z.object({
-      ...sortParam(["Id", "CreatedOn"]),
-      jobId: z.number().int().describe("Job ID"),
-    }),
-  ),
+  z.object({
+    ...sortParam(["Id", "CreatedOn"]),
+    jobId: z.number().int().describe("Job ID"),
+    createdBefore: z.string().datetime({ offset: true }).optional().describe("Return items created before this UTC timestamp"),
+    createdOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return items created on or after this UTC timestamp"),
+  }),
 );
 
 const reasonListSchema = paginationParams(

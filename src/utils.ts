@@ -167,7 +167,31 @@ function fitsBudget(response: ToolResponse, limit: number): boolean {
   return JSON.stringify(response).length <= limit;
 }
 
+type DeliveryErrorCode = "RESPONSE_TOO_LARGE" | "INVALID_RESPONSE";
+const deliveryFailures = new WeakMap<ToolResponse, Readonly<{ code: DeliveryErrorCode; mutationCompleted: boolean }>>();
+
+/** Internal provenance: upstream error codes alone cannot prove mutation success. */
+export function getResponseDeliveryFailure(response: ToolResponse) {
+  return deliveryFailures.get(response);
+}
+
+function deliveryFailure(response: ToolResponse, code: DeliveryErrorCode): ToolResponse {
+  deliveryFailures.set(response, Object.freeze({ code, mutationCompleted: getRequestContext().mutatingOperation === true }));
+  return response;
+}
+
+function completedMutationDeliveryError(code: DeliveryErrorCode, limit: number): ToolResponse {
+  const error = { code, mutationCompleted: true, retryable: false };
+  const detailed = responseEnvelope({ error: {
+    ...error, message: "The mutation completed, but its result could not be delivered. Do not repeat the mutation; inspect its result with a read operation.",
+  } }, true);
+  // Compact text preserves both safety flags within the minimum 256-character
+  // envelope budget; no upstream records or misleading read-retry advice remain.
+  return fitsBudget(detailed, limit) ? detailed : responseEnvelope({ error }, true, true);
+}
+
 function oversizedResponse(payload: Record<string, unknown>, originalSize: number, limit: number): ToolResponse {
+  if (getRequestContext().mutatingOperation) return completedMutationDeliveryError("RESPONSE_TOO_LARGE", limit);
   const pagination: Record<string, unknown> = {};
   for (const key of ["page", "pageSize", "totalCount", "hasMore", "continueFrom", "nextPageToken", "paginationToken"]) {
     if (payload[key] !== undefined) pagination[key] = payload[key];
@@ -214,14 +238,20 @@ export function toolResult(
     if (store) {
       try {
         const metadata = store(jsonPayload);
-        const stored = responseEnvelope({ ...metadata, delivery: "stored", complete: false });
+        const stored = responseEnvelope({
+          ...metadata, delivery: "stored", complete: false,
+          ...(getRequestContext().mutatingOperation ? { mutationCompleted: true, retryable: false } : {}),
+        });
         if (fitsBudget(stored, limit)) return stored;
       } catch { /* Full/unavailable storage retains the explicit unavailable fallback. */ }
     }
-    return oversizedResponse(jsonPayload, originalSize, limit);
+    return deliveryFailure(oversizedResponse(jsonPayload, originalSize, limit), "RESPONSE_TOO_LARGE");
   } catch {
+    if (getRequestContext().mutatingOperation) {
+      return deliveryFailure(completedMutationDeliveryError("INVALID_RESPONSE", limit), "INVALID_RESPONSE");
+    }
     const error = responseEnvelope({ error: { code: "INVALID_RESPONSE", message: "Response could not be represented as JSON." } }, true);
-    return fitsBudget(error, limit) ? error : responseEnvelope({ error: { code: "INVALID_RESPONSE" } }, true);
+    return deliveryFailure(fitsBudget(error, limit) ? error : responseEnvelope({ error: { code: "INVALID_RESPONSE" } }, true), "INVALID_RESPONSE");
   }
 }
 

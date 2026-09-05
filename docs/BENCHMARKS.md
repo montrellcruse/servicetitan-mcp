@@ -34,11 +34,11 @@ Node 22's benchmark driver emitted abort-listener warnings during sustained HTTP
 
 ## Focused refresh after review fixes
 
-On September 5, 2026, the client-load and analytics harnesses were repeated sequentially on Node 22.23.2 and 24.20.0 after correcting retry metadata and report POST classification. The rebuilt package identity is `9ae4fac12e3aac62d4d5f90ff75fe90c239564e6ad51eb1d9a54a1a0e6eab81d`; the harnesses bundle the corresponding current client/executor source. The full protocol, soak, and retained-memory comparison above remains evidence for `786f15b` and was not repeated for these error-handling changes.
+On September 5, 2026, the client-load and analytics harnesses were repeated sequentially on Node 22.23.2 and 24.20.0 after correcting completed-mutation delivery semantics, query filters, and official-operation lookup precedence. The rebuilt package identity is `a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701`; the harnesses bundle the corresponding current client/executor source. The full protocol, soak, and retained-memory comparison above remains evidence for `786f15b` and was not repeated for these error-handling changes.
 
 The refresh passed three statistics checks, 20 client-load scenarios, and 18 fault scenarios across both runtimes: 7,680 offered requests, 6,688 successful requests, and 992 expected queue-overflow rejections. Concurrency, queue bounds, cancellation, and recovery invariants passed. Both timeout and HTTP 503 mutation faults made exactly one mutation attempt and returned `outcomeUnknown: true` with `retryable: false`; the harness now asserts that pair explicitly.
 
-Analytics checks passed with 40 local samples and ten modeled samples at 20 ms per page. Three-page cold/warm medians were 66.016 / 0.035 ms on Node 22 and 65.397 / 0.024 ms on Node 24, with no added upstream requests for warm results. Duplicate fan-in, complete pagination, expiry, and per-client isolation checks passed. These measurements confirm the tested behavior under synthetic load; they do not add a production latency or capacity claim.
+Analytics checks passed with 40 local samples and ten modeled samples at 20 ms per page. Three-page cold/warm medians were 66.427 / 0.034 ms on Node 22 and 66.190 / 0.018 ms on Node 24, with no added upstream requests for warm results. Duplicate fan-in, complete pagination, expiry, and per-client isolation checks passed. These measurements confirm the tested behavior under synthetic load; they do not add a production latency or capacity claim.
 
 ## Operating limits
 

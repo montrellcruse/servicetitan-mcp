@@ -5,6 +5,8 @@ export interface RequestContext {
   signal?: AbortSignal;
   timezone?: string;
   maxResponseChars?: number;
+  /** Set by the registry only while an authorized mutation handler executes. */
+  mutatingOperation?: boolean;
   /** Per-server/session bounded storage for results that cannot fit inline. */
   storeOversized?: (payload: unknown) => Record<string, unknown>;
 }

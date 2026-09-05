@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import {
   activeFilterParam,
   buildParams,
-  dateFilterParams,
   paginationParams,
   toolError,
   toolResult,
@@ -16,12 +15,12 @@ const paymentTypeGetSchema = z.object({
 });
 
 const paymentTypesListSchema = paginationParams(
-  dateFilterParams(
-    z.object({
-      ids: z.string().optional().describe("Comma-delimited payment type IDs (max 50)"),
-      ...activeFilterParam(),
-    }),
-  ),
+  z.object({
+    ids: z.string().optional().describe("Comma-delimited payment type IDs (max 50)"),
+    ...activeFilterParam(),
+    createdBefore: z.string().datetime({ offset: true }).optional().describe("Return records created before this timestamp"),
+    createdOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return records created on or after this timestamp"),
+  }),
 );
 
 

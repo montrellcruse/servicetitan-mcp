@@ -9,7 +9,10 @@ function operationRegex(fullPath: string): RegExp {
 const CONTRACT_INDEX = OFFICIAL_OPERATIONS.map((contract) => ({
   contract,
   regex: operationRegex(contract.fullPath),
-}));
+  parameterCount: (contract.fullPath.match(/\{[^}]+\}/g) ?? []).length,
+})).sort((left, right) =>
+  left.parameterCount - right.parameterCount || right.contract.fullPath.length - left.contract.fullPath.length
+);
 
 /** Look up authoritative scope, parameter, request, and response semantics for a resolved API call. */
 export function findOfficialOperation(

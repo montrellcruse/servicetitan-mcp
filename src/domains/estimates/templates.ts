@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import {
   activeFilterParam,
   buildParams,
-  dateFilterParams,
   paginationParams,
   toolError,
   toolResult,
@@ -57,12 +56,12 @@ const estimateTemplateItemSchema = z.object({
     .describe("Project labels. Empty string clears labels; null leaves labels unchanged."),
 });
 
-const estimateTemplateListSchema = dateFilterParams(
-  paginationParams(
-    z.object({
-      ...activeFilterParam(),
-    }),
-  ),
+const estimateTemplateListSchema = paginationParams(
+  z.object({
+    ...activeFilterParam(),
+    modifiedBefore: z.string().datetime({ offset: true }).optional().describe("Return templates modified before this UTC timestamp"),
+    modifiedOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return templates modified on or after this UTC timestamp"),
+  }),
 );
 
 const estimateTemplatePayloadSchema = z.object({
@@ -108,13 +107,13 @@ const proposalTypeIdFilterSchema = {
   proposalTypeId: z.number().int().optional().describe("Filter by proposal type ID"),
 };
 
-const proposalTemplateListSchema = dateFilterParams(
-  paginationParams(
-    z.object({
-      ...activeFilterParam(),
-      ...proposalTypeIdFilterSchema,
-    }),
-  ),
+const proposalTemplateListSchema = paginationParams(
+  z.object({
+    ...activeFilterParam(),
+    ...proposalTypeIdFilterSchema,
+    modifiedBefore: z.string().datetime({ offset: true }).optional().describe("Return templates modified before this UTC timestamp"),
+    modifiedOnOrAfter: z.string().datetime({ offset: true }).optional().describe("Return templates modified on or after this UTC timestamp"),
+  }),
 );
 
 const proposalTemplatePayloadSchema = z.object({

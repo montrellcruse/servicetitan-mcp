@@ -12,7 +12,7 @@ import { withRequestContext } from "./request-context.js";
 import { ResultStore } from "./result-store.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
-import { toolError, toolResult } from "./utils.js";
+import { getResponseDeliveryFailure, toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
 export const EXPERIMENTAL_MUTATION_NOTICE = "EXPERIMENTAL: This mutation has not been verified against a live ServiceTitan Integration environment. ";
@@ -314,7 +314,9 @@ export class ToolRegistry {
       }
 
       try {
-        const result = await originalHandler(executionParams, extra);
+        const result = isMutating
+          ? await withRequestContext({ mutatingOperation: true }, () => originalHandler(executionParams, extra))
+          : await originalHandler(executionParams, extra);
 
         if (shouldAudit) {
           this.auditLogger.log(
@@ -336,7 +338,7 @@ export class ToolRegistry {
       timer.unref();
       const signal = extra?.signal ? AbortSignal.any([extra.signal, deadline.signal]) : deadline.signal;
       try {
-        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, storeOversized: payload => this.resultStore.put(payload) }, async () => {
+        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, storeOversized: payload => this.resultStore.put(payload) }, async () => {
           if (signal.aborted) return toolError("Tool execution cancelled");
           if (this.activeCalls >= (this.config.maxConcurrentToolCalls ?? 16)) return toolError("Server is busy; retry after active tool calls complete");
           this.activeCalls += 1;
@@ -446,8 +448,7 @@ export class ToolRegistry {
     result?: ToolResponse,
     thrownError?: string,
   ): AuditEntry {
-    const deliveryCode = (result?.structuredContent as { error?: { code?: string } } | undefined)?.error?.code;
-    const deliveryError = deliveryCode === "RESPONSE_TOO_LARGE" || deliveryCode === "INVALID_RESPONSE" ? deliveryCode : undefined;
+    const deliveryFailure = result ? getResponseDeliveryFailure(result) : undefined;
     const outcomeUnknown = (result?.structuredContent as { error?: { outcomeUnknown?: boolean } } | undefined)?.error?.outcomeUnknown === true;
     return {
       timestamp: new Date().toISOString(),
@@ -457,8 +458,8 @@ export class ToolRegistry {
       resource: this.extractResource(tool.name),
       resourceId: this.extractResourceId(params),
       params: sanitizeParams(params),
-      success: deliveryError ? true : success,
-      ...(deliveryError ? { deliveryError } : {}),
+      success: deliveryFailure?.mutationCompleted === true ? true : success,
+      ...(deliveryFailure ? { deliveryError: deliveryFailure.code } : {}),
       ...(outcomeUnknown ? { outcomeUnknown: true } : {}),
       error: thrownError ?? this.extractResultError(result),
     };

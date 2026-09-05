@@ -29,7 +29,7 @@ export class ResultStore {
   read(resultId: string, offset: number, maxChars: number): Record<string, unknown> {
     this.prune();
     const value = this.values.get(resultId);
-    if (!value) throw new Error("Result is unavailable or expired; repeat the original query");
+    if (!value) throw new Error("Result is unavailable or expired. Inspect the resource with a read operation; do not repeat a completed mutation to retrieve its result.");
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > value.text.length) throw new Error("Invalid result offset");
     if (!Number.isSafeInteger(maxChars) || maxChars <= 0) throw new Error("Invalid chunk size");
     const text = value.text.slice(offset, offset + maxChars);
