@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z.object({
@@ -144,7 +143,7 @@ export function registerDispatchJobTypeTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -162,7 +161,7 @@ export function registerDispatchJobTypeTools(
         const data = await client.get("/tenant/{tenant}/job-types", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -180,7 +179,7 @@ export function registerDispatchJobTypeTools(
         const data = await client.post("/tenant/{tenant}/job-types", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -203,7 +202,7 @@ export function registerDispatchJobTypeTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -221,7 +220,7 @@ export function registerDispatchJobTypeTools(
         const data = await client.delete(`/tenant/{tenant}/job-types/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

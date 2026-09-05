@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 const recurringServiceEventStatusEnum = z.enum([
   "NotAttempted",
@@ -143,7 +142,7 @@ export function registerRecurringServiceTools(
         const data = await client.get(`/tenant/{tenant}/recurring-services/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -177,7 +176,7 @@ export function registerRecurringServiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -200,7 +199,7 @@ export function registerRecurringServiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -234,7 +233,7 @@ export function registerRecurringServiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -254,7 +253,7 @@ export function registerRecurringServiceTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -274,7 +273,7 @@ export function registerRecurringServiceTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -292,7 +291,7 @@ export function registerRecurringServiceTools(
         const data = await client.get(`/tenant/{tenant}/recurring-service-types/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -328,7 +327,7 @@ export function registerRecurringServiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import { materialCreateInputSchema, materialUpdateInputSchema } from "./schemas.js";
 
@@ -87,7 +86,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.post(`/tenant/{tenant}/materials`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -118,7 +117,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -136,7 +135,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/materials`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -156,7 +155,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         await client.delete(`/tenant/{tenant}/materials/${id}`);
         return toolResult({ success: true, message: "Material deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -172,7 +171,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/materials/costtypes`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -190,7 +189,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/materialsmarkup`, query);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -210,7 +209,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.post(`/tenant/{tenant}/materialsmarkup`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -230,7 +229,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.get(`/tenant/{tenant}/materialsmarkup/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -254,7 +253,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.put(`/tenant/{tenant}/materialsmarkup/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -278,7 +277,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
         const data = await client.patch(`/tenant/{tenant}/materials/${id}`, buildParams(body));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

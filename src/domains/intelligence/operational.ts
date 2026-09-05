@@ -9,7 +9,6 @@ import {
   fetchWithWarning,
   firstValue,
   formatCurrency,
-  getErrorMessage,
   isRecord,
   normalizeStatus,
   round,
@@ -19,6 +18,7 @@ import {
   toText,
   toSingleDayRange,
 } from "./helpers.js";
+import { executeReport } from "./report-executor.js";
 
 const dailySnapshotSchema = z.object({
   date: z.string().optional().describe("Date to snapshot (YYYY-MM-DD, defaults to today)"),
@@ -242,13 +242,11 @@ export function registerIntelligenceDailySnapshotTool(
           warnings,
           "Upcoming jobs report (Report 163)",
           () =>
-            client.post("/tenant/{tenant}/report-category/operations/reports/163/data", {
-              parameters: [
-                { name: "DateType", value: "Appointment Date" },
+            executeReport(client, "163", [
+                { name: "DateType", value: 6 },
                 { name: "From", value: tomorrowDate },
                 { name: "To", value: tomorrowDate },
-              ],
-            }),
+              ], registry.reportBindings),
           null,
         );
 
@@ -351,7 +349,7 @@ export function registerIntelligenceDailySnapshotTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const timesheetCodeListSchema = paginationParams(
@@ -150,7 +149,7 @@ export function registerPayrollTimesheetTools(
         const data = await client.get(`/tenant/{tenant}/timesheet-codes/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -181,7 +180,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -202,7 +201,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -220,7 +219,7 @@ export function registerPayrollTimesheetTools(
         const data = await client.get(`/tenant/{tenant}/non-job-timesheets/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -241,7 +240,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -274,7 +273,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -308,7 +307,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -329,7 +328,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -362,7 +361,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -384,7 +383,7 @@ export function registerPayrollTimesheetTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -405,7 +404,7 @@ export function registerPayrollTimesheetTools(
           message: "Non-job timesheet deleted",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const suppressionEmailSchema = z.object({
   email: z.string().email().describe("Suppression email address"),
@@ -48,7 +48,7 @@ function registerSuppressionsListTool(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -79,7 +79,7 @@ export function registerMarketingSuppressionTools(
         const data = await client.get(`/tenant/{tenant}/suppressions/${encodedEmail}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -102,7 +102,7 @@ export function registerMarketingSuppressionTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -120,7 +120,7 @@ export function registerMarketingSuppressionTools(
         const data = await client.post("/tenant/{tenant}/suppressions/suppress", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

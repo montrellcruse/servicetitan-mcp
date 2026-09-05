@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   dayDiff,
@@ -9,7 +10,6 @@ import {
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
-  getErrorMessage,
   isRecord,
   normalizeStatus,
   round,
@@ -172,18 +172,17 @@ export function registerIntelligenceEstimatePipelineTool(
               }),
             [],
           ),
-          fetchWithWarning(
-            warnings,
-            "Technician sales report (Report 172)",
-            () =>
-              client.post("/tenant/{tenant}/report-category/technician-dashboard/reports/172/data", {
-                parameters: [
-                  { name: "From", value: input.startDate ?? "" },
-                  { name: "To", value: input.endDate ?? "" },
-                ],
-              }),
-            null,
-          ),
+          input.startDate !== undefined && input.endDate !== undefined
+            ? fetchWithWarning(
+                warnings,
+                "Technician sales report (Report 172)",
+                () => executeReport(client, "172", [
+                  { name: "From", value: input.startDate },
+                  { name: "To", value: input.endDate },
+                ], registry.reportBindings),
+                null,
+              )
+            : Promise.resolve(null),
         ]);
 
         const allSalesByTechnician = parseSalesReport(salesReport);
@@ -362,7 +361,7 @@ export function registerIntelligenceEstimatePipelineTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

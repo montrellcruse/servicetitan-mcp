@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   buildParams,
   dateFilterParams,
@@ -9,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -36,43 +36,8 @@ function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T
       .describe("Return items modified on or after this UTC timestamp"),
   });
 }
-const nonJobAppointmentCreateSchema = {
-  technicianId: z.number().int().describe("Technician ID"),
-  start: z.string().describe("Appointment start timestamp"),
-  name: z.string().describe("Appointment name"),
-  duration: z.string().describe("Appointment duration"),
-  timesheetCodeId: z.number().int().describe("Timesheet code ID"),
-  summary: z.string().optional().describe("Appointment summary"),
-  clearDispatchBoard: z
-    .boolean()
-    .optional()
-    .describe("Whether to clear the dispatch board slot"),
-  clearTechnicianView: z
-    .boolean()
-    .optional()
-    .describe("Whether to clear technician view visibility"),
-  removeTechnicianFromCapacityPlanning: z
-    .boolean()
-    .optional()
-    .describe("Whether technician should be removed from capacity planning"),
-  allDay: z.boolean().optional().describe("Whether appointment is all day"),
-  showOnTechnicianSchedule: z
-    .boolean()
-    .optional()
-    .describe("Whether to show on technician schedule"),
-  active: z.boolean().optional().describe("Whether appointment is active"),
-  repeat: z.boolean().optional().describe("Whether appointment repeats"),
-  countOccurrences: z
-    .number()
-    .int()
-    .optional()
-    .describe("Number of repeated occurrences"),
-  interval: z.number().int().optional().describe("Repeat interval"),
-  frequency: z.string().optional().describe("Repeat frequency"),
-  endType: z.string().optional().describe("Repeat end type"),
-  endOn: z.string().optional().describe("Repeat end timestamp"),
-  daysOfWeek: z.string().optional().describe("Comma-separated days of week"),
-} as const;
+const nonJobAppointmentCreateSchema = officialRequestSchema("NonJobAppointments_Create") as z.ZodObject<z.ZodRawShape>;
+const nonJobAppointmentUpdateSchema = (officialRequestSchema("NonJobAppointments_Update") as z.ZodObject<z.ZodRawShape>).extend({ id: z.number().int() });
 
 const nonJobAppointmentListSchema = paginationParams(
   withDescribedDateFilters(
@@ -119,7 +84,7 @@ export function registerSchedulingNonJobAppointmentTools(
         const data = await client.get(`/tenant/{tenant}/non-job-appointments/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -139,7 +104,7 @@ export function registerSchedulingNonJobAppointmentTools(
         const data = await client.delete(`/tenant/{tenant}/non-job-appointments/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -149,49 +114,9 @@ export function registerSchedulingNonJobAppointmentTools(
     domain: "scheduling",
     operation: "write",
     description: "Update a non-job appointment",
-    schema: {
-      id: z.number().int().describe("Non-job appointment ID"),
-      technicianId: z.number().int().optional().describe("Technician ID"),
-      start: z.string().optional().describe("Appointment start timestamp"),
-      name: z.string().optional().describe("Appointment name"),
-      duration: z.string().optional().describe("Appointment duration"),
-      timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
-      summary: z.string().optional().describe("Appointment summary"),
-      clearDispatchBoard: z
-        .boolean()
-        .optional()
-        .describe("Whether to clear the dispatch board slot"),
-      clearTechnicianView: z
-        .boolean()
-        .optional()
-        .describe("Whether to clear technician view visibility"),
-      removeTechnicianFromCapacityPlanning: z
-        .boolean()
-        .optional()
-        .describe("Whether technician should be removed from capacity planning"),
-      allDay: z.boolean().optional().describe("Whether appointment is all day"),
-      showOnTechnicianSchedule: z
-        .boolean()
-        .optional()
-        .describe("Whether to show on technician schedule"),
-      active: z.boolean().optional().describe("Whether appointment is active"),
-    },
+    schema: nonJobAppointmentUpdateSchema.shape,
     handler: async (params) => {
-      const { id, ...payload } = params as {
-        id: number;
-        technicianId?: number;
-        start?: string;
-        name?: string;
-        duration?: string;
-        timesheetCodeId?: number;
-        summary?: string;
-        clearDispatchBoard?: boolean;
-        clearTechnicianView?: boolean;
-        removeTechnicianFromCapacityPlanning?: boolean;
-        allDay?: boolean;
-        showOnTechnicianSchedule?: boolean;
-        active?: boolean;
-      };
+      const { id, ...payload } = nonJobAppointmentUpdateSchema.parse(params);
 
       try {
         const data = await client.put(
@@ -200,7 +125,7 @@ export function registerSchedulingNonJobAppointmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -221,7 +146,7 @@ export function registerSchedulingNonJobAppointmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -231,29 +156,9 @@ export function registerSchedulingNonJobAppointmentTools(
     domain: "scheduling",
     operation: "write",
     description: "Create a non-job appointment",
-    schema: nonJobAppointmentCreateSchema,
+    schema: nonJobAppointmentCreateSchema.shape,
     handler: async (params) => {
-      const typed = params as {
-        technicianId: number;
-        start: string;
-        name: string;
-        duration: string;
-        timesheetCodeId: number;
-        summary?: string;
-        clearDispatchBoard?: boolean;
-        clearTechnicianView?: boolean;
-        removeTechnicianFromCapacityPlanning?: boolean;
-        allDay?: boolean;
-        showOnTechnicianSchedule?: boolean;
-        active?: boolean;
-        repeat?: boolean;
-        countOccurrences?: number;
-        interval?: number;
-        frequency?: string;
-        endType?: string;
-        endOn?: string;
-        daysOfWeek?: string;
-      };
+      const typed = nonJobAppointmentCreateSchema.parse(params);
 
       try {
         const data = await client.post(
@@ -262,7 +167,7 @@ export function registerSchedulingNonJobAppointmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

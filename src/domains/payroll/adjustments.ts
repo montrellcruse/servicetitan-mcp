@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const payrollAdjustmentPayloadSchema = z.object({}).passthrough();
 
@@ -50,7 +50,7 @@ export function registerPayrollAdjustmentTools(
         const data = await client.post("/tenant/{tenant}/payroll-adjustments", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -70,7 +70,7 @@ export function registerPayrollAdjustmentTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -98,7 +98,7 @@ export function registerPayrollAdjustmentTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

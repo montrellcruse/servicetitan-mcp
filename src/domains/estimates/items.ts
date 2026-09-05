@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 import {
   estimateItemRequestSchema,
@@ -78,7 +77,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -109,7 +108,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -127,7 +126,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
         await client.delete(`/tenant/{tenant}/estimates/${id}/items/${itemId}`);
         return toolResult({ success: true, message: "Estimate item deleted" });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

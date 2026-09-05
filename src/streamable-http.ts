@@ -17,32 +17,21 @@
  *   GET  /health      → Health check (no auth required)
  *   GET  /sse         → Legacy SSE endpoint (returns 410 Gone with deprecation notice)
  */
-import { timingSafeEqual, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
-import { createRequire } from "node:module";
 
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
-import { AuditLogger } from "./audit.js";
 import { ServiceTitanClient } from "./client.js";
 import { loadConfig } from "./config.js";
-import { loadDomainModules } from "./domains/loader.js";
 import { Logger } from "./logger.js";
-import { ToolRegistry } from "./registry.js";
-import { setDisplayTimezone, setMaxResponseChars, toolResult } from "./utils.js";
+import { createMcpServer, VERSION } from "./server.js";
+import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
 
 const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
 const SESSION_REAP_INTERVAL_MS = 60 * 1000;
-
-// Catch crashes
-process.on("uncaughtException", (err) => {
-  process.stderr.write(`UNCAUGHT EXCEPTION: ${err.stack ?? err.message}\n`);
-});
-process.on("unhandledRejection", (reason) => {
-  process.stderr.write(`UNHANDLED REJECTION: ${reason instanceof Error ? reason.stack ?? reason.message : String(reason)}\n`);
-});
 
 const PORT = Number(process.env.PORT ?? process.env.ST_MCP_PORT ?? 3100);
 const API_KEY = process.env.ST_MCP_API_KEY ?? "";
@@ -50,27 +39,6 @@ const API_KEY = process.env.ST_MCP_API_KEY ?? "";
 if (!API_KEY) {
   process.stderr.write("Fatal: ST_MCP_API_KEY is required for remote access.\n");
   process.exit(1);
-}
-
-// ── Constant-time string comparison ──
-
-function safeCompare(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  return timingSafeEqual(Buffer.from(a), Buffer.from(b));
-}
-
-// ── Auth middleware ──
-
-function authenticate(req: IncomingMessage): boolean {
-  const key = req.headers["x-api-key"];
-  if (typeof key === "string" && safeCompare(key, API_KEY)) {
-    return true;
-  }
-  const auth = req.headers.authorization;
-  if (typeof auth === "string" && auth.startsWith("Bearer ") && safeCompare(auth.slice(7), API_KEY)) {
-    return true;
-  }
-  return false;
 }
 
 function sendJson(res: ServerResponse, status: number, body: unknown): void {
@@ -104,84 +72,15 @@ function isInitializeRequest(body: unknown): boolean {
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  setMaxResponseChars(config.maxResponseChars);
-  setDisplayTimezone(config.timezone);
-
-  const _require = createRequire(import.meta.url);
-  const pkg = _require("../package.json") as { version: string };
-  const version = pkg.version;
-
+  const version = VERSION;
   const logger = new Logger(config.logLevel);
   const client = new ServiceTitanClient(config);
-  const auditLogger = new AuditLogger(logger);
-
-  // Create a "template" McpServer + registry to register tools once, then log stats
-  const templateServer = new McpServer({ name: "ServiceTitan", version });
-  const templateRegistry = new ToolRegistry(templateServer, config, logger, auditLogger);
-  templateRegistry.attachClient(client);
-
-  templateRegistry.register({
-    name: "st_health_check",
-    domain: "_system",
-    operation: "read",
-    description:
-      "Verify ServiceTitan API connectivity, authentication, tenant access, and server config",
-    schema: {},
-    handler: async () => {
-      const checks: Record<string, string> = {};
-      try {
-        await client.ensureToken();
-        checks.authentication = "OK";
-      } catch (error: unknown) {
-        checks.authentication = "FAILED";
-      }
-      try {
-        await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
-        checks.tenant_access = "OK";
-      } catch (error: unknown) {
-        checks.tenant_access = "FAILED";
-      }
-      return toolResult(checks);
-    },
-  });
-
-  await loadDomainModules(templateRegistry, logger);
-  templateRegistry.logSummary();
-  const stats = templateRegistry.getStats();
-
-  /** Create a fresh McpServer + ToolRegistry per session */
+  let stats = { registered: 0 };
+  let pendingInitializations = 0;
   async function createSessionServer(): Promise<McpServer> {
-    const sessionMcpServer = new McpServer({ name: "ServiceTitan", version });
-    const sessionRegistry = new ToolRegistry(sessionMcpServer, config, logger, auditLogger);
-    sessionRegistry.attachClient(client);
-
-    sessionRegistry.register({
-      name: "st_health_check",
-      domain: "_system",
-      operation: "read",
-      description:
-        "Verify ServiceTitan API connectivity, authentication, tenant access, and server config",
-      schema: {},
-      handler: async () => {
-        const checks: Record<string, string> = {};
-        try {
-          await client.ensureToken();
-          checks.authentication = "OK";
-        } catch (error: unknown) {
-          checks.authentication = "FAILED";
-        }
-        try {
-          await client.get("/settings/v2/tenant/{tenant}/business-units", { pageSize: 1 });
-          checks.tenant_access = "OK";
-        } catch (error: unknown) {
-          checks.tenant_access = "FAILED";
-        }
-        return toolResult(checks);
-      },
-    });
-
-    await loadDomainModules(sessionRegistry, logger);
-    return sessionMcpServer;
+    const runtime = await createMcpServer(config, { client, logger });
+    stats = runtime.registry.getStats();
+    return runtime.server;
   }
 
   type Session = {
@@ -189,6 +88,7 @@ async function main(): Promise<void> {
     server: McpServer;
     lastSeen: number;
     closing: boolean;
+    activeRequests: number;
   };
 
   // Track active sessions: transport + server
@@ -228,7 +128,7 @@ async function main(): Promise<void> {
   const sessionReaper = setInterval(() => {
     const now = Date.now();
     const expiredSessions = Array.from(sessions.entries()).filter(
-      ([, session]) => !session.closing && now - session.lastSeen > SESSION_IDLE_TTL_MS,
+      ([, session]) => !session.closing && session.activeRequests === 0 && now - session.lastSeen > SESSION_IDLE_TTL_MS,
     );
 
     if (expiredSessions.length === 0) {
@@ -243,6 +143,10 @@ async function main(): Promise<void> {
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();
+    try {
+    let url: URL;
+    try { url = requestUrl(req); } catch { sendJson(res, 400, { error: "Invalid request URL or Host", requestId }); return; }
+    if (!allowedOrigin(req, config.corsOrigin)) { sendJson(res, 403, { error: "Origin not permitted", requestId }); return; }
     sendCorsHeaders(res, config.corsOrigin);
 
     if (req.method === "OPTIONS") {
@@ -251,7 +155,6 @@ async function main(): Promise<void> {
       return;
     }
 
-    const url = new URL(req.url ?? "/", `http://${req.headers.host ?? "localhost"}`);
     logger.info(`[${requestId}] ${req.method} ${url.pathname}`);
 
     // Health endpoint (no auth)
@@ -267,10 +170,12 @@ async function main(): Promise<void> {
     }
 
     // Auth required for everything else
-    if (!authenticate(req)) {
+    if (!authenticated(req, API_KEY)) {
       sendJson(res, 401, { error: "Unauthorized", requestId });
       return;
     }
+
+    attachAuthenticatedPrincipal(req, config.mcpClientId ?? "api-key");
 
     // Legacy SSE endpoint — tell clients to use /mcp instead
     if (url.pathname === "/sse") {
@@ -285,6 +190,7 @@ async function main(): Promise<void> {
     // Streamable HTTP MCP endpoint
     if (url.pathname === "/mcp") {
       let createdSessionId: string | undefined;
+      let selectedSessionId: string | undefined;
 
       try {
         // Parse body for POST requests
@@ -319,8 +225,20 @@ async function main(): Promise<void> {
             sendJson(res, 404, { error: "Session not found. Send initialize request without session ID.", requestId });
             return;
           }
+          selectedSessionId = sessionId;
           session.lastSeen = Date.now();
-          await session.transport.handleRequest(req, res, parsedBody);
+          session.activeRequests += 1;
+          let finished = false;
+          const finishedRequest = () => {
+            if (finished) return;
+            finished = true;
+            session.activeRequests -= 1;
+            session.lastSeen = Date.now();
+          };
+          res.once("finish", finishedRequest);
+          res.once("close", finishedRequest);
+          try { await session.transport.handleRequest(req, res, parsedBody); }
+          finally { if (res.writableEnded) finishedRequest(); }
           return;
         }
 
@@ -346,8 +264,16 @@ async function main(): Promise<void> {
           return;
         }
 
-        // New session — create dedicated McpServer + transport
-        const sessionServer = await createSessionServer();
+        // Include pending initialization to prevent concurrent requests bypassing the limit.
+        if (sessions.size + pendingInitializations >= (config.maxSessions ?? 32)) {
+          sendJson(res, 503, { error: "Session limit reached; close an existing session before retrying", requestId });
+          return;
+        }
+        pendingInitializations += 1;
+        let sessionServer: McpServer | undefined;
+        let newTransport: StreamableHTTPServerTransport | undefined;
+        try {
+        sessionServer = await createSessionServer();
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (newSessionId: string) => {
@@ -355,9 +281,10 @@ async function main(): Promise<void> {
             logger.info("Session initialized", { sessionId: newSessionId, requestId });
             sessions.set(newSessionId, {
               transport,
-              server: sessionServer,
+              server: sessionServer!,
               lastSeen: Date.now(),
               closing: false,
+              activeRequests: 0,
             });
           },
         });
@@ -370,9 +297,19 @@ async function main(): Promise<void> {
           }
         };
 
+        newTransport = transport;
         await sessionServer.connect(transport);
         await transport.handleRequest(req, res, parsedBody);
+        if (!createdSessionId) { await transport.close(); await sessionServer.close(); }
+        } catch (error) {
+          if (!createdSessionId) { await newTransport?.close().catch(() => {}); await sessionServer?.close().catch(() => {}); }
+          throw error;
+        } finally { pendingInitializations -= 1; }
       } catch (error: unknown) {
+        if (selectedSessionId) {
+          const selected = sessions.get(selectedSessionId);
+          if (selected) await closeSession(selectedSessionId, selected, "transport-failed");
+        }
         if (createdSessionId) {
           const createdSession = sessions.get(createdSessionId);
           if (createdSession) {
@@ -395,9 +332,17 @@ async function main(): Promise<void> {
     }
 
     sendJson(res, 404, { error: "Not found. MCP endpoint is at /mcp", requestId });
+    } catch {
+      logger.error("HTTP request failed", { requestId });
+      if (!res.headersSent) sendJson(res, 500, { error: "Internal server error", requestId });
+      else if (!res.writableEnded) res.end();
+    }
   });
+  httpServer.requestTimeout = 30_000;
+  httpServer.headersTimeout = 15_000;
+  httpServer.keepAliveTimeout = 5_000;
 
-  httpServer.listen(PORT, "0.0.0.0", () => {
+  httpServer.listen(PORT, process.env.ST_MCP_HOST ?? "127.0.0.1", () => {
     logger.info(`ServiceTitan MCP Server v${version}`);
     logger.info(`Transport: Streamable HTTP on port ${PORT}`);
     logger.info(`Read-only: ${config.readonlyMode ? "yes" : "no"}`);

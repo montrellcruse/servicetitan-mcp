@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, toolError, toolResult } from "../../utils.js";
 import { pricebookBulkPayloadSchema } from "./schemas.js";
 export function registerBulkTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
@@ -20,7 +20,7 @@ export function registerBulkTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.post(`/tenant/{tenant}/pricebook`, body);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -40,7 +40,7 @@ export function registerBulkTools(client: ServiceTitanClient, registry: ToolRegi
         const data = await client.patch(`/tenant/{tenant}/pricebook`, body);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

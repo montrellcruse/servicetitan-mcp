@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { activeFilterParam, buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { activeFilterParam, buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const userRoleListSchema = paginationParams(
   z.object({
@@ -48,7 +48,7 @@ export function registerUserRoleTools(client: ServiceTitanClient, registry: Tool
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -9,7 +9,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -62,7 +61,7 @@ export function registerSchedulingTeamTools(
         const data = await client.get("/tenant/{tenant}/teams", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -83,7 +82,7 @@ export function registerSchedulingTeamTools(
         const data = await client.post("/tenant/{tenant}/teams", buildParams({ name, active }));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -103,7 +102,7 @@ export function registerSchedulingTeamTools(
         const data = await client.get(`/tenant/{tenant}/teams/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -123,7 +122,7 @@ export function registerSchedulingTeamTools(
         await client.delete(`/tenant/{tenant}/teams/${id}`);
         return toolResult({ success: true, message: "Team deleted successfully." });
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

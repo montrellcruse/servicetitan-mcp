@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const safePathSegmentSchema = z
@@ -141,7 +140,7 @@ function registerAttributionCreateTool(
         const data = await client.post(options.path, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -199,7 +198,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -215,7 +214,7 @@ export function registerMarketingAttributionTools(
         const data = await client.get("/tenant/{tenant}/data");
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -244,7 +243,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -266,7 +265,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -312,7 +311,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -342,7 +341,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -368,7 +367,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -399,7 +398,7 @@ export function registerMarketingAttributionTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

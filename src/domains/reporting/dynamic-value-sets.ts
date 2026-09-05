@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, paginationParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, paginationParams, toolError, toolResult } from "../../utils.js";
 
 const dynamicValueSetSchema = paginationParams(
   z.object({
@@ -36,7 +36,7 @@ export function registerDynamicValueSetTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

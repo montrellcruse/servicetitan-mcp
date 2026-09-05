@@ -41,6 +41,12 @@ describe("convertTimestampsToLocal", () => {
     );
   });
 
+  it("preserves ServiceTitan's finer-than-millisecond precision across day boundaries", () => {
+    expect(convertTimestampsToLocal("2026-03-28T02:30:00.1234567Z", "America/Phoenix")).toBe(
+      "2026-03-27T19:30:00.1234567-07:00",
+    );
+  });
+
   it("does not convert bare dates", () => {
     expect(convertTimestampsToLocal("2026-03-28", "America/New_York")).toBe("2026-03-28");
   });
@@ -151,7 +157,7 @@ describe("convertTimestampsToLocal", () => {
 });
 
 describe("toolResult timezone conversion", () => {
-  it("applies timezone conversion after shaping so date-only fields stay compact", () => {
+  it("preserves date-time precision when applying the display timezone", () => {
     const result = toolResult(
       {
         date: "2026-03-28T00:00:00Z",
@@ -164,7 +170,7 @@ describe("toolResult timezone conversion", () => {
     );
 
     expect(JSON.parse(result.content[0]?.text ?? "")).toEqual({
-      date: "2026-03-28",
+      date: "2026-03-27T20:00:00.000-04:00",
       createdAt: "2026-03-28T00:00:00.000-04:00",
     });
   });

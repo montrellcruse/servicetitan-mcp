@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,40 +11,15 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const externalDataEntrySchema = z.object({
-  key: z.string().optional().describe("External data key"),
-  value: z.string().optional().describe("External data value"),
-});
-
-const technicianPayloadSchema = z.object({
-  name: z.string().optional().describe("Technician display name"),
-  firstName: z.string().optional().describe("Technician first name"),
-  lastName: z.string().optional().describe("Technician last name"),
-  nickname: z.string().optional().describe("Technician nickname"),
-  employeeId: z.number().int().optional().describe("Related employee ID"),
-  userId: z.number().int().optional().describe("Related user ID"),
-  userRoleId: z.number().int().optional().describe("Related user role ID"),
-  employeeNumber: z.string().optional().describe("Technician employee number"),
-  mobilePhoneNumber: z.string().optional().describe("Mobile phone number"),
-  businessUnitId: z.number().int().optional().describe("Default business unit ID"),
-  active: z.boolean().optional().describe("Whether the technician is active"),
-  color: z.string().optional().describe("Schedule display color"),
-  laborWageTypeId: z.number().int().optional().describe("Labor wage type ID"),
-  laborCostPerHour: z.number().optional().describe("Labor cost per hour"),
-  memo: z.string().optional().describe("Internal note"),
-  externalData: z
-    .array(externalDataEntrySchema)
-    .optional()
-    .describe("External data entries"),
-});
+const technicianPayloadSchema = officialRequestSchema("Technicians_Create") as z.ZodObject<z.ZodRawShape>;
+const technicianUpdatePayloadSchema = officialRequestSchema("Technicians_Update") as z.ZodObject<z.ZodRawShape>;
 
 const technicianIdSchema = z.object({
   id: z.number().int().describe("Technician ID"),
 });
 
-const technicianUpdateSchema = technicianPayloadSchema.extend({
+const technicianUpdateSchema = technicianUpdatePayloadSchema.extend({
   id: z.number().int().describe("Technician ID"),
 });
 
@@ -69,12 +45,8 @@ const technicianListSchema = dateFilterParams(
 
 const shiftTypeSchema = z.enum(["Normal", "OnCall", "TimeOff"]);
 
-const repeatTypeSchema = z.enum(["Never", "Daily", "Weekly", "Monthly"]);
+const repeatTypeSchema = z.enum(["Never", "Daily", "Weekly"]);
 
-// ServiceTitan's POST /technician-shifts requires `technicianIds` (array),
-// `body`, and `repeatType`. Calling it with the previous `technicianId`
-// (singular) + missing `body`/`repeatType` returns HTTP 400 with all three
-// fields named.
 const technicianShiftCreateSchema = z.object({
   technicianIds: z
     .array(z.number().int())
@@ -82,20 +54,19 @@ const technicianShiftCreateSchema = z.object({
     .describe("Technician IDs to assign the shift to (one or more)"),
   start: z.string().datetime().describe("Shift start timestamp (ISO UTC)"),
   end: z.string().datetime().describe("Shift end timestamp (ISO UTC)"),
-  body: z.string().describe("Shift body / description (required by ST API)"),
+  shiftType: shiftTypeSchema.describe("Shift type"),
+  title: z.string().min(1).describe("Shift title"),
   repeatType: repeatTypeSchema.describe(
-    "Repeat type. Use 'Never' for a single shift; 'Daily'/'Weekly'/'Monthly' " +
-      "for recurrence (then `repeatEndOn` is required).",
+    "Repeat type. Use 'Never' for a single shift or 'Daily'/'Weekly' for recurrence.",
   ),
-  repeatEndOn: z
+  repeatEndDate: z
     .string()
     .datetime()
     .optional()
-    .describe("End date for recurrence (required when repeatType != 'Never')"),
-  shiftType: shiftTypeSchema.optional().describe("Shift type. Default 'Normal'."),
-  title: z.string().optional().describe("Shift title"),
+    .describe("Optional end date for recurrence"),
+  repeatInterval: z.number().int().optional(),
+  shiftDays: z.string().optional().describe("Comma-delimited weekdays for weekly recurrence"),
   note: z.string().optional().describe("Shift note"),
-  active: z.boolean().optional().describe("Whether the shift is active"),
   timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
 });
 
@@ -135,21 +106,14 @@ const technicianShiftUpdateSchema = z.object({
   shiftType: shiftTypeSchema.optional().describe("Shift type"),
   title: z.string().optional().describe("Shift title"),
   note: z.string().optional().describe("Shift note"),
-  active: z.boolean().optional().describe("Whether the shift is active"),
-  technicianId: z.number().int().optional().describe("Technician ID"),
   start: z.string().datetime().optional().describe("Shift start timestamp"),
   end: z.string().datetime().optional().describe("Shift end timestamp"),
   timesheetCodeId: z.number().int().optional().describe("Timesheet code ID"),
 });
 
-// ST's bulk-delete endpoint expects `ids`, not `deletedIds`. The previous
-// `deletedIds` field was silently dropped (the request body was empty), so
-// the call returned 400.
 const technicianShiftsBulkDeleteSchema = z.object({
-  ids: z
-    .array(z.number().int())
-    .min(1)
-    .describe("IDs of technician shifts to delete"),
+  start: z.string().datetime().describe("Start of the shift deletion range"),
+  end: z.string().datetime().describe("End of the shift deletion range"),
 });
 
 const performanceGetSchema = paginationParams(
@@ -182,7 +146,7 @@ export function registerPeopleTechnicianTools(
         const data = await client.post("/tenant/{tenant}/technicians", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -200,7 +164,7 @@ export function registerPeopleTechnicianTools(
         const data = await client.get(`/tenant/{tenant}/technicians/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -233,7 +197,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -255,7 +219,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -265,15 +229,25 @@ export function registerPeopleTechnicianTools(
     domain: "people",
     operation: "write",
     description: "Run account actions for a technician",
-    schema: technicianIdSchema.shape,
+    schema: {
+      ...technicianIdSchema.shape,
+      action: z.enum(["Activate", "Deactivate", "SendInvite", "SendPasswordResetLink"]),
+      licenseType: z.enum(["NonManagedTechnician", "ManagedTechnician", "ManagedInstaller"]).nullable().optional(),
+      truckId: z.number().int().nullable().optional(),
+    },
     handler: async (params) => {
-      const input = technicianIdSchema.parse(params);
+      const input = technicianIdSchema.extend({
+        action: z.enum(["Activate", "Deactivate", "SendInvite", "SendPasswordResetLink"]),
+        licenseType: z.enum(["NonManagedTechnician", "ManagedTechnician", "ManagedInstaller"]).nullable().optional(),
+        truckId: z.number().int().nullable().optional(),
+      }).parse(params);
+      const { id, ...body } = input;
 
       try {
-        const data = await client.post(`/tenant/{tenant}/technicians/${input.id}/account-actions`);
+        const data = await client.post(`/tenant/{tenant}/technicians/${id}/account-actions`, body);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -286,25 +260,28 @@ export function registerPeopleTechnicianTools(
     schema: {
       technicianId: z.number().int().describe("Technician ID"),
       jobId: z.number().int().describe("Job ID"),
+      value: z.number().min(0).max(10).describe("Rating from 0 to 10"),
     },
     handler: async (params) => {
-      const { technicianId, jobId } = z
+      const { technicianId, jobId, value } = z
         .object({
           technicianId: z.number().int(),
           jobId: z.number().int(),
+          value: z.number().min(0).max(10),
         })
         .parse(params);
 
       try {
         await client.put(
           `/tenant/{tenant}/technician-rating/technician/${technicianId}/job/${jobId}`,
+          { value },
         );
         return toolResult({
           success: true,
           message: "Technician rating updated successfully.",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -325,7 +302,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -343,7 +320,7 @@ export function registerPeopleTechnicianTools(
         const data = await client.get(`/tenant/{tenant}/technician-shifts/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -380,7 +357,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -398,7 +375,7 @@ export function registerPeopleTechnicianTools(
         const data = await client.delete(`/tenant/{tenant}/technician-shifts/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -420,7 +397,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -441,7 +418,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -469,7 +446,7 @@ export function registerPeopleTechnicianTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

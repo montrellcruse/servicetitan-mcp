@@ -10,6 +10,8 @@ import {
   withIntelCache,
 } from "../../src/domains/intelligence/helpers.js";
 import { ToolRegistry } from "../../src/registry.js";
+import { getReportContract } from "../../src/domains/intelligence/report-executor.js";
+import { awaitWithSignal, withRequestContext } from "../../src/request-context.js";
 import type { ToolResponse } from "../../src/types.js";
 
 const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
@@ -50,9 +52,17 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext
   };
 
   const registry = new ToolRegistry(server as any, createConfig(overrides), logger as any);
+  const postMock = vi.fn();
   const client = {
     get: vi.fn(),
-    post: vi.fn(),
+    post: async (...args: unknown[]) => {
+      const response = await postMock(args[0], args[1]);
+      if (response && typeof response === "object" && Array.isArray(response.fields) && response.fields.length === 0) {
+        const match = String(args[0]).match(/reports\/(\d+)\/data/);
+        if (match) return { ...response, fields: getReportContract(match[1]).fields.map((name) => ({ name })) };
+      }
+      return response;
+    },
   } as unknown as ServiceTitanClient;
 
   registry.attachClient(client);
@@ -65,7 +75,7 @@ function createContext(overrides: Partial<ServiceTitanConfig> = {}): TestContext
 
   return {
     getMock: (client as any).get,
-    postMock: (client as any).post,
+    postMock,
     handlers,
     registry,
     server,
@@ -265,6 +275,15 @@ describe("intelligence domain", () => {
     );
   });
 
+  it("fetchAllPages rejects malformed and contradictory pagination responses", async () => {
+    const malformed={get:vi.fn(async()=>({items:[{id:1}],hasMore:false}))} as unknown as ServiceTitanClient;
+    await expect(fetchAllPages(malformed,"/tenant/{tenant}/invoices",{})).rejects.toThrow(/Malformed paginated response/);
+    const emptyMore={get:vi.fn(async()=>({data:[],hasMore:true}))} as unknown as ServiceTitanClient;
+    await expect(fetchAllPages(emptyMore,"/tenant/{tenant}/invoices",{})).rejects.toThrow(/empty page with hasMore=true/);
+    const arrayClient={get:vi.fn(async()=>[{id:1}])} as unknown as ServiceTitanClient;
+    await expect(fetchAllPages(arrayClient,"/tenant/{tenant}/invoices",{})).resolves.toEqual([{id:1}]);
+  });
+
   it("safeDivide handles finite and zero-denominator edge cases", () => {
     expect(safeDivide(10, 2)).toBe(5);
     expect(safeDivide(10, 0)).toBe(0);
@@ -288,6 +307,55 @@ describe("intelligence domain", () => {
     vi.advanceTimersByTime(1_001);
 
     expect(await withIntelCache("intel_test", { id: 1 }, load, 1_000)).toEqual({ calls: 2 });
+  });
+
+  it("withIntelCache never stores warning-bearing partial results", async () => {
+    let calls = 0;
+    const load = async () => {
+      calls += 1;
+      return {
+        content: [{ type: "text", text: JSON.stringify({ _warnings: ["page unavailable"] }) }],
+        structuredContent: { _warnings: ["page unavailable"] },
+      };
+    };
+    await withIntelCache("intel_partial", { nested: { date: "2026-01-01" } }, load, 60_000);
+    await withIntelCache("intel_partial", { nested: { date: "2026-01-01" } }, load, 60_000);
+    expect(calls).toBe(2);
+  });
+
+  it("never caches or shares session-owned large-result handles", async () => {
+    let calls=0;
+    const load=async()=>({content:[{type:"text",text:JSON.stringify({retrievalTool:"st_result_read",resultId:`id-${++calls}`})}],structuredContent:{retrievalTool:"st_result_read",resultId:`id-${calls}`}});
+    const store=()=>({resultId:"stored",retrievalTool:"st_result_read"});
+    await withRequestContext({storeOversized:store},()=>withIntelCache("intel_handle",{},load,60_000));
+    await withRequestContext({storeOversized:store},()=>withIntelCache("intel_handle",{},load,60_000));
+    expect(calls).toBe(2);
+  });
+
+  it("isolates cached shaped responses by request context and bounds cache entries", async () => {
+    let calls = 0;
+    const load = async () => ({ calls: ++calls });
+    await withRequestContext({timezone:"UTC",maxResponseChars:1_000},()=>withIntelCache("intel_context",{},load,60_000));
+    await withRequestContext({timezone:"America/Phoenix",maxResponseChars:1_000},()=>withIntelCache("intel_context",{},load,60_000));
+    await withRequestContext({timezone:"UTC",maxResponseChars:2_000},()=>withIntelCache("intel_context",{},load,60_000));
+    expect(calls).toBe(3);
+
+    clearIntelCache();calls=0;
+    for(let id=0;id<257;id+=1)await withIntelCache("intel_bound",{id},load,60_000);
+    await withIntelCache("intel_bound",{id:0},load,60_000);
+    expect(calls).toBe(258);
+  });
+
+  it("does not share an abortable in-flight load between request contexts", async () => {
+    const firstController=new AbortController(),secondController=new AbortController();
+    let resolve!:()=>void;const source=new Promise<void>(done=>{resolve=done;});let calls=0;
+    const first=withRequestContext({signal:firstController.signal},()=>withIntelCache("intel_abort",{},async()=>{calls+=1;await awaitWithSignal(source,firstController.signal);return {ok:true};}));
+    const second=withRequestContext({signal:secondController.signal},()=>withIntelCache("intel_abort",{},async()=>{calls+=1;await awaitWithSignal(source,secondController.signal);return {ok:true};}));
+    firstController.abort();resolve();
+    await expect(first).rejects.toMatchObject({name:"AbortError"});
+    await expect(second).resolves.toEqual({ok:true});
+    expect(calls).toBe(2);
+    expect(secondController.signal.aborted).toBe(false);
   });
 
   it("intel_revenue_summary uses Report 175 for revenue and payments for collections", async () => {
@@ -369,8 +437,7 @@ describe("intelligence domain", () => {
       nonJobRevenue: 100,
       adjustmentRevenue: 0,
     });
-    expect(payload.totalCollected).toBe(350);
-    expect(payload.outstanding).toBe(250);
+    expect(payload.paymentsReceivedInPeriod).toBe(350);
     expect(payload.avgTicket).toBe(50);
     expect(payload.totalConvertedJobs).toBe(10);
     expect(payload.totalOpportunities).toBe(15);
@@ -506,7 +573,7 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(result);
 
     expect(payload.totalRevenue).toBe(0);
-    expect(payload.totalCollected).toBe(125);
+    expect(payload.paymentsReceivedInPeriod).toBe(125);
     expect(payload.productivity).toEqual({
       averageRevenuePerHour: 0,
       averageBillableEfficiency: 0,
@@ -523,7 +590,7 @@ describe("intelligence domain", () => {
       averageOptionsPerOpportunity: 0,
     });
     expect(payload._warnings).toEqual([
-      "Revenue report (Report 175) unavailable: report outage",
+      "Revenue report (Report 175) unavailable: Report 175 page 1 failed: report outage",
     ]);
   });
 
@@ -538,8 +605,7 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(result);
 
     expect(payload.totalRevenue).toBe(0);
-    expect(payload.totalCollected).toBe(0);
-    expect(payload.outstanding).toBe(0);
+    expect(payload.paymentsReceivedInPeriod).toBe(0);
     expect(payload.avgTicket).toBe(0);
     expect(payload.overallConversionRate).toBe(0);
     expect(payload.byBusinessUnit).toEqual([]);
@@ -737,7 +803,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitIds", value: "3" },
+          { name: "BusinessUnitId", value: "3" },
         ],
       },
     );
@@ -748,7 +814,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitIds", value: "3" },
+          { name: "BusinessUnitId", value: "3" },
         ],
       },
     );
@@ -770,7 +836,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitIds", value: "3" },
+          { name: "BusinessUnitId", value: "3" },
         ],
       },
     );
@@ -781,7 +847,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitIds", value: "3" },
+          { name: "BusinessUnitId", value: "3" },
         ],
       },
     );
@@ -792,7 +858,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-10" },
-          { name: "BusinessUnitIds", value: "3" },
+          { name: "BusinessUnitId", value: "3" },
         ],
       },
     );
@@ -903,7 +969,7 @@ describe("intelligence domain", () => {
       },
     });
     expect(payload._warnings).toEqual([
-      "Technician revenue report (Report 168) unavailable: report outage",
+      "Technician revenue report (Report 168) unavailable: Report 168 page 1 failed: report outage",
     ]);
   });
 
@@ -969,9 +1035,9 @@ describe("intelligence domain", () => {
         return {
           fields: [],
           data: [
-            ["HVAC", 8, 3, 0.375],
-            ["Plumbing", 2, 1, 0.5],
-            ["Admin", 0, 0, 0],
+            ["HVAC", 8, 3, 0.375, 0, 0, 0],
+            ["Plumbing", 2, 1, 0.5, 0, 0, 0],
+            ["Admin", 0, 0, 0, 0, 0, 0],
           ],
           hasMore: false,
         };
@@ -1012,7 +1078,7 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(3);
     expect(payload.reactivated).toBe(1);
     expect(payload.deleted).toBe(1);
-    expect(payload.retentionRate).toBeCloseTo(0.893, 3);
+    expect(payload.activeToCancellationRatio).toBeCloseTo(0.893, 3);
     expect(payload.totalServiceRevenue).toBe(580);
     expect(payload.conversionTotals).toEqual({
       opportunities: 10,
@@ -1086,7 +1152,7 @@ describe("intelligence domain", () => {
       if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/178/data") {
         return {
           fields: [],
-          data: [["HVAC", 4, 2, 0.5]],
+          data: [["HVAC", 4, 2, 0.5, 0, 0, 0]],
           hasMore: false,
         };
       }
@@ -1134,7 +1200,7 @@ describe("intelligence domain", () => {
     ]);
     expect(payload.membershipTypes).toEqual([]);
     expect(payload._warnings).toEqual([
-      "Membership summary report (Report 182) unavailable: report outage",
+      "Membership summary report (Report 182) unavailable: Report 182 page 1 failed: report outage",
     ]);
   });
 
@@ -1156,7 +1222,7 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(0);
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
-    expect(payload.retentionRate).toBe(0);
+    expect(payload.activeToCancellationRatio).toBe(0);
     expect(payload.totalServiceRevenue).toBe(0);
     expect(payload.conversionTotals).toEqual({
       opportunities: 0,
@@ -1321,9 +1387,7 @@ describe("intelligence domain", () => {
         },
       ],
     });
-    // fetchAllPagesBlind catches per-page errors internally, so fetchWithWarning
-    // sees a resolved [] and no "Estimate data unavailable" warning is surfaced
-    expect(payload._warnings).toBeUndefined();
+    expect(payload._warnings).toEqual(["Estimate data unavailable: pipeline unavailable"]);
   });
 
   it("intel_estimate_pipeline handles empty estimate data", async () => {
@@ -1446,7 +1510,7 @@ describe("intelligence domain", () => {
       byTechnician: [],
     });
     expect(payload._warnings).toEqual([
-      "Technician sales report (Report 172) unavailable: report outage",
+      "Technician sales report (Report 172) unavailable: Report 172 page 1 failed: report outage",
     ]);
   });
 
@@ -1548,27 +1612,27 @@ describe("intelligence domain", () => {
         name: "Google Ads - AC Repair",
         calls: 5,
         bookings: 2,
-        conversionRate: 0.4,
-        revenue: 0,
-        revenuePerCall: 0,
+        bookingsPerCallRatio: 0.4,
+        revenue: null,
+        revenuePerCall: null,
       },
       {
         id: 3,
         name: "zYelp",
         calls: 2,
         bookings: 1,
-        conversionRate: 0.5,
-        revenue: 0,
-        revenuePerCall: 0,
+        bookingsPerCallRatio: 0.5,
+        revenue: null,
+        revenuePerCall: null,
       },
       {
         id: 1,
         name: "zExisting Client",
         calls: 1,
         bookings: 0,
-        conversionRate: 0,
-        revenue: 0,
-        revenuePerCall: 0,
+        bookingsPerCallRatio: 0,
+        revenue: null,
+        revenuePerCall: null,
       },
     ]);
 
@@ -1577,8 +1641,10 @@ describe("intelligence domain", () => {
     expect(payload.totals).toEqual({
       calls: 8,
       bookings: 3,
-      conversionRate: 0.375,
-      revenue: 1500,
+      bookingsPerCallRatio: 0.375,
+      unattributedCalls: 0,
+      unattributedBookings: 0,
+      tenantRevenueForPeriod: 1500,
     });
     expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
 
@@ -1692,15 +1758,16 @@ describe("intelligence domain", () => {
       expect.objectContaining({
         calls: 2,
         bookings: 0,
-        revenue: 0,
-        conversionRate: 0,
+        revenue: null,
+        bookingsPerCallRatio: 0,
       }),
     );
     // Revenue now comes from Report 175 (empty mock = 0), not invoice pagination
-    expect(payload.totals.revenue).toBe(0);
+    expect(payload.totals.tenantRevenueForPeriod).toBe(0);
     // fetchAllPagesBlind catches per-page errors internally, so "Booking data unavailable"
     // is NOT surfaced via fetchWithWarning. Only the per-campaign revenue warning remains.
     expect(payload._warnings).toEqual([
+      "Booking data unavailable: bookings unavailable",
       PER_CAMPAIGN_REVENUE_WARNING,
     ]);
   });
@@ -1748,8 +1815,8 @@ describe("intelligence domain", () => {
     expect(payload.leadGeneration).toEqual([]);
     // Both Report 175 (revenue) and 176 (lead gen) fail since postMock rejects all POSTs
     expect(payload._warnings).toEqual([
-      "Revenue report (Report 175) unavailable: lead report unavailable",
-      "Lead generation report (Report 176) unavailable: lead report unavailable",
+      "Revenue report (Report 175) unavailable: Report 175 page 1 failed: lead report unavailable",
+      "Lead generation report (Report 176) unavailable: Report 176 page 1 failed: lead report unavailable",
       PER_CAMPAIGN_REVENUE_WARNING,
     ]);
   });
@@ -1786,8 +1853,10 @@ describe("intelligence domain", () => {
     expect(payload.totals).toEqual({
       calls: 0,
       bookings: 0,
-      conversionRate: 0,
-      revenue: 0,
+      bookingsPerCallRatio: 0,
+      unattributedCalls: 0,
+      unattributedBookings: 0,
+      tenantRevenueForPeriod: 0,
     });
     expect(payload.leadGeneration).toEqual([]);
     expect(payload._warnings).toEqual([PER_CAMPAIGN_REVENUE_WARNING]);
@@ -1883,7 +1952,7 @@ describe("intelligence domain", () => {
               "",
               "",
               "HVAC Service",
-              "Mike Johnson",
+              "Mike Johnson", "", "", false, "",
             ],
             [
               "JOB-1002",
@@ -1897,7 +1966,7 @@ describe("intelligence domain", () => {
               "",
               "",
               "Maintenance",
-              "Nina Lopez",
+              "Nina Lopez", "", "", false, "",
             ],
           ],
           hasMore: false,
@@ -1975,7 +2044,7 @@ describe("intelligence domain", () => {
       "/tenant/{tenant}/report-category/operations/reports/163/data",
       {
         parameters: [
-          { name: "DateType", value: "Appointment Date" },
+          { name: "DateType", value: 6 },
           { name: "From", value: "2026-03-05" },
           { name: "To", value: "2026-03-05" },
         ],
@@ -2062,7 +2131,7 @@ describe("intelligence domain", () => {
     expectAllNumbersFinite(payload);
   });
 
-  it("intel_labor_cost avoids Infinity when gross pay exists with zero hours", async () => {
+  it("intel_labor_cost marks cost unavailable for the default five-column Report 166 layout", async () => {
     const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_labor_cost");
 
@@ -2073,28 +2142,7 @@ describe("intelligence domain", () => {
 
       return {
         fields: [],
-        data: [
-          [
-            "Jamie Tech",
-            "Training",
-            "2026-01-15",
-            "INV-1",
-            "HVAC",
-            0,
-            0,
-            0,
-            0,
-            120,
-            "Customer",
-            "Project",
-            "Zone",
-            "TaxZone",
-            "85001",
-            "Phoenix",
-            "123 Main St",
-            "TRAIN",
-          ],
-        ],
+        data: [["Jamie Tech", "2026-01-15", 1, 0, 0]],
         hasMore: false,
       };
     });
@@ -2102,43 +2150,28 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.avgHourlyRate).toBe(0);
+    expect(payload.avgHourlyRate).toBeNull();
     expect(payload.overtimePercent).toBe(0);
-    expect(payload.employees).toEqual([
-      {
-        name: "Jamie Tech",
-        businessUnits: ["HVAC"],
-        totalHours: 0,
-        regularHours: 0,
-        overtimeHours: 0,
-        doubleOvertimeHours: 0,
-        grossPay: 120,
-        avgHourlyRate: 0,
-        activityBreakdown: [
-          {
-            activity: "Training",
-            entries: 1,
-            hours: 0,
-            grossPay: 120,
-            avgHourlyRate: 0,
-          },
-        ],
-      },
-    ]);
-    expect(payload.byBusinessUnit).toEqual([
-      {
-        name: "HVAC",
-        employeeCount: 1,
-        totalHours: 0,
-        regularHours: 0,
-        overtimeHours: 0,
-        doubleOvertimeHours: 0,
-        grossPay: 120,
-        avgHourlyRate: 0,
-        overtimePercent: 0,
-      },
-    ]);
+    expect(payload.totalGrossPay).toBeNull();
+    expect(payload.costAvailability.available).toBe(false);
+    expect(payload.employees[0]).toMatchObject({ name: "Jamie Tech", grossPay: null, avgHourlyRate: null });
     expectAllNumbersFinite(payload);
+  });
+
+  it("intel_labor_cost computes cost only for a configured report that exposes GrossPay", async () => {
+    const { handlers, postMock } = createContext({
+      reportBindings: { "166": { category: "custom", reportId: 9166 } },
+    });
+    postMock.mockResolvedValue({
+      fields: reportFields("EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"),
+      data: [["Jamie Tech", "2026-01-02", 8, 2, 0, 500]],
+      hasMore: false,
+    });
+    const payload = payloadFrom(await getHandler(handlers, "intel_labor_cost")({ startDate: "2026-01-01", endDate: "2026-01-31" }));
+    expect(postMock.mock.calls[0][0]).toContain("/custom/reports/9166/data");
+    expect(payload.costAvailability.available).toBe(true);
+    expect(payload.totalGrossPay).toBe(500);
+    expect(payload.avgHourlyRate).toBe(50);
   });
 
   it("intel_invoice_tracking avoids NaN when no invoices are returned", async () => {

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { toolError, toolResult } from "../../utils.js";
 
 const gpsPingSchema = z.object({
   recordedOn: z
@@ -50,7 +50,7 @@ export function registerPeopleGpsTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

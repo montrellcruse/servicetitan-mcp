@@ -109,20 +109,10 @@ describe("path validation", () => {
     ).toBe(true);
   });
 
-  it("encodes suppression emails before interpolating them into the path", async () => {
-    const { getMock, handlers } = createDomainContext(loadMarketingDomain);
-    const handler = handlers.get("marketing_suppressions_get");
-
-    if (!handler) {
-      throw new Error("Missing marketing_suppressions_get handler");
-    }
-
-    getMock.mockResolvedValue({ email: "user+alerts@example.com" });
-
-    await handler({ email: "user+alerts@example.com" });
-
-    expect(getMock).toHaveBeenCalledWith(
-      "/tenant/{tenant}/suppressions/user%2Balerts%40example.com",
-    );
+  it("does not publish undocumented suppression operations", () => {
+    const { handlers } = createDomainContext(loadMarketingDomain);
+    expect(handlers.has("marketing_suppressions_get")).toBe(false);
+    expect(handlers.has("marketing_suppressions_create")).toBe(false);
+    expect(handlers.has("marketing_suppressions_delete")).toBe(false);
   });
 });

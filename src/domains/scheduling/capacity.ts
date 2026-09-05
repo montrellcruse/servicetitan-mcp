@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { toolError, toolResult } from "../../utils.js";
 
 // ServiceTitan's /capacity endpoint requires `skillBasedAvailability` (boolean).
 // Including `jobTypeId` without a matching `args` object triggers a second
@@ -63,7 +63,7 @@ export function registerSchedulingCapacityTools(
         const data = await client.post("/tenant/{tenant}/capacity", input);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -27,6 +27,7 @@ describe("loadConfig", () => {
       timezone: "UTC",
       corsOrigin: "",
       allowedCallers: null,
+      toolProfile: "full", enabledTools: null, reportBindings: {}, maxSessions: 32, maxConcurrentToolCalls: 16, toolTimeoutMs: 900000, mcpClientId: "api-key",
     });
   });
 

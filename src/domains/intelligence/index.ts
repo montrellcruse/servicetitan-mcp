@@ -14,13 +14,21 @@ import { registerIntelligenceRevenueTool } from "./revenue.js";
 import { registerIntelligenceTechnicianPerformanceTool } from "./technician-performance.js";
 import { withIntelCache } from "./helpers.js";
 
+const CLIENT_CACHE_IDS = new WeakMap<object, number>();
+let nextClientCacheId = 1;
+
 /**
  * Creates a caching proxy for the ToolRegistry that wraps intelligence tool
  * handlers with a 5-minute in-memory cache. Cache key = tool name + args hash.
  * Transparent to the tool implementations — they register normally.
  */
-function createCachingRegistry(inner: ToolRegistry): ToolRegistry {
+function createCachingRegistry(inner: ToolRegistry, client: ServiceTitanClient): ToolRegistry {
   const CACHEABLE_PREFIX = "intel_";
+  let clientCacheId = CLIENT_CACHE_IDS.get(client as object);
+  if (clientCacheId === undefined) {
+    clientCacheId = nextClientCacheId++;
+    CLIENT_CACHE_IDS.set(client as object, clientCacheId);
+  }
 
   return new Proxy(inner, {
     get(target, prop, receiver) {
@@ -40,8 +48,8 @@ function createCachingRegistry(inner: ToolRegistry): ToolRegistry {
               ...tool,
               handler: async (params: unknown) => {
                 return withIntelCache(
-                  tool.name,
-                  normalizeCacheParams(params),
+                  `${clientCacheId}:${tool.name}`,
+                  { params: normalizeCacheParams(params), reportBindings: inner.reportBindings },
                   () => originalHandler(params),
                   tool.cacheTtlMs,
                 );
@@ -57,7 +65,7 @@ function createCachingRegistry(inner: ToolRegistry): ToolRegistry {
 }
 
 export const loadIntelligenceDomain: DomainLoader = (client, registry) => {
-  const cachedRegistry = createCachingRegistry(registry);
+  const cachedRegistry = createCachingRegistry(registry, client);
   registerIntelligenceLookupTool(client, cachedRegistry);
   registerIntelligenceRevenueTool(client, cachedRegistry);
   registerIntelligenceTechnicianPerformanceTool(client, cachedRegistry);

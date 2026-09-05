@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ReferenceDataCache, TtlCache } from "../src/cache.js";
 import type { ServiceTitanClient } from "../src/client.js";
+import { awaitWithSignal, getRequestContext, withRequestContext } from "../src/request-context.js";
 
 // ---------------------------------------------------------------------------
 // TtlCache
@@ -126,6 +127,28 @@ describe("ReferenceDataCache", () => {
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(loader).toHaveBeenCalledTimes(1);
     expect(r1).toEqual(r2);
+  });
+
+  it("does not share an abortable reference-data load between callers", async () => {
+    const firstController=new AbortController(),secondController=new AbortController();
+    let resolve!:()=>void;const source=new Promise<void>(done=>{resolve=done;});let calls=0;
+    const client=makeClient(async()=>{calls+=1;await awaitWithSignal(source,getRequestContext().signal);return {data:[{id:calls}],hasMore:false};});
+    const cache=new ReferenceDataCache();
+    const first=withRequestContext({signal:firstController.signal},()=>cache.getTechnicians(client));
+    const second=withRequestContext({signal:secondController.signal},()=>cache.getTechnicians(client));
+    firstController.abort();resolve();
+    await expect(first).rejects.toMatchObject({name:"AbortError"});
+    await expect(second).resolves.toHaveLength(1);
+    expect(calls).toBe(2);
+  });
+
+  it("isolates cached reference data between clients", async () => {
+    const firstLoader = vi.fn().mockResolvedValue({ data: [{ id: 1, name: "Tenant A" }], hasMore: false });
+    const secondLoader = vi.fn().mockResolvedValue({ data: [{ id: 2, name: "Tenant B" }], hasMore: false });
+    const cache = new ReferenceDataCache();
+
+    expect(await cache.getBusinessUnits(makeClient(firstLoader))).toEqual([{ id: 1, name: "Tenant A" }]);
+    expect(await cache.getBusinessUnits(makeClient(secondLoader))).toEqual([{ id: 2, name: "Tenant B" }]);
   });
 
   it("does not cache loader errors — retry succeeds on second call", async () => {
@@ -271,7 +294,7 @@ describe("ReferenceDataCache", () => {
     expect(loader).not.toHaveBeenCalled();
   });
 
-  it("warns when reference data pagination is truncated at the max page limit", async () => {
+  it("rejects and does not cache reference data truncated at the max page limit", async () => {
     const warn = vi.fn();
     const loader = vi.fn().mockImplementation(
       async (_path: string, params?: Record<string, unknown>) => {
@@ -286,9 +309,7 @@ describe("ReferenceDataCache", () => {
     const client = makeClient(loader);
     const cache = new ReferenceDataCache(60_000, { warn });
 
-    const technicians = await cache.getTechnicians(client);
-
-    expect(technicians).toHaveLength(50);
+    await expect(cache.getTechnicians(client)).rejects.toThrow(/refusing to cache incomplete data/);
     expect(loader).toHaveBeenCalledTimes(50);
     expect(warn).toHaveBeenCalledWith(
       "Reference data cache truncated at max pages, some records may be missing",
@@ -297,5 +318,16 @@ describe("ReferenceDataCache", () => {
         endpoint: "/tenant/{tenant}/technicians",
       }),
     );
+    await expect(cache.getTechnicians(client)).rejects.toThrow(/refusing to cache incomplete data/);
+    expect(loader).toHaveBeenCalledTimes(100);
+  });
+
+  it("rejects and does not cache an empty page that claims more data", async () => {
+    const loader=vi.fn().mockResolvedValue({data:[],hasMore:true,page:1});
+    const cache=new ReferenceDataCache(60_000,{warn:vi.fn()});
+    const client=makeClient(loader);
+    await expect(cache.getBusinessUnits(client)).rejects.toThrow(/empty page with hasMore=true/);
+    await expect(cache.getBusinessUnits(client)).rejects.toThrow(/empty page with hasMore=true/);
+    expect(loader).toHaveBeenCalledTimes(2);
   });
 });

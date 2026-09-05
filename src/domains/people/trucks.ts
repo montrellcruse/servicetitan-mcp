@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,39 +11,8 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const externalDataEntrySchema = z.object({
-  key: z.string().optional().describe("External data key"),
-  value: z.string().optional().describe("External data value"),
-});
-
-const truckPayloadSchema = z.object({
-  name: z.string().optional().describe("Truck display name"),
-  number: z.string().optional().describe("Truck number/code"),
-  description: z.string().optional().describe("Truck description"),
-  active: z.boolean().optional().describe("Whether the truck is active"),
-  businessUnitId: z.number().int().optional().describe("Business unit ID"),
-  employeeId: z.number().int().optional().describe("Assigned employee ID"),
-  technicianId: z.number().int().optional().describe("Assigned technician ID"),
-  inventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Inventory location ID"),
-  warehouseId: z.number().int().optional().describe("Warehouse ID"),
-  licensePlate: z.string().optional().describe("License plate"),
-  vin: z.string().optional().describe("Vehicle identification number"),
-  make: z.string().optional().describe("Vehicle make"),
-  model: z.string().optional().describe("Vehicle model"),
-  year: z.number().int().optional().describe("Vehicle model year"),
-  color: z.string().optional().describe("Vehicle color"),
-  memo: z.string().optional().describe("Internal note"),
-  externalData: z
-    .array(externalDataEntrySchema)
-    .optional()
-    .describe("External data entries"),
-});
+const truckPayloadSchema = officialRequestSchema("Trucks_Update") as z.ZodObject<z.ZodRawShape>;
 
 const truckUpdateSchema = truckPayloadSchema.extend({
   id: z.number().int().describe("Truck ID"),
@@ -87,7 +57,7 @@ export function registerPeopleTruckTools(
         const data = await client.patch(`/tenant/{tenant}/trucks/${id}`, buildParams(payload));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -122,7 +92,7 @@ export function registerPeopleTruckTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

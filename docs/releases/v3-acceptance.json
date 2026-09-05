@@ -1,0 +1,59 @@
+{
+  "version": "3.0.0-rc.1",
+  "sourceFingerprint": "42ba9630569bfe11080307e3f65023fd911b058a8f892e163840c81ed010783a",
+  "gates": {
+    "maintenance": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md"
+    },
+    "contracts": {
+      "status": "passed",
+      "coverage": "All operation associations and 210 official schemas; captured request dispatch covers corrected high-risk adapters, not every write handler",
+      "summary": "VALIDATION-v3.md"
+    },
+    "analytics": {
+      "status": "passed",
+      "boundary": "Independent company fixtures and source-row reconciliation; dashboard parity is not certified",
+      "summary": "VALIDATION-v3.md"
+    },
+    "interface": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md"
+    },
+    "runtimeMatrix": {
+      "status": "passed",
+      "runtimes": [
+        "22.23.2",
+        "24.20.0"
+      ],
+      "platform": "darwin-arm64",
+      "testsPerRuntime": 432,
+      "testFiles": 36,
+      "wireTestsPerRuntime": 5,
+      "summary": "VALIDATION-v3.md"
+    },
+    "packageSmoke": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md"
+    },
+    "liveProduction": {
+      "status": "passed",
+      "boundary": "Only the bounded readonly plan; Scheduling Pro 403 remains; no production mutations or dashboard parity claim",
+      "summary": "VALIDATION-v3.md"
+    },
+    "liveIntegration": {
+      "status": "pending",
+      "reason": "Integration-environment mutation acceptance and cleanup have not been executed."
+    },
+    "liveSecondCompany": {
+      "status": "pending",
+      "reason": "Independent live-company acceptance has not been executed."
+    },
+    "latencyAndLoad": {
+      "status": "passed",
+      "boundary": "Synthetic built-process latency/load, short soaks, caching, and retained-memory diagnostics on Node 22/24. No production capacity or latency SLA; Node 22 benchmark-client abort-listener warnings remain documented.",
+      "summary": "../BENCHMARKS.md"
+    }
+  },
+  "releaseDisposition": "release candidate; publication blocked by pending live acceptance gates"
+}

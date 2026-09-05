@@ -9,7 +9,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 const serviceAgreementStatusEnum = z.enum([
   "Draft",
@@ -81,7 +80,7 @@ export function registerServiceAgreementTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -99,7 +98,7 @@ export function registerServiceAgreementTools(
         const data = await client.get(`/tenant/{tenant}/service-agreements/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

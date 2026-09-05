@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const installedEquipmentIdSchema = z.object({
@@ -140,7 +139,7 @@ export function registerDispatchInstalledEquipmentTools(
         const data = await client.get(`/tenant/{tenant}/installed-equipment/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -161,7 +160,7 @@ export function registerDispatchInstalledEquipmentTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -182,7 +181,7 @@ export function registerDispatchInstalledEquipmentTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -205,7 +204,7 @@ export function registerDispatchInstalledEquipmentTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -223,7 +222,7 @@ export function registerDispatchInstalledEquipmentTools(
         const data = await client.delete(`/tenant/{tenant}/installed-equipment/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -243,7 +242,7 @@ export function registerDispatchInstalledEquipmentTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -264,7 +263,7 @@ export function registerDispatchInstalledEquipmentTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

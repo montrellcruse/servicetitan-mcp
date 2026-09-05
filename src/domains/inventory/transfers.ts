@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   buildParams,
   dateFilterParams,
@@ -9,55 +10,8 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const scalarCustomFieldValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-]);
-
-const customFieldMapSchema = z
-  .object({})
-  .catchall(scalarCustomFieldValueSchema)
-  .describe("Custom field key/value map");
-
-const transferLineItemSchema = z.object({
-  skuId: z.number().int().optional().describe("SKU ID"),
-  skuCode: z.string().optional().describe("SKU code"),
-  description: z.string().optional().describe("Line item description"),
-  quantity: z.number().optional().describe("Transfer quantity"),
-  fromInventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("From inventory location ID"),
-  toInventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("To inventory location ID"),
-  unitCost: z.number().optional().describe("Unit cost"),
-});
-
-const transferPayloadSchema = z.object({
-  number: z.string().optional().describe("Transfer number"),
-  referenceNumber: z.string().optional().describe("Transfer reference number"),
-  date: z.string().optional().describe("Transfer date/time"),
-  status: z.string().optional().describe("Transfer status"),
-  transferTypeId: z.number().int().optional().describe("Transfer type ID"),
-  fromLocationId: z.number().int().optional().describe("From location ID"),
-  toLocationId: z.number().int().optional().describe("To location ID"),
-  batchId: z.number().int().optional().describe("Batch ID"),
-  syncStatus: z.string().optional().describe("Sync status"),
-  active: z.boolean().optional().describe("Whether transfer is active"),
-  memo: z.string().optional().describe("Transfer memo"),
-  items: z.array(transferLineItemSchema).optional().describe("Transfer line items"),
-  customFields: customFieldMapSchema.optional().describe("Transfer custom fields"),
-});
-
-const transferUpdateSchema = transferPayloadSchema.extend({
+const transferUpdateSchema = (officialRequestSchema("Transfers_Update") as z.AnyZodObject).extend({
   id: z.number().int().describe("Transfer ID"),
 });
 
@@ -116,9 +70,7 @@ const transfersListSchema = dateFilterParams(
   ),
 );
 
-const updateCustomFieldsSchema = z.object({
-  customFields: customFieldMapSchema.describe("Custom fields payload"),
-});
+const updateCustomFieldsSchema = officialRequestSchema("Transfers_UpdateCustomFields") as z.AnyZodObject;
 
 export function registerTransferTools(
   client: ServiceTitanClient,
@@ -136,11 +88,11 @@ export function registerTransferTools(
       try {
         const data = await client.patch(
           "/tenant/{tenant}/transfers/custom-fields",
-          input.customFields,
+          input,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -158,11 +110,11 @@ export function registerTransferTools(
       try {
         const data = await client.patch(
           `/tenant/{tenant}/transfers/${id}`,
-          buildParams(payload),
+          payload,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -208,7 +160,7 @@ export function registerTransferTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

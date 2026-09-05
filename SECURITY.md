@@ -4,9 +4,9 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 2.3.x   | ✅ Current              |
-| 2.2.x   | ⚠️ Security fixes only  |
-| < 2.2   | ❌ Not supported        |
+| 3.x     | ✅ Current              |
+| 2.x     | ⚠️ Security fixes only  |
+| < 2     | ❌ Not supported        |
 
 ## Reporting a Vulnerability
 
@@ -28,19 +28,19 @@ You should receive an acknowledgment within 48 hours.
 - The server authenticates to ServiceTitan using OAuth 2.0 client credentials
 - Credentials are loaded from environment variables, never hardcoded
 - Access tokens are cached in memory with a 60-second expiry buffer
-- Token acquisition uses a dedicated `axios.post()` call outside the interceptor chain to avoid recursive auth loops
+- Token acquisition uses a separate bounded auth client, and simultaneous callers share one token acquisition
 
-### Remote Deployment (SSE Mode)
+### Remote Deployment
 
-- Remote clients authenticate with `ST_MCP_API_KEY` (bearer token via `Authorization: Bearer` header or `x-api-key` header)
-- CORS headers are configurable via `ST_CORS_ORIGIN`; the default is empty (no CORS headers emitted by Streamable HTTP; SSE uses the configured value)
+- Streamable HTTP is the current remote transport; SSE remains available for legacy clients
+- Remote clients authenticate with `ST_MCP_API_KEY` (bearer token via `Authorization: Bearer` or the `x-api-key` header)
+- Browser origins require an exact `ST_CORS_ORIGIN`; native clients normally omit `Origin`
 - Request body size is limited to 1MB (HTTP 413 on oversize payloads)
 - The server handles graceful shutdown on `SIGTERM`/`SIGINT` with a 10-second force-exit fallback
-- `uncaughtException` and `unhandledRejection` handlers prevent silent crashes
 
 ### Data Safety
 
-- Read-only mode is **enabled by default** (`ST_READONLY=true`) — write and delete tools remain visible, but execution is blocked with `Readonly mode: operation not permitted` until explicitly opted in
+- Read-only mode is **enabled by default** (`ST_READONLY=true`) — write and delete tools are omitted from discovery
 - Write and delete operations require explicit opt-in via `ST_READONLY=false`
 - Delete operations require `confirm: true` in the tool call payload
 - Write operations (when `ST_CONFIRM_WRITES=true`) require `_confirmed: true` in the tool call payload
@@ -49,10 +49,10 @@ You should receive an acknowledgment within 48 hours.
 
 ## Authorization Model
 
-This server is designed for single-operator use. The confirmation prompts for writes and deletes are safety UX to reduce accidental mutations; they are not a substitute for access control.
+This server is designed for a trusted operator or a separately authorized remote boundary. Confirmation prompts reduce accidental mutations; they are not access control.
 
 Remote deployments still authenticate transport access with `ST_MCP_API_KEY`, but that only answers "can this client reach the server?" It does not implement per-caller authorization.
 
-If you need a lightweight caller allowlist, set `ST_ALLOWED_CALLERS` to a comma-separated list of permitted caller identities. When configured, the registry checks the MCP request context for caller identity data in `authInfo` or common proxy-forwarded headers such as `x-user-email`, `x-user-id`, `x-caller-id`, or `x-forwarded-user`. Requests are rejected when the caller is missing from the allowlist or when no caller identity is available.
+For the bundled HTTP transports, `ST_MCP_CLIENT_ID` names the server-controlled principal attached after successful shared-key authentication. `ST_ALLOWED_CALLERS` can restrict tool execution to that principal. Caller-supplied forwarding headers do not establish identity.
 
-For multi-tenant or shared deployments, enforce authentication and authorization at the transport or proxy layer before requests reach this process. Examples include mTLS, OAuth/OIDC at the edge, or a reverse proxy that validates identity and forwards an explicit caller header consumed by `ST_ALLOWED_CALLERS`.
+For multi-tenant or shared deployments, enforce authentication and authorization at the transport or proxy layer before requests reach this process. Examples include mTLS or OAuth/OIDC at the edge. Integrations that supply richer identities must attach authenticated `authInfo` in a trusted transport adapter rather than forwarding unverified request headers.

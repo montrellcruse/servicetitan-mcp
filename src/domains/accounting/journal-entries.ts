@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const journalEntryIdSchema = z.object({
   id: z.string().uuid().describe("Journal entry UUID"),
@@ -134,6 +133,10 @@ const journalEntryUpdateSchema = z.object({
 
 const journalEntrySyncSchema = z.object({
   id: z.string().uuid().describe("Journal entry UUID"),
+  syncStatus: z.string().describe("New synchronization status"),
+  versionId: z.string().optional(),
+  message: z.string().optional(),
+  customFields: z.record(z.string()).optional(),
 });
 
 
@@ -171,7 +174,7 @@ export function registerJournalEntryTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -196,7 +199,7 @@ export function registerJournalEntryTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -248,7 +251,7 @@ export function registerJournalEntryTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -269,7 +272,7 @@ export function registerJournalEntryTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -281,15 +284,17 @@ export function registerJournalEntryTools(
     description: "Trigger journal entry sync update",
     schema: journalEntrySyncSchema.shape,
     handler: async (params) => {
-      const input = params as z.infer<typeof journalEntrySyncSchema>;
+      const input = journalEntrySyncSchema.parse(params);
+      const { id, ...body } = input;
 
       try {
         const data = await client.patch(
-          `/tenant/{tenant}/journal-entries/${input.id}/sync`,
+          `/tenant/{tenant}/journal-entries/${id}/sync`,
+          body,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

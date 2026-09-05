@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const externalDataEntrySchema = z.object({
@@ -244,7 +243,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -262,7 +261,7 @@ export function registerDispatchProjectTools(
         const data = await client.get("/tenant/{tenant}/projects", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -284,7 +283,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -307,7 +306,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -325,7 +324,7 @@ export function registerDispatchProjectTools(
         const data = await client.delete(`/tenant/{tenant}/projects/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -345,7 +344,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -363,7 +362,7 @@ export function registerDispatchProjectTools(
         const data = await client.post(`/tenant/{tenant}/projects/detach-job/${input.jobId}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -388,7 +387,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -409,7 +408,7 @@ export function registerDispatchProjectTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -429,7 +428,7 @@ export function registerDispatchProjectTools(
         });
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -450,7 +449,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -468,7 +467,7 @@ export function registerDispatchProjectTools(
         const data = await client.get(`/tenant/{tenant}/project-types/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -486,7 +485,7 @@ export function registerDispatchProjectTools(
         const data = await client.get("/tenant/{tenant}/project-types", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -504,7 +503,7 @@ export function registerDispatchProjectTools(
         const data = await client.get(`/tenant/{tenant}/project-statuses/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -525,7 +524,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -543,7 +542,7 @@ export function registerDispatchProjectTools(
         const data = await client.get(`/tenant/{tenant}/project-substatuses/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -564,7 +563,7 @@ export function registerDispatchProjectTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

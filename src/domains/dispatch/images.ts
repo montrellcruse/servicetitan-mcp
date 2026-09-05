@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { buildParams, toolError, toolResult, getErrorMessage } from "../../utils.js";
+import { buildParams, toolError, toolResult } from "../../utils.js";
 
 const imageGetSchema = z.object({
   path: z.string().optional().describe("Storage path of the image to retrieve"),
@@ -30,7 +30,7 @@ export function registerDispatchImageTools(
         const data = await client.get("/tenant/{tenant}/images", buildParams({ path: input.path }));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -52,7 +52,7 @@ export function registerDispatchImageTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -26,16 +26,21 @@ export class Logger {
     this.log("error", msg, data);
   }
 
-  private log(level: LogLevel, msg: string, data?: Record<string, unknown>): void {
-    if (!this.shouldLog(level)) {
+  /** Audit events are independent of the diagnostic verbosity setting. */
+  audit(msg: string, data?: Record<string, unknown>): void {
+    this.log("info", msg, data, true);
+  }
+
+  private log(level: LogLevel, msg: string, data?: Record<string, unknown>, force = false): void {
+    if (!force && !this.shouldLog(level)) {
       return;
     }
 
     const entry = {
+      ...(data ?? {}),
       level,
       ts: new Date().toISOString(),
       msg,
-      ...(data ?? {}),
     };
 
     // MCP uses stdout for protocol messages, so all logs must go to stderr.
@@ -47,7 +52,9 @@ export class Logger {
       })}\n`);
     } catch {
       // Fallback for circular references or other serialization failures
-      process.stderr.write(`${JSON.stringify({ level, ts: new Date().toISOString(), msg, error: "Log serialization failed" })}\n`);
+      try {
+        process.stderr.write(`${JSON.stringify({ level, ts: new Date().toISOString(), msg, error: "Log serialization failed" })}\n`);
+      } catch { /* A failed diagnostic sink must not turn a committed write into a retryable failure. */ }
     }
   }
 

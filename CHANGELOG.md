@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ## [Unreleased]
 
+## [3.0.0-rc.1] - 2026-09-04
+
+### Changed
+- Pinned ServiceTitan operation/request contracts replace guessed module routing; undocumented tools are excluded from discovery.
+- Readonly discovery, tool profiles and exact allowlists; shared side-effect-free server factory and TypeScript library entrypoint.
+- Lossless structured/text JSON, complete result retrieval within bounded storage, and explicit delivery errors.
+- Corrected analytics labels and populations; configurable report bindings, field-name mapping, complete pagination, per-client caches and report scheduling.
+- HTTP defaults to loopback; browser origins and authenticated caller identity are enforced.
+
+### Fixed
+- OAuth failures cannot replay token requests through a business client or expose token payloads in tool results; concurrent stale 401s reuse fresh tokens.
+- Default warning removal, silent page loss, failed-result caching, ambiguous name broadening, and DST date boundaries.
+- Report 166 hours/layout, missing gross-pay semantics, CSR/upcoming date keys, and technician BU filtering.
+- Accounting export arrays and multiple documented write/action bodies, including gross pay and technician shifts.
+- Official request shapes for CRM/customer memberships, people, dispatch actions, task management, accounting actions, and inventory; explicit null/false/zero values are preserved.
+- Cache isolation across timezone/budget contexts, independent cancellation, bounded memory, and rejection of incomplete reference-data pages.
+- Typed contact/audit redaction, final response-size bounds, malformed Host handling, and transport/session cleanup.
+
+### Added
+- Readonly readiness CLI/tool with company report definition fingerprints and compatibility diagnostics.
+- Auth/cancellation/pagination/schema/metric/identity/budget regressions, real MCP protocol tests, Node 22/24 CI, and explicit release acceptance gates.
+- Reproducible v2/v3 protocol, client-load, report-cache, and retained-memory benchmarks with documented measurement limits.
+
+### Release status
+- Release candidate. Live integration and second-company acceptance remain pending. See [validation](docs/releases/VALIDATION-v3.md), [acceptance gates](docs/releases/v3-acceptance.json), and the [migration guide](docs/MIGRATION-v3.md).
+
 ## [2.6.4] - 2026-09-02
 
 ### Security

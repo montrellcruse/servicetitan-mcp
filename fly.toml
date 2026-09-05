@@ -12,8 +12,8 @@ primary_region = "iad"
   ST_READONLY = "true"
   ST_TIMEZONE = "America/New_York"
   ST_LOG_LEVEL = "info"
-  ST_RESPONSE_SHAPING = "true"
   PORT = "8080"
+  ST_MCP_HOST = "0.0.0.0"
 
 # Streamable HTTP sessions live only in process memory, so this deployment must
 # stay single-machine unless session state is moved to shared storage.

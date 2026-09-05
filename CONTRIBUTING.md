@@ -1,108 +1,62 @@
-# Contributing to ServiceTitan MCP Server
+# Contributing to ServiceTitan MCP
 
-Thank you for your interest in contributing! This document covers development setup, architecture conventions, and the PR process.
+## Setup
 
-## Prerequisites
+Use Node.js 22 or newer and the locked npm dependencies.
 
-- Node.js >= 22
-- npm >= 10
-- A ServiceTitan developer account with API credentials
-
-## Getting Started
-
-```bash
+```sh
 git clone https://github.com/montrellcruse/servicetitan-mcp.git
 cd servicetitan-mcp
 npm ci
 cp .env.example .env
-# Fill in your ServiceTitan credentials
 ```
 
-## Development Workflow
+Credentials are needed only for explicitly authorized integration or production checks. Unit, contract, wire, and fixture tests must not depend on `.env` or make live ServiceTitan calls.
 
-```bash
-# Build
-npm run build
+## Development commands
 
-# Run locally (stdio mode)
-npm start
-
-# Run as Streamable HTTP server
-npm run start:streamable-http
-
-# Run as legacy SSE server
-npm run start:sse
-
-# Run tests
-npm test
-
-# Type-check
-npx tsc --noEmit
-
-# Lint
+```sh
+npm run typecheck
 npm run lint
-
-# Regenerate tool catalog
-npm run docs:tools
+npm test
+npm run contracts:check
+npm run test:wire
+npm run build
 ```
 
-## Adding a New Domain
+Use `npm start` for stdio and `npm run start:streamable-http` for remote MCP. `npm run start:sse` exists for legacy clients. `npm run release:check` checks the package version, acceptance-gate record, and source fingerprint. `npm run docs:tools` rebuilds the package and regenerates the public tool catalog.
 
-1. Create a directory: `src/domains/<domain>/`
-2. Create tool files following the existing pattern (one file per resource)
-3. Each tool file exports a function that takes `(client, registry)` and registers tools via `registry.register()`
-4. Use Zod schemas for input validation
-5. Use `toolResult()` and `toolError()` helpers from `src/utils.ts`
-6. Use `getErrorMessage()` from `src/utils.ts` for error formatting (intelligence tools may use the copy in `src/domains/intelligence/helpers.ts`)
-7. Create an `index.ts` that imports and re-exports all tool registrations
-8. Add tests in `tests/domains/<domain>.test.ts`
+## Adding or changing an API tool
 
-## Adding an Intelligence Tool
+1. Locate the operation in the pinned official sources under `docs/contracts/`.
+2. Add the adapter to the appropriate `src/domains/<domain>/` module and register it through `ToolRegistry`.
+3. Use the documented HTTP method and an operation-resolvable path. Do not add fallback routes for undocumented operations.
+4. Model path and query inputs with Zod. For request bodies, use the operation-bound helpers in `src/contracts/request-schema.ts` where practical so required fields and enums remain aligned with the official schema.
+5. Return results with `toolResult()` and pass caught errors directly to `toolError(error)` so sanitized API metadata is retained.
+6. Add a focused domain test that captures the final client method, path, query, and body. Add contract tests when changing shared resolution or schema conversion.
+7. Run `npm run contracts:check`, typecheck, lint, and the relevant test files.
 
-Intelligence tools go in `src/domains/intelligence/`. They provide pre-computed business answers (revenue summaries, snapshots, leaderboards) rather than raw CRUD access.
+Tool names follow `<domain>_<resource>_<action>`. Files use kebab-case, functions and variables use camelCase, and types use PascalCase. Every tool needs an accurate description and operation classification. Mutation annotations may be narrowed only when ServiceTitan behavior supports it; `readOnlyHint` always comes from the operation.
 
-1. Create the tool in `src/domains/intelligence/`
-2. Register through the caching proxy in `src/domains/intelligence/index.ts` — the `createCachingRegistry()` wrapper automatically adds intel cache to any tool prefixed with `intel_`
-3. Handle partial failures gracefully (use `Promise.allSettled` or `fetchWithWarning` pattern from existing tools)
-4. Include timezone-aware date handling via the `timezone` field from `registry.timezone`
-5. Add comprehensive tests — intelligence tools are the project's core differentiator
+Readonly mode omits mutation tools from MCP discovery. Test mutation adapters with fake clients or in-memory MCP unless a separate, explicit live-write authorization and cleanup plan exists.
 
-## Naming Conventions
+## Changing pinned contracts
 
-- **Tool names:** `<domain>_<resource>_<action>` (e.g., `crm_customers_list`, `intel_revenue_summary`)
-- **Files:** kebab-case (e.g., `gl-accounts.ts`, `customer-memberships.ts`)
-- **Functions/variables:** camelCase
-- **Types/interfaces:** PascalCase
+The archive in `docs/contracts/` is an immutable dated snapshot. Replace it only when intentionally adopting a newer official ServiceTitan snapshot, and update `sources.json` with exact public URLs and hashes.
 
-## Coding Conventions
+```sh
+npm run contracts:generate
+npm run contracts:check
+```
 
-- TypeScript strict mode — no `any` types
-- Use `getErrorMessage()` from `src/utils.ts` for error formatting (intelligence helpers have their own copy for internal use)
-- Use Zod schemas for all tool input validation
-- Use `toolResult()` / `toolError()` for tool responses
-- Always set `description` — it is sent to MCP clients and is what the model reads to choose a tool. `tests/mcp-contract.test.ts` fails if any tool arrives without one
-- MCP tool annotations are derived from `operation`; mutations default to destructive. Use `annotations` only after verifying a narrower hint (e.g. `destructiveHint: false` for an additive-only write or `idempotentHint: true` for a safe repeat). `readOnlyHint` cannot be overridden
-- Respect read-only mode: when `ST_READONLY=true`, all tools are registered but write and delete operations are blocked at execution time by the middleware
+Review generated operation and route diffs. Document removed, renamed, or newly unsupported tools as migration changes rather than routing them to a guessed endpoint.
 
-## Commit Messages
+## Intelligence tools
 
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-- `feat:` — new tool or feature
-- `fix:` — bug fix
-- `docs:` — documentation
-- `chore:` — maintenance
-- `test:` — tests
-- `refactor:` — restructuring without behavior change
+Intelligence tools live in `src/domains/intelligence/`. Define logical report contracts deliberately and allow company-specific category/report-ID overrides through `ST_REPORT_BINDINGS`; readiness validates the selected definitions but does not discover replacements. Cache only complete results, preserve useful partial-failure warnings, and use the registry timezone for date boundaries. Tests must cover row semantics, pagination, cache isolation, and required report parameters with fake clients.
 
-## Pull Request Process
+## Pull requests
 
-1. Fork and create a feature branch
-2. Make changes with tests
-3. Ensure `npm run build && npm test && npm run lint` pass
-4. Update CHANGELOG.md under `[Unreleased]`
-5. If adding tools, run `npm run docs:tools` to regenerate TOOLS.md
-6. Submit PR with clear description
+Use conventional commit prefixes such as `feat:`, `fix:`, `docs:`, `test:`, and `refactor:`. Include the concrete behavior change, contract source, migration impact, and validation commands. Run `npm run docs:tools` when the supported tool catalog changes.
 
-## Questions?
-
-Open an issue or start a discussion on GitHub.
+Report security issues through the private channel in `SECURITY.md`; do not open a public issue for a vulnerability.

@@ -10,7 +10,6 @@ import {
   toolError,
   toolResult,
 } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const paymentTypeGetSchema = z.object({
   id: z.number().int().describe("Payment type ID"),
@@ -43,7 +42,7 @@ export function registerPaymentTypeTools(
         const data = await client.get(`/tenant/{tenant}/payment-types/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -73,7 +72,7 @@ export function registerPaymentTypeTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

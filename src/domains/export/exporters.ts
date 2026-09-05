@@ -33,7 +33,7 @@ function registerExportTool(
         const data = await client.get(path, buildParams(params as Record<string, unknown>));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(error instanceof Error ? error.message : String(error));
+        return toolError(error);
       }
     },
   });

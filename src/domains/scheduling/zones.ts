@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -65,7 +64,7 @@ export function registerSchedulingZoneTools(
         const data = await client.get(`/tenant/{tenant}/zones/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -83,7 +82,7 @@ export function registerSchedulingZoneTools(
         const data = await client.get("/tenant/{tenant}/zones", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

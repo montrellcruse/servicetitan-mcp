@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -87,7 +86,7 @@ export function registerSchedulingAppointmentAssignmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -98,23 +97,20 @@ export function registerSchedulingAppointmentAssignmentTools(
     operation: "write",
     description: "Unassign technicians from appointments",
     schema: {
-      assignmentIds: z
-        .array(z.number().int().describe("Appointment assignment ID"))
-        .optional()
-        .describe("Assignment IDs to remove"),
+      jobAppointmentId: z.number().int().describe("Appointment ID"),
+      technicianIds: z.array(z.number().int()).min(1).describe("Technician IDs to unassign"),
     },
     handler: async (params) => {
-      const typed = params as { assignmentIds?: number[] };
+      const typed = params as { jobAppointmentId: number; technicianIds: number[] };
 
       try {
-        const payload = buildParams(typed);
         const data = await client.post(
           "/tenant/{tenant}/appointment-assignments/unassign-technicians",
-          Object.keys(payload).length > 0 ? payload : undefined,
+          typed,
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -135,7 +131,7 @@ export function registerSchedulingAppointmentAssignmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

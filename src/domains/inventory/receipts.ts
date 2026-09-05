@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   activeFilterParam,
   buildParams,
@@ -10,73 +11,14 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const scalarCustomFieldValueSchema = z.union([
-  z.string(),
-  z.number(),
-  z.boolean(),
-  z.null(),
-]);
-
-const customFieldMapSchema = z
-  .object({})
-  .catchall(scalarCustomFieldValueSchema)
-  .describe("Custom field key/value map");
-
-const receiptLineItemSchema = z.object({
-  skuId: z.number().int().optional().describe("SKU ID"),
-  skuCode: z.string().optional().describe("SKU code"),
-  description: z.string().optional().describe("Line item description"),
-  quantity: z.number().optional().describe("Receipt quantity"),
-  unitCost: z.number().optional().describe("Unit cost"),
-  inventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Inventory location ID"),
-  purchaseOrderItemId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Purchase order item ID"),
-  taxCodeId: z.number().int().optional().describe("Tax code ID"),
-});
-
-const receiptExternalLinkSchema = z.object({
-  name: z.string().optional().describe("External link label"),
-  url: z.string().optional().describe("External link URL"),
-});
-
-const receiptPayloadSchema = z.object({
-  number: z.string().optional().describe("Receipt number"),
-  vendorInvoiceNumber: z.string().optional().describe("Vendor invoice number"),
-  receivedOn: z.string().optional().describe("Receipt received date/time"),
-  vendorId: z.number().int().optional().describe("Vendor ID"),
-  billId: z.number().int().optional().describe("Bill ID"),
-  batchId: z.number().int().optional().describe("Batch ID"),
-  businessUnitId: z.number().int().optional().describe("Business unit ID"),
-  inventoryLocationId: z
-    .number()
-    .int()
-    .optional()
-    .describe("Inventory location ID"),
-  purchaseOrderId: z.number().int().optional().describe("Purchase order ID"),
-  syncStatus: z.string().optional().describe("Sync status"),
-  active: z.boolean().optional().describe("Whether receipt is active"),
-  summary: z.string().optional().describe("Receipt summary"),
-  memo: z.string().optional().describe("Receipt memo"),
-  items: z.array(receiptLineItemSchema).optional().describe("Receipt line items"),
-  externalLinks: z
-    .array(receiptExternalLinkSchema)
-    .optional()
-    .describe("External links for this receipt"),
-  customFields: customFieldMapSchema.optional().describe("Receipt custom fields"),
-});
+const receiptPayloadSchema = officialRequestSchema("Receipts_CreateReceipt") as z.AnyZodObject;
 
 const receiptIdSchema = z.object({
   id: z.number().int().describe("Receipt ID"),
 });
+
+const receiptCancelSchema = (officialRequestSchema("Receipts_CancelReceipts") as z.AnyZodObject).extend({ id: z.number().int().describe("Receipt ID") });
 
 const receiptsListSchema = dateFilterParams(
   paginationParams(
@@ -131,9 +73,7 @@ const receiptsListSchema = dateFilterParams(
   ),
 );
 
-const updateCustomFieldsSchema = z.object({
-  customFields: customFieldMapSchema.describe("Custom fields payload"),
-});
+const updateCustomFieldsSchema = officialRequestSchema("Receipts_UpdateCustomFields") as z.AnyZodObject;
 
 export function registerReceiptTools(client: ServiceTitanClient, registry: ToolRegistry): void {
   registry.register({
@@ -146,10 +86,10 @@ export function registerReceiptTools(client: ServiceTitanClient, registry: ToolR
       const input = receiptPayloadSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/receipts", buildParams(input));
+        const data = await client.post("/tenant/{tenant}/receipts", input);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -159,15 +99,15 @@ export function registerReceiptTools(client: ServiceTitanClient, registry: ToolR
     domain: "inventory",
     operation: "write",
     description: "Cancel a receipt",
-    schema: receiptIdSchema.shape,
+    schema: receiptCancelSchema.shape,
     handler: async (params) => {
-      const { id } = receiptIdSchema.parse(params);
+      const { id, ...payload } = receiptCancelSchema.parse(params);
 
       try {
-        const data = await client.patch(`/tenant/{tenant}/receipts/${id}/cancellation`);
+        const data = await client.patch(`/tenant/{tenant}/receipts/${id}/cancellation`, payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -212,7 +152,7 @@ export function registerReceiptTools(client: ServiceTitanClient, registry: ToolR
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -229,11 +169,11 @@ export function registerReceiptTools(client: ServiceTitanClient, registry: ToolR
       try {
         const data = await client.patch(
           "/tenant/{tenant}/receipts/custom-fields",
-          input.customFields,
+          input,
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

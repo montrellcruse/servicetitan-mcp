@@ -1,4 +1,5 @@
 import type { ServiceTitanClient } from "./client.js";
+import { getRequestContext, throwIfAborted } from "./request-context.js";
 
 export type GenericRecord = Record<string, unknown>;
 
@@ -189,19 +190,24 @@ async function fetchAllPages(
       pageSize: DEFAULT_PAGE_SIZE,
       includeTotal: true,
     });
+    throwIfAborted(getRequestContext().signal);
 
     const items = extractItems(response);
     allItems.push(...items);
 
     const hasMore = hasMorePages(response);
-    if (page === maxPages && hasMore && items.length > 0) {
+    if (hasMore && items.length === 0) {
+      throw new Error(`Reference data pagination returned an empty page with hasMore=true for ${path}; refusing to cache incomplete data`);
+    }
+    if (page === maxPages && hasMore) {
       logger.warn("Reference data cache truncated at max pages, some records may be missing", {
         maxPages,
         endpoint: path,
       });
+      throw new Error(`Reference data pagination exceeded ${maxPages} pages for ${path}; refusing to cache incomplete data`);
     }
 
-    if (!hasMore || items.length === 0) {
+    if (!hasMore) {
       break;
     }
   }
@@ -264,26 +270,26 @@ export class TtlCache<T> {
 }
 
 export class ReferenceDataCache {
-  private readonly cache: TtlCache<GenericRecord[]>;
-  private readonly inFlight = new Map<string, Promise<GenericRecord[]>>();
+  private clientStates = new WeakMap<object, { cache: TtlCache<GenericRecord[]>; inFlight: Map<string, Promise<GenericRecord[]>> }>();
 
   constructor(
     ttlMs: number = DEFAULT_TTL_MS,
     private readonly logger: CacheLogger = defaultCacheLogger,
   ) {
-    this.cache = new TtlCache<GenericRecord[]>(ttlMs);
+    this.ttlMs = ttlMs;
   }
 
+  private readonly ttlMs: number;
+
   clear(): void {
-    this.cache.clear();
-    this.inFlight.clear();
+    this.clientStates = new WeakMap();
   }
 
   async getTechnicians(
     client: ServiceTitanClient,
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
-    return this.getOrLoad("technicians", () =>
+    return this.getOrLoad(client, "technicians", () =>
       fetchAllPages(
         client,
         "/tenant/{tenant}/technicians",
@@ -299,7 +305,7 @@ export class ReferenceDataCache {
     client: ServiceTitanClient,
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
-    return this.getOrLoad("business-units", () =>
+    return this.getOrLoad(client, "business-units", () =>
       fetchAllPages(
         client,
         "/tenant/{tenant}/business-units",
@@ -315,7 +321,7 @@ export class ReferenceDataCache {
     client: ServiceTitanClient,
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
-    return this.getOrLoad("payment-types", () =>
+    return this.getOrLoad(client, "payment-types", () =>
       fetchAllPages(
         client,
         "/tenant/{tenant}/payment-types",
@@ -331,7 +337,7 @@ export class ReferenceDataCache {
     client: ServiceTitanClient,
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
-    return this.getOrLoad("membership-types", () =>
+    return this.getOrLoad(client, "membership-types", () =>
       fetchAllPages(
         client,
         "/tenant/{tenant}/membership-types",
@@ -371,32 +377,41 @@ export class ReferenceDataCache {
   }
 
   private async getOrLoad(
-    key: string,
+    client: ServiceTitanClient,
+    namespace: string,
     loader: () => Promise<GenericRecord[]>,
     ttlMs?: number,
   ): Promise<GenericRecord[]> {
-    const cached = this.cache.get(key);
+    throwIfAborted(getRequestContext().signal);
+    let state = this.clientStates.get(client as object);
+    if (!state) {
+      state = { cache: new TtlCache<GenericRecord[]>(this.ttlMs), inFlight: new Map() };
+      this.clientStates.set(client as object, state);
+    }
+    const cached = state.cache.get(namespace);
     if (cached !== undefined) {
       return cached;
     }
 
-    const existingRequest = this.inFlight.get(key);
+    const deduplicate = getRequestContext().signal === undefined;
+    const existingRequest = deduplicate ? state.inFlight.get(namespace) : undefined;
     if (existingRequest) {
       return existingRequest;
     }
 
     const request = loader()
       .then((value) => {
-        this.cache.set(key, value, ttlMs);
-        this.inFlight.delete(key);
+        throwIfAborted(getRequestContext().signal);
+        state!.cache.set(namespace, value, ttlMs);
+        if (state!.inFlight.get(namespace) === request) state!.inFlight.delete(namespace);
         return value;
       })
       .catch((error: unknown) => {
-        this.inFlight.delete(key);
+        if (state!.inFlight.get(namespace) === request) state!.inFlight.delete(namespace);
         throw error;
       });
 
-    this.inFlight.set(key, request);
+    if (deduplicate) state.inFlight.set(namespace, request);
     return request;
   }
 }

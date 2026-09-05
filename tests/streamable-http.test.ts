@@ -283,6 +283,8 @@ beforeAll(async () => {
         return { registered: MOCK_TOOL_COUNT };
       }
       logSummary(): void {}
+      validateSelection(): void {}
+      clearResults(): void {}
     },
   }));
 

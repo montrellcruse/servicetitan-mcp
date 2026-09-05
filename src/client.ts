@@ -1,249 +1,28 @@
-import https from "https";
-import axios, {
-  type AxiosError,
-  type AxiosInstance,
-  type AxiosRequestConfig,
-  type InternalAxiosRequestConfig,
-} from "axios";
+import https from "node:https";
+import axios, { type AxiosAdapter, type AxiosError, type AxiosInstance } from "axios";
 
 import type { ServiceTitanConfig } from "./config.js";
+import { resolveServiceTitanPath } from "./contracts/resolve-route.js";
+import { redactSensitiveText } from "./audit.js";
+import { awaitWithSignal, getRequestContext, sleepWithSignal, throwIfAborted } from "./request-context.js";
 import { buildParams } from "./utils.js";
 
 const TOKEN_EXPIRY_BUFFER_MS = 60_000;
-
-// Shared agent for connection pooling and keep-alive
-const httpsAgent = new https.Agent({
-  keepAlive: true,
-  maxSockets: 32, // Optimized for high-concurrency parallel fetching
-  maxFreeSockets: 10,
-  timeout: 60_000,
-});
-
-/**
- * Maps resource path segments to their ServiceTitan API module prefix.
- * ST production API requires: /{module}/v2/tenant/{id}/{resource}
- */
-const ROUTE_TABLE: Record<string, string> = {
-  // CRM
-  "/customers": "crm",
-  "/contacts": "crm",
-  "/leads": "crm",
-  "/locations": "crm",
-  "/bookings": "crm",
-  "/booking-provider": "crm",
-  "/booking-provider-tags": "crm",
-  "/tags": "crm",
-
-  // Job Planning & Management (dispatch/jobs)
-  "/jobs": "jpm",
-  "/appointments": "jpm",
-  "/job-cancel-reasons": "jpm",
-  "/job-hold-reasons": "jpm",
-  "/job-types": "jpm",
-  "/projects": "jpm",
-  "/project-types": "jpm",
-  "/project-statuses": "jpm",
-  "/project-substatuses": "jpm",
-  "/technicians": "settings",
-  "/images": "jpm",
-  "/installed-equipment": "jpm",
-
-  // Dispatch
-  "/appointment-assignments": "dispatch",
-  "/arrival-windows": "dispatch",
-  "/capacity": "dispatch",
-  "/non-job-appointments": "dispatch",
-  "/gps-provider": "dispatch",
-  "/teams": "dispatch",
-  "/zones": "dispatch",
-
-  // Accounting
-  "/invoices": "accounting",
-  "/invoice-items": "accounting",
-  "/payments": "accounting",
-  "/ap-credits": "accounting",
-  "/ap-payments": "accounting",
-  "/gl-accounts": "accounting",
-  "/journal-entries": "accounting",
-  "/payment-terms": "accounting",
-  "/payment-types": "accounting",
-  "/tax-zones": "accounting",
-
-  // Estimates / Sales
-  "/estimates": "sales",
-  "/estimate-templates": "sales",
-  "/proposal-templates": "sales",
-  "/proposal-types": "sales",
-
-  // Pricebook
-  "/services": "pricebook",
-  "/materials": "pricebook",
-  "/materialsmarkup": "pricebook",
-  "/equipment": "pricebook",
-  "/categories": "pricebook",
-  "/discounts": "pricebook",
-  "/discounts-and-fees": "pricebook",
-  "/pricebook": "pricebook",
-
-  // Payroll
-  "/payrolls": "payroll",
-  "/payroll-adjustments": "payroll",
-  "/payroll-settings": "payroll",
-  "/gross-pay-items": "payroll",
-  "/timesheet-codes": "payroll",
-  "/timesheets": "payroll",
-  "/non-job-timesheets": "payroll",
-  "/splits": "payroll",
-
-  // Memberships
-  "/memberships": "memberships",
-  "/membership-types": "memberships",
-  "/service-agreements": "memberships",
-  "/recurring-services": "memberships",
-  "/recurring-service-types": "memberships",
-  "/recurring-service-events": "memberships",
-
-  // Marketing
-  "/campaigns": "marketing",
-  "/costs": "marketing",
-  "/attributed-leads": "marketing",
-  "/external-call-attributions": "marketing",
-  "/job-attributions": "marketing",
-  "/web-booking-attributions": "marketing",
-  "/web-lead-form-attributions": "marketing",
-  "/clientspecificpricing": "marketing",
-  "/reviews": "marketing",
-  "/suppressions": "marketing",
-  "/submissions": "marketing",
-
-  // Marketing - Telecom (calls)
-  "/calls": "telecom",
-  "/call-reasons": "telecom",
-
-  // Inventory
-  "/purchase-orders": "inventory",
-  "/purchase-order-types": "inventory",
-  "/purchase-order-markups": "inventory",
-  "/vendors": "inventory",
-  "/warehouses": "inventory",
-  "/adjustments": "inventory",
-  "/transfers": "inventory",
-  "/receipts": "inventory",
-  "/returns": "inventory",
-  "/return-types": "inventory",
-
-  // Reporting
-  "/report-categories": "reporting",
-  "/report-category": "reporting",
-  "/dynamic-value-sets": "reporting",
-  "/data": "reporting",
-
-  // Settings
-  "/business-units": "settings",
-  "/employees": "settings",
-  "/tag-types": "settings",
-  "/user-roles": "settings",
-  "/activities": "settings",
-  "/activity-categories": "settings",
-  "/activity-types": "settings",
-  "/business-hours": "settings",
-  "/performance": "settings",
-  "/schedulers": "settings",
-  "/technician-rating": "settings",
-  "/technician-shifts": "settings",
-  "/trucks": "settings",
-  "/tasks": "task-management",
-
-  // Forms
-  "/forms": "forms",
-
-  // Opt-in/out (marketing v3)
-  "/optinouts": "marketing",
-};
-
-/**
- * For /tenant/{id}/export/{resource} paths, maps the resource to its API module.
- * Export endpoints live under their parent domain: /{module}/v2/tenant/{id}/export/{resource}
- */
-const EXPORT_ROUTE_TABLE: Record<string, string> = {
-  "/customers": "crm",
-  "/customers/contacts": "crm",
-  "/contacts": "crm",
-  "/leads": "crm",
-  "/locations": "crm",
-  "/locations/contacts": "crm",
-  "/bookings": "crm",
-  "/jobs": "jpm",
-  "/job-notes": "jpm",
-  "/job-history": "jpm",
-  "/job-canceled-logs": "jpm",
-  "/jobs/splits": "jpm",
-  "/appointments": "jpm",
-  "/appointment-assignments": "dispatch",
-  "/job-types": "jpm",
-  "/projects": "jpm",
-  "/project-notes": "jpm",
-  "/job-cancel-reasons": "jpm",
-  "/installed-equipment": "jpm",
-  "/invoices": "accounting",
-  "/invoice-items": "accounting",
-  "/invoice-templates": "accounting",
-  "/payments": "accounting",
-  "/inventory-bills": "accounting",
-  "/estimates": "sales",
-  "/estimate-items": "sales",
-  "/services": "pricebook",
-  "/materials": "pricebook",
-  "/equipment": "pricebook",
-  "/campaigns": "marketing",
-  "/calls": "telecom",
-  "/membership-types": "memberships",
-  "/memberships": "memberships",
-  "/membership-status-changes": "memberships",
-  "/service-agreements": "memberships",
-  "/recurring-services": "memberships",
-  "/recurring-service-types": "memberships",
-  "/location-recurring-services": "memberships",
-  "/location-recurring-service-events": "memberships",
-  "/purchase-orders": "inventory",
-  "/returns": "inventory",
-  "/transfers": "inventory",
-  "/vendors": "inventory",
-  "/employees": "settings",
-  "/business-units": "settings",
-  "/tag-types": "settings",
-  "/technicians": "settings",
-  "/activities": "settings",
-  "/activity-categories": "settings",
-  "/activity-codes": "settings",
-  "/adjustments": "inventory",
-  "/payrolls": "payroll",
-  "/payroll-adjustments": "payroll",
-  "/payroll-settings": "payroll",
-  "/gross-pay-items": "payroll",
-  "/timesheets": "payroll",
-  "/timesheet-codes": "payroll",
-};
+const httpsAgent = new https.Agent({ keepAlive: true, maxSockets: 32, maxFreeSockets: 10, timeout: 60_000 });
 
 export const ENVIRONMENTS = {
-  integration: {
-    authUrl: "https://auth-integration.servicetitan.io",
-    apiUrl: "https://api-integration.servicetitan.io",
-  },
-  production: {
-    authUrl: "https://auth.servicetitan.io",
-    apiUrl: "https://api.servicetitan.io",
-  },
+  integration: { authUrl: "https://auth-integration.servicetitan.io", apiUrl: "https://api-integration.servicetitan.io" },
+  production: { authUrl: "https://auth.servicetitan.io", apiUrl: "https://api.servicetitan.io" },
 } as const;
 
-interface TokenResponse {
-  access_token: string;
-  expires_in: number;
-}
-
-interface RetriableRequestConfig extends InternalAxiosRequestConfig {
-  _retried401?: boolean;
-  _retried429?: boolean;
+type RequestPhase = "auth" | "resource" | "queue";
+interface ErrorDetails {
+  phase?: RequestPhase;
+  code?: string;
+  traceId?: string;
+  retryAfterMs?: number;
+  retryable?: boolean;
+  outcomeUnknown?: boolean;
 }
 
 export class ServiceTitanApiError extends Error {
@@ -251,372 +30,356 @@ export class ServiceTitanApiError extends Error {
     public readonly status: number,
     message: string,
     public readonly path: string,
+    public readonly details: Readonly<ErrorDetails> = {},
   ) {
     super(message);
     this.name = "ServiceTitanApiError";
   }
 
-  toJSON(): { status: number; message: string; path: string } {
-    return {
-      status: this.status,
-      message: this.message,
-      path: this.path,
-    };
+  toJSON(): { status: number; message: string; path: string } & ErrorDetails {
+    return { status: this.status, message: this.message, path: this.path, ...this.details };
   }
+}
+
+export interface ClientRequestEvent {
+  method: string;
+  path: string;
+  elapsedMs: number;
+  attempts: number;
+  status: number;
+  phase?: RequestPhase;
+  traceId?: string;
+}
+
+export interface ServiceTitanClientOptions {
+  maxConcurrentRequests?: number;
+  maxQueuedRequests?: number;
+  /** Reject a longer server-requested wait without retrying early. */
+  maxRetryDelayMs?: number;
+  requestTimeoutMs?: number;
+  authTimeoutMs?: number;
+  onRequestComplete?: (event: ClientRequestEvent) => void;
+  /** Test/embedding adapters; URLs and credentials remain config-owned. */
+  adapter?: AxiosAdapter;
+  authAdapter?: AxiosAdapter;
+}
+
+interface GateWaiter { grant: () => void; cancel: () => void }
+
+class RequestGate {
+  active = 0;
+  private readonly waiting: GateWaiter[] = [];
+  constructor(private readonly limit: number, private readonly maxQueued: number) {}
+  get queued(): number { return this.waiting.length; }
+
+  async acquire(signal?: AbortSignal): Promise<() => void> {
+    throwIfAborted(signal);
+    if (this.active < this.limit) {
+      this.active += 1;
+      return () => this.release();
+    }
+    if (this.waiting.length >= this.maxQueued) {
+      throw new ServiceTitanApiError(0, "Request queue is full; retry after current requests finish.", "", { phase: "queue", code: "QUEUE_FULL", retryable: true });
+    }
+    return new Promise((resolve, reject) => {
+      const waiter: GateWaiter = {
+        grant: () => {
+          signal?.removeEventListener("abort", waiter.cancel);
+          this.active += 1;
+          resolve(() => this.release());
+        },
+        cancel: () => {
+          const index = this.waiting.indexOf(waiter);
+          if (index !== -1) this.waiting.splice(index, 1);
+          signal?.removeEventListener("abort", waiter.cancel);
+          reject(new DOMException("Request cancelled", "AbortError"));
+        },
+      };
+      this.waiting.push(waiter);
+      signal?.addEventListener("abort", waiter.cancel, { once: true });
+    });
+  }
+
+  private release(): void {
+    this.active -= 1;
+    this.waiting.shift()?.grant();
+  }
+}
+
+interface TokenSnapshot { value: string; generation: number }
+interface TokenFlight {
+  promise: Promise<TokenSnapshot>;
+  controller: AbortController;
+  waiters: number;
+  settled: boolean;
+}
+
+function positiveInteger(value: number, name: string): number {
+  if (!Number.isSafeInteger(value) || value <= 0) throw new Error(`${name} must be a positive integer`);
+  return value;
+}
+
+/** Retry-After is delta-seconds or an HTTP date; never permissively parse prefixes. */
+export function retryAfterMilliseconds(value: unknown, now = Date.now()): number {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) return value * 1000;
+  if (typeof value !== "string") return 1000;
+  const text = value.trim();
+  if (/^\d+$/.test(text)) {
+    const seconds = Number(text);
+    return Number.isFinite(seconds) ? seconds * 1000 : Number.POSITIVE_INFINITY;
+  }
+  // Only date-shaped values can enter Date.parse ("0"/"10oops" are not dates).
+  if (/^[A-Za-z]{3},/.test(text)) {
+    const date = Date.parse(text);
+    if (Number.isFinite(date)) return Math.max(0, date - now);
+  }
+  return 1000;
 }
 
 export class ServiceTitanClient {
   private readonly http: AxiosInstance;
   private readonly authUrl: string;
-
-  private accessToken: string | null = null;
+  private readonly gate: RequestGate;
+  private readonly maxRetryDelayMs: number;
+  private readonly options: ServiceTitanClientOptions;
+  private accessToken: TokenSnapshot | null = null;
   private tokenExpiration = 0;
-  private tokenRequest: Promise<string> | null = null;
+  private tokenGeneration = 0;
+  private tokenFlight: TokenFlight | null = null;
+  private resourceCooldownUntil = 0;
+  private authCooldownUntil = 0;
+  private readonly counters = { requests: 0, failures: 0, resourceAttempts: 0, authAcquisitions: 0, retries401: 0, retries429: 0, authRetries429: 0 };
 
-  constructor(private readonly config: ServiceTitanConfig) {
+  constructor(private readonly config: ServiceTitanConfig, options: ServiceTitanClientOptions = {}) {
+    this.options = options;
     const environment = ENVIRONMENTS[config.environment];
     this.authUrl = environment.authUrl;
+    this.maxRetryDelayMs = positiveInteger(options.maxRetryDelayMs ?? 60_000, "maxRetryDelayMs");
+    if (this.maxRetryDelayMs > 300_000) throw new Error("maxRetryDelayMs cannot exceed 300000");
+    this.gate = new RequestGate(positiveInteger(options.maxConcurrentRequests ?? 8, "maxConcurrentRequests"), positiveInteger(options.maxQueuedRequests ?? 128, "maxQueuedRequests"));
     this.http = axios.create({
       baseURL: environment.apiUrl,
-      timeout: 60_000, // 60s default for all API requests
+      timeout: positiveInteger(options.requestTimeoutMs ?? 60_000, "requestTimeoutMs"),
       httpsAgent,
+      ...(options.adapter ? { adapter: options.adapter } : {}),
     });
-
-    this.setupInterceptors();
+    positiveInteger(options.authTimeoutMs ?? 15_000, "authTimeoutMs");
   }
 
-  async get(path: string, params?: Record<string, unknown>): Promise<unknown> {
-    return this.request("get", path, undefined, params);
+  getMetrics(): Readonly<typeof this.counters & { activeRequests: number; queuedRequests: number }> {
+    return { ...this.counters, activeRequests: this.gate.active, queuedRequests: this.gate.queued };
   }
 
-  async post(
-    path: string,
-    body?: unknown,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.request("post", path, body, params);
+  async get(path: string, params?: Record<string, unknown>): Promise<unknown> { return this.request("get", path, undefined, params); }
+  async post(path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> { return this.request("post", path, body, params); }
+  async put(path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> { return this.request("put", path, body, params); }
+  async patch(path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> { return this.request("patch", path, body, params); }
+  async delete(path: string, params?: Record<string, unknown>): Promise<unknown> { return this.request("delete", path, undefined, params); }
+  async deleteWithBody(path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> { return this.request("delete", path, body, params); }
+  async ensureToken(): Promise<void> { await this.getAccessToken(getRequestContext().signal); }
+
+  async prewarm(): Promise<void> {
+    try { await this.ensureToken(); } catch { /* Startup remains available for diagnostics/recovery. */ }
   }
 
-  async put(
-    path: string,
-    body?: unknown,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.request("put", path, body, params);
-  }
-
-  async patch(
-    path: string,
-    body?: unknown,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.request("patch", path, body, params);
-  }
-
-  async delete(path: string, params?: Record<string, unknown>): Promise<unknown> {
-    return this.request("delete", path, undefined, params);
-  }
-
-  async deleteWithBody(
-    path: string,
-    body?: unknown,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    return this.request("delete", path, body, params);
-  }
-
-  async ensureToken(): Promise<void> {
-    await this.getAccessToken();
-  }
-
-  private async request(
-    method: "get" | "post" | "put" | "patch" | "delete",
-    path: string,
-    body?: unknown,
-    params?: Record<string, unknown>,
-  ): Promise<unknown> {
-    const resolvedPath = this.resolvePath(path);
-    const requestConfig: AxiosRequestConfig = {
-      method,
-      url: resolvedPath,
-      params: params ? buildParams(params) : undefined,
-      data: body,
-    };
-
+  private async request(method: string, path: string, body?: unknown, params?: Record<string, unknown>): Promise<unknown> {
+    const resolvedPath = resolveServiceTitanPath(path, this.config.tenantId, method);
+    const signal = getRequestContext().signal;
+    const started = Date.now();
+    let attempts = 0;
+    let status = 0;
+    let failure: ServiceTitanApiError | undefined;
+    let retried401 = false;
+    let retried429 = false;
+    this.counters.requests += 1;
     try {
-      const response = await this.http.request(requestConfig);
-      return response.data;
+      for (;;) {
+        throwIfAborted(signal);
+        const release = await this.gate.acquire(signal);
+        let rejectedGeneration: number | undefined;
+        let rateLimitError: AxiosError | undefined;
+        try {
+          // Auth failure is outside the resource-response catch. Its config can
+          // never be replayed as a business request or returned as business data.
+          await this.waitForCooldown("resource", resolvedPath, signal);
+          const token = await this.getAccessToken(signal);
+          throwIfAborted(signal);
+          attempts += 1;
+          this.counters.resourceAttempts += 1;
+          try {
+            const response = await this.http.request({
+              method, url: resolvedPath, params: params ? buildParams(params) : undefined, data: body, signal,
+              headers: { Authorization: `Bearer ${token.value}`, "ST-App-Key": this.config.appKey },
+            });
+            status = response.status;
+            return response.data;
+          } catch (error) {
+            if (axios.isAxiosError(error) && error.response?.status === 401 && !retried401) {
+              retried401 = true;
+              rejectedGeneration = token.generation;
+              this.counters.retries401 += 1;
+            } else if (axios.isAxiosError(error) && error.response?.status === 429) {
+              this.recordCooldown(error, "resource");
+              if (retried429) throw this.sanitizeError(error, resolvedPath, "resource", method !== "get");
+              retried429 = true;
+              rateLimitError = error;
+            } else {
+              throw this.sanitizeError(error, resolvedPath, "resource", method !== "get");
+            }
+          }
+        } finally {
+          release();
+        }
+        if (rejectedGeneration !== undefined) {
+          // A delayed 401 for an older token must not discard a newer token.
+          if (this.accessToken?.generation === rejectedGeneration) {
+            this.accessToken = null;
+            this.tokenExpiration = 0;
+          }
+          continue;
+        }
+        if (rateLimitError) {
+          this.retryDelay(rateLimitError, resolvedPath, "resource");
+          this.counters.retries429 += 1;
+        }
+      }
     } catch (error) {
-      throw this.sanitizeError(error, resolvedPath);
-    }
-  }
-
-  private resolvePath(path: string): string {
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    const withTenant = normalizedPath.replaceAll("{tenant}", this.config.tenantId);
-    return this.addApiPrefix(withTenant);
-  }
-
-  /**
-   * ServiceTitan's v2 API requires versioned module prefixes on all endpoints.
-   * e.g. `/tenant/123/customers` → `/crm/v2/tenant/123/customers`
-   *
-   * This mapping routes each resource path to its correct API module prefix.
-   * Paths that already include a prefix (e.g. `/v3/...`, `/crm/v2/...`) are left untouched.
-   */
-  private addApiPrefix(path: string): string {
-    // Skip paths that already have a full module+version prefix (e.g. /crm/v2/tenant/...)
-    if (/^\/(?:crm|accounting|jpm|dispatch|settings|pricebook|payroll|memberships|marketing|telecom|inventory|reporting|sales|equipment-systems|task-management|forms)\/v\d+\//i.test(path)) {
-      return path;
-    }
-
-    // Handle bare versioned paths like /v2/tenant/{id}/calls or /v3/tenant/{id}/calls
-    // These need the module prefix prepended: /v2/tenant/.../calls → /telecom/v2/tenant/.../calls
-    const versionedMatch = path.match(/^\/(v\d+)\/tenant\/[^/]+(\/export)?(\/[^/?]+)/);
-    if (versionedMatch) {
-      const isExport = versionedMatch[2] === "/export";
-      const resource = versionedMatch[3];
-      const table = isExport ? EXPORT_ROUTE_TABLE : ROUTE_TABLE;
-      const prefix = table[resource];
-      if (prefix) {
-        return `/${prefix}${path}`;
-      }
-      return path;
-    }
-
-    // Extract the resource segment after /tenant/{id}/
-    const match = path.match(/^\/tenant\/[^/]+(\/export)?(\/[^/?]+)/);
-    if (!match) return path;
-
-    const isExport = match[1] === "/export";
-    const resource = match[2]; // e.g. "/customers", "/jobs"
-
-    // Export endpoints are nested under their parent domain prefix
-    if (isExport) {
-      const exportPrefix = EXPORT_ROUTE_TABLE[resource];
-      if (exportPrefix) {
-        return `/${exportPrefix}/v2${path}`;
-      }
-      // Default: try matching the exported resource to a regular domain
-      const regularPrefix = ROUTE_TABLE[resource];
-      if (regularPrefix) {
-        return `/${regularPrefix}/v2${path}`;
-      }
-    }
-
-    const prefix = ROUTE_TABLE[resource];
-    if (prefix) {
-      return `/${prefix}/v2${path}`;
-    }
-
-    // Fallback: return path as-is (will likely 404, but better than silently misrouting)
-    return path;
-  }
-
-  private setupInterceptors(): void {
-    this.http.interceptors.request.use(
-      async (
-        request: InternalAxiosRequestConfig,
-      ): Promise<InternalAxiosRequestConfig> => {
-        const token = await this.getAccessToken();
-        if (request.headers?.set) {
-          request.headers.set("Authorization", `Bearer ${token}`);
-          request.headers.set("ST-App-Key", this.config.appKey);
-        } else {
-          // Fallback for plain-object headers (e.g. in tests)
-          (request as unknown as Record<string, unknown>).headers = {
-            ...((request.headers as Record<string, unknown>) ?? {}),
-            Authorization: `Bearer ${token}`,
-            "ST-App-Key": this.config.appKey,
-          };
-        }
-        return request;
-      },
-    );
-
-    this.http.interceptors.response.use(
-      (response) => response,
-      async (error: AxiosError) => {
-        const requestConfig = error.config as RetriableRequestConfig | undefined;
-        const status = error.response?.status;
-
-        if (status === 401 && requestConfig && !requestConfig._retried401) {
-          requestConfig._retried401 = true;
-          await this.refreshToken();
-          return this.http.request(requestConfig);
-        }
-
-        if (status === 429 && requestConfig && !requestConfig._retried429) {
-          requestConfig._retried429 = true;
-          const retryAfterSeconds = this.parseRetryAfter(
-            error.response?.headers?.["retry-after"],
-          );
-          await this.sleep(retryAfterSeconds * 1000);
-          return this.http.request(requestConfig);
-        }
-
-        return Promise.reject(error);
-      },
-    );
-  }
-
-  /**
-   * Pre-warm authentication token and connection pool.
-   * Call during server initialization to save latency on first tool execution.
-   */
-  public async prewarm(): Promise<void> {
-    try {
-      await this.getAccessToken();
-    } catch {
-      // Don't crash on prewarm failure, first real request will retry
-    }
-  }
-
-  private async getAccessToken(forceRefresh = false): Promise<string> {
-    const isTokenValid =
-      this.accessToken !== null &&
-      Date.now() < this.tokenExpiration - TOKEN_EXPIRY_BUFFER_MS;
-
-    if (!forceRefresh && isTokenValid) {
-      return this.accessToken!;
-    }
-
-    if (this.tokenRequest) {
-      return this.tokenRequest;
-    }
-
-    this.tokenRequest = this.fetchAccessToken();
-
-    try {
-      return await this.tokenRequest;
+      failure = error instanceof ServiceTitanApiError ? error : this.sanitizeError(error, resolvedPath, "resource", false);
+      status = failure.status;
+      this.counters.failures += 1;
+      throw failure;
     } finally {
-      this.tokenRequest = null;
+      try {
+        this.options.onRequestComplete?.({ method, path: resolvedPath, elapsedMs: Date.now() - started, attempts, status, phase: failure?.details.phase, traceId: failure?.details.traceId });
+      } catch { /* Observability callbacks must not change a business outcome. */ }
     }
   }
 
-  private async refreshToken(): Promise<void> {
-    this.accessToken = null;
-    this.tokenExpiration = 0;
-    await this.getAccessToken(true);
-  }
-
-  private async fetchAccessToken(): Promise<string> {
-    const form = new URLSearchParams({
-      grant_type: "client_credentials",
-      client_id: this.config.clientId,
-      client_secret: this.config.clientSecret,
-    });
-
-    // Token acquisition must use raw axios.post() to avoid recursive auth interception.
-    const response = await axios.post<TokenResponse>(
-      `${this.authUrl}/connect/token`,
-      form.toString(),
-      {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        httpsAgent,
-        timeout: 15_000, // 15s timeout for auth — fail fast if ST auth is stalled
-      },
-    );
-
-    const accessToken = response.data?.access_token;
-    const expiresInSeconds = Number(response.data?.expires_in ?? 0);
-
-    if (!accessToken || !Number.isFinite(expiresInSeconds) || expiresInSeconds <= 0) {
-      throw new Error("Invalid token response from ServiceTitan auth endpoint");
+  private async waitForCooldown(phase: "auth" | "resource", path: string, signal?: AbortSignal): Promise<void> {
+    for (;;) {
+      throwIfAborted(signal);
+      const until = phase === "auth" ? this.authCooldownUntil : this.resourceCooldownUntil;
+      const remaining = until - Date.now();
+      if (remaining <= 0) return;
+      // Remember even an excessive delay across calls, without allocating an
+      // overflowing timer or allowing a new call to retry early.
+      if (remaining > this.maxRetryDelayMs) throw this.retryBudgetError(remaining, path, phase);
+      await sleepWithSignal(remaining, signal);
     }
-
-    this.accessToken = accessToken;
-    this.tokenExpiration = Date.now() + expiresInSeconds * 1000;
-
-    return accessToken;
   }
 
-  private parseRetryAfter(value: unknown): number {
-    if (typeof value === "string") {
-      // Try integer seconds first (most common)
-      const parsed = Number.parseInt(value, 10);
-      if (Number.isFinite(parsed) && parsed > 0) {
-        return parsed;
-      }
+  private async getAccessToken(signal?: AbortSignal): Promise<TokenSnapshot> {
+    throwIfAborted(signal);
+    if (this.accessToken && Date.now() < this.tokenExpiration - TOKEN_EXPIRY_BUFFER_MS) return this.accessToken;
+    let flight = this.tokenFlight;
+    if (!flight || flight.controller.signal.aborted) {
+      const controller = new AbortController();
+      flight = { controller, waiters: 0, settled: false, promise: Promise.resolve({ value: "", generation: 0 }) };
+      const current = flight;
+      current.promise = this.fetchAccessToken(controller.signal).finally(() => {
+        current.settled = true;
+        if (this.tokenFlight === current) this.tokenFlight = null;
+      });
+      this.tokenFlight = current;
+    }
+    flight.waiters += 1;
+    try {
+      return await awaitWithSignal(flight.promise, signal);
+    } finally {
+      flight.waiters -= 1;
+      if (flight.waiters === 0 && !flight.settled) flight.controller.abort();
+    }
+  }
 
-      // Try HTTP-date format (e.g. "Sat, 28 Mar 2026 17:00:00 GMT")
-      const dateMs = Date.parse(value);
-      if (Number.isFinite(dateMs)) {
-        const delaySeconds = Math.ceil((dateMs - Date.now()) / 1000);
-        if (delaySeconds > 0) {
-          return Math.min(delaySeconds, 300); // Cap at 5 minutes
+  private async fetchAccessToken(signal: AbortSignal): Promise<TokenSnapshot> {
+    const form = new URLSearchParams({ grant_type: "client_credentials", client_id: this.config.clientId, client_secret: this.config.clientSecret });
+    for (let attempt = 0; ; attempt += 1) {
+      throwIfAborted(signal);
+      await this.waitForCooldown("auth", "/connect/token", signal);
+      try {
+        this.counters.authAcquisitions += 1;
+        const response = await axios.post<{ access_token: string; expires_in: number }>(`${this.authUrl}/connect/token`, form.toString(), {
+          headers: { "Content-Type": "application/x-www-form-urlencoded" }, httpsAgent, signal,
+          timeout: this.options.authTimeoutMs ?? 15_000,
+          ...(this.options.authAdapter ? { adapter: this.options.authAdapter } : {}),
+        });
+        const value = response.data?.access_token;
+        const expires = Number(response.data?.expires_in ?? 0);
+        if (typeof value !== "string" || !value || !Number.isFinite(expires) || expires <= 0) {
+          throw new Error("Invalid token response from ServiceTitan auth endpoint");
+        }
+        throwIfAborted(signal);
+        const token = { value, generation: ++this.tokenGeneration };
+        this.accessToken = token;
+        this.tokenExpiration = Date.now() + expires * 1000;
+        return token;
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response?.status === 429) {
+          this.recordCooldown(error, "auth");
+          if (attempt !== 0) throw this.sanitizeError(error, "/connect/token", "auth", false);
+          this.retryDelay(error, "/connect/token", "auth");
+          this.counters.authRetries429 += 1;
+        } else {
+          throw this.sanitizeError(error, "/connect/token", "auth", false);
         }
       }
     }
-
-    return 1;
   }
 
-  private async sleep(ms: number): Promise<void> {
-    await new Promise((resolve) => setTimeout(resolve, ms));
-  }
-
-  private sanitizeError(error: unknown, path: string): ServiceTitanApiError {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status ?? 0;
-      const message = this.extractServiceTitanMessage(error) ?? "Request failed";
-      return new ServiceTitanApiError(status, message, path);
+  private retryDelay(error: AxiosError, path: string, phase: RequestPhase): number {
+    const delay = retryAfterMilliseconds(error.response?.headers?.["retry-after"]);
+    if (!Number.isFinite(delay) || delay > this.maxRetryDelayMs) {
+      throw this.retryBudgetError(delay, path, phase);
     }
-
-    if (error instanceof Error) {
-      return new ServiceTitanApiError(0, error.message, path);
-    }
-
-    return new ServiceTitanApiError(0, "Unknown error", path);
+    return delay;
   }
 
-  private extractServiceTitanMessage(error: AxiosError): string | null {
+  private recordCooldown(error: AxiosError, phase: "auth" | "resource"): void {
+    const delay = retryAfterMilliseconds(error.response?.headers?.["retry-after"]);
+    const until = Math.min(Number.MAX_SAFE_INTEGER, Date.now() + delay);
+    if (phase === "auth") this.authCooldownUntil = Math.max(this.authCooldownUntil, until);
+    else this.resourceCooldownUntil = Math.max(this.resourceCooldownUntil, until);
+  }
+
+  private retryBudgetError(delay: number, path: string, phase: RequestPhase): ServiceTitanApiError {
+    return new ServiceTitanApiError(429, "ServiceTitan requested a retry delay beyond this request's wait budget; no early retry was made.", path, { phase, code: "RETRY_DELAY_EXCEEDED", retryAfterMs: Number.isFinite(delay) ? delay : undefined, retryable: true });
+  }
+
+  private sanitizeError(error: unknown, path: string, phase: RequestPhase, mutation: boolean): ServiceTitanApiError {
+    if (error instanceof ServiceTitanApiError) return error;
+    const cancelled = error instanceof Error && error.name === "AbortError" || axios.isCancel?.(error);
+    const status = axios.isAxiosError(error) ? error.response?.status ?? 0 : 0;
+    const message = cancelled ? "Request cancelled" : axios.isAxiosError(error) ? this.extractServiceTitanMessage(error) : error instanceof Error ? error.message : "Unknown request error";
+    const data = axios.isAxiosError(error) ? error.response?.data : undefined;
+    const trace = data && typeof data === "object" && typeof data.traceId === "string" ? data.traceId : undefined;
+    const secrets = [this.config.clientSecret, this.config.appKey, this.accessToken?.value ?? ""];
+    const outcomeUnknown = mutation && (status === 0 || status >= 500);
+    const safeMessage = redactSensitiveText(message, secrets) + (outcomeUnknown
+      ? " The write may have completed in ServiceTitan. Verify its result before retrying."
+      : "");
+    return new ServiceTitanApiError(status, safeMessage, path, {
+      phase, code: cancelled ? "CANCELLED" : axios.isAxiosError(error) ? error.code : undefined,
+      traceId: trace && /^[A-Za-z0-9_-]{1,200}$/.test(trace) ? trace : undefined,
+      retryable: !cancelled && (status === 429 || status >= 500 || status === 0),
+      // A sent write that times out/cancels can still have committed upstream.
+      outcomeUnknown: outcomeUnknown || undefined,
+    });
+  }
+
+  private extractServiceTitanMessage(error: AxiosError): string {
     const data = error.response?.data;
-
-    if (typeof data === "string" && data.trim().length > 0) {
-      return data;
-    }
-
+    if (typeof data === "string" && data.trim()) return data;
     if (data && typeof data === "object") {
       const record = data as Record<string, unknown>;
-
-      // ServiceTitan validation errors follow RFC 7807-ish shape:
-      //   { errors: { fieldName: [reason1, reason2] }, title, status, traceId }
-      // Surface every field-level reason so callers can correct their payload
-      // in one round trip rather than guessing.
       if (record.errors && typeof record.errors === "object") {
-        const fieldErrors = Object.entries(record.errors as Record<string, unknown>)
-          .map(([field, reasons]) => {
-            const reasonText = Array.isArray(reasons)
-              ? reasons.filter((r) => typeof r === "string").join("; ")
-              : String(reasons);
-            return `${field}: ${reasonText}`;
-          })
-          .join(" | ");
-        if (fieldErrors.length > 0) {
-          const title = typeof record.title === "string" ? record.title : "Validation error";
-          return `${title} — ${fieldErrors}`;
-        }
+        const details = Object.entries(record.errors).map(([field, reasons]) => `${field}: ${Array.isArray(reasons) ? reasons.filter((item) => typeof item === "string").join("; ") : String(reasons)}`).join(" | ");
+        if (details) return `${typeof record.title === "string" ? record.title : "Validation error"} — ${details}`;
       }
-
-      // Generic ST/Problem-Details responses with title (+ optional detail)
-      if (typeof record.title === "string" && record.title.trim().length > 0) {
-        const detail = typeof record.detail === "string" ? ` — ${record.detail}` : "";
-        return `${record.title}${detail}`;
-      }
-
-      // Legacy / OAuth / generic message fields
-      const knownMessageFields = ["message", "error_description", "error"] as const;
-      for (const field of knownMessageFields) {
-        const value = record[field];
-        if (typeof value === "string" && value.trim().length > 0) {
-          return value;
-        }
+      if (typeof record.title === "string" && record.title.trim()) return `${record.title}${typeof record.detail === "string" ? ` — ${record.detail}` : ""}`;
+      for (const field of ["message", "error_description", "error"]) {
+        if (typeof record[field] === "string" && record[field].trim()) return record[field];
       }
     }
-
-    return error.message ?? null;
+    return error.message || "Request failed";
   }
 }

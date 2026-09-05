@@ -9,7 +9,6 @@ import {
   paginationParams,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const templateIdSchema = z.object({
@@ -171,7 +170,7 @@ export function registerEstimateTemplateTools(
         const data = await client.get("/tenant/{tenant}/estimate-templates", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -189,7 +188,7 @@ export function registerEstimateTemplateTools(
         const data = await client.get(`/tenant/{tenant}/estimate-templates/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -210,7 +209,7 @@ export function registerEstimateTemplateTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -233,7 +232,7 @@ export function registerEstimateTemplateTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -251,7 +250,7 @@ export function registerEstimateTemplateTools(
         const data = await client.delete(`/tenant/{tenant}/estimate-templates/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -274,7 +273,7 @@ export function registerProposalTemplateTools(
         const data = await client.get("/tenant/{tenant}/proposal-templates", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -292,7 +291,7 @@ export function registerProposalTemplateTools(
         const data = await client.get(`/tenant/{tenant}/proposal-templates/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -313,7 +312,7 @@ export function registerProposalTemplateTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -336,7 +335,7 @@ export function registerProposalTemplateTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -354,7 +353,7 @@ export function registerProposalTemplateTools(
         const data = await client.delete(`/tenant/{tenant}/proposal-templates/${input.id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -377,7 +376,7 @@ export function registerProposalTypeTools(
         const data = await client.get("/tenant/{tenant}/proposal-types", buildParams(input));
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

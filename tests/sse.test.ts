@@ -269,6 +269,8 @@ beforeAll(async () => {
         return { registered: MOCK_TOOL_COUNT };
       }
       logSummary(): void {}
+      validateSelection(): void {}
+      clearResults(): void {}
     },
   }));
 
@@ -451,6 +453,7 @@ describe("SSE transport HTTP handler", () => {
   });
 
   it("ignores a stale disconnect from the previously active transport", async () => {
+    const closeSpy = vi.spyOn(serverInstances[0]!, "close");
     await dispatch({
       method: "GET",
       url: "/sse",
@@ -470,11 +473,11 @@ describe("SSE transport HTTP handler", () => {
     expect(secondTransport).toBeDefined();
     expect(secondTransport?.sessionId).not.toBe(firstTransport?.sessionId);
 
-    const closeCallsBefore = serverInstances[0]?.close.mock.calls.length ?? 0;
+    const closeCallsBefore = closeSpy.mock.calls.length ?? 0;
     firstTransport!.emitClose();
     await Promise.resolve();
 
-    expect(serverInstances[0]?.close.mock.calls.length).toBe(closeCallsBefore);
+    expect(closeSpy.mock.calls.length).toBe(closeCallsBefore);
 
     const { res } = await dispatch({
       method: "POST",

@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const scalarCustomFieldValueSchema = z.union([
   z.string(),
@@ -159,10 +158,14 @@ const invoiceAdjustmentCreateSchema = z.object({
 });
 
 const invoiceMarkAsExportedSchema = z.object({
-  ids: z
-    .array(z.number().int().describe("Invoice ID"))
+  items: z
+    .array(z.object({
+      invoiceId: z.number().int().describe("Invoice ID"),
+      externalId: z.string().nullable().optional(),
+      externalMessage: z.string().nullable().optional(),
+    }))
     .min(1)
-    .describe("Invoice IDs to mark as exported"),
+    .describe("Invoices to mark as exported (sent as the API's top-level array)"),
 });
 
 export function registerInvoiceTools(
@@ -182,7 +185,7 @@ export function registerInvoiceTools(
         const data = await client.post("/tenant/{tenant}/invoices", input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -203,7 +206,7 @@ export function registerInvoiceTools(
         );
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -221,7 +224,7 @@ export function registerInvoiceTools(
         const data = await client.patch(`/tenant/{tenant}/invoices/${input.id}`, input.payload);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -276,7 +279,7 @@ export function registerInvoiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -307,7 +310,7 @@ export function registerInvoiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -331,7 +334,7 @@ export function registerInvoiceTools(
           message: "Invoice item deleted successfully",
         });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -353,7 +356,7 @@ export function registerInvoiceTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -368,12 +371,10 @@ export function registerInvoiceTools(
       const input = invoiceMarkAsExportedSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/invoices/markasexported", {
-          ids: input.ids,
-        });
+        const data = await client.post("/tenant/{tenant}/invoices/markasexported", input.items);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -15,6 +14,7 @@ import {
   toText,
 } from "./helpers.js";
 import { resolveBusinessUnitId, resolveTechnicianId } from "./resolvers.js";
+import { executeReport } from "./report-executor.js";
 
 const laborCostSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
@@ -27,23 +27,10 @@ const laborCostSchema = z.object({
 
 const FIELD = {
   EmployeeName: 0,
-  Activity: 1,
-  Date: 2,
-  InvoiceNumber: 3,
-  EmployeeBusinessUnit: 4,
-  Duration: 5,
-  RegularHours: 6,
-  OvertimeHours: 7,
-  DoubleOvertimeHours: 8,
-  GrossPay: 9,
-  CustomerName: 10,
-  ProjectNumber: 11,
-  Zone: 12,
-  TaxZone: 13,
-  LocationZip: 14,
-  LocationName: 15,
-  LocationAddress: 16,
-  LaborTypeCode: 17,
+  Date: 1,
+  RegularHours: 2,
+  OvertimeHours: 3,
+  DoubleOvertimeHours: 4,
 } as const;
 
 interface ActivityAccumulator {
@@ -121,8 +108,8 @@ export function registerIntelligenceLaborCostTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Labor cost summary from the Master Pay File with employee hours, gross pay, hourly rates, activity mix, and business unit breakdown" +
-      '\n\nExamples:\n- "What did labor cost us this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime costs by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"\n- "How much did Andrew cost in labor last week?" -> startDate="2026-03-02", endDate="2026-03-09", technicianName="Andrew"',
+      "Reported labor hours by employee from Report 166. The default report does not expose gross pay, so cost and hourly-rate fields are returned as unavailable." +
+      '\n\nExamples:\n- "What labor hours were reported this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime hours by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"',
     schema: laborCostSchema.shape,
     handler: async (params) => {
       try {
@@ -171,24 +158,26 @@ export function registerIntelligenceLaborCostTool(
           warnings,
           "Labor cost report (Report 166)",
           () =>
-            client.post("/tenant/{tenant}/report-category/accounting/reports/166/data", {
-              parameters: reportParams,
-            }),
+            executeReport(client, "166", reportParams, registry.reportBindings),
           null,
         );
 
         const rows = reportResponse ? extractReportRows(reportResponse) : [];
+        const grossPayIndex = reportResponse && Array.isArray(reportResponse.fields)
+          ? reportResponse.fields.findIndex((field) => field.name === "GrossPay")
+          : -1;
+        const costAvailable = grossPayIndex >= 0;
         const employeeMap = new Map<string, EmployeeAccumulator>();
         const businessUnitMap = new Map<string, BusinessUnitAccumulator>();
 
         for (const row of rows) {
           const employeeName = toText(row[FIELD.EmployeeName]) ?? "Unknown Employee";
-          const activityName = toText(row[FIELD.Activity]) ?? "Unknown Activity";
-          const businessUnitName = toText(row[FIELD.EmployeeBusinessUnit]) ?? "Unknown";
+          const activityName = "Reported hours";
+          const businessUnitName = "Unavailable from Report 166";
           const regularHours = toNumber(row[FIELD.RegularHours]);
           const overtimeHours = toNumber(row[FIELD.OvertimeHours]);
           const doubleOvertimeHours = toNumber(row[FIELD.DoubleOvertimeHours]);
-          const grossPay = toNumber(row[FIELD.GrossPay]);
+          const grossPay = costAvailable ? toNumber(row[grossPayIndex]) : 0;
           const hours = totalHours(regularHours, overtimeHours, doubleOvertimeHours);
 
           const employeeKey = normalizeKey(employeeName);
@@ -309,7 +298,8 @@ export function registerIntelligenceLaborCostTool(
           })
           .sort((a, b) => b.grossPay - a.grossPay || b.totalHours - a.totalHours);
 
-        const totalGrossPay = round(sumBy(employees, (employee) => employee.grossPay), 2);
+        const calculatedGrossPay = round(sumBy(employees, (employee) => employee.grossPay), 2);
+        const totalGrossPay = costAvailable ? calculatedGrossPay : null;
         const totalHoursWorked = round(sumBy(employees, (employee) => employee.totalHours), 2);
         const totalRegularHours = round(sumBy(employees, (employee) => employee.regularHours), 2);
         const totalOvertimeHours = round(sumBy(employees, (employee) => employee.overtimeHours), 2);
@@ -317,6 +307,21 @@ export function registerIntelligenceLaborCostTool(
           sumBy(employees, (employee) => employee.doubleOvertimeHours),
           2,
         );
+        const presentedEmployees = employees.map((employee) => ({
+          ...employee,
+          grossPay: costAvailable ? employee.grossPay : null,
+          avgHourlyRate: costAvailable ? employee.avgHourlyRate : null,
+          activityBreakdown: employee.activityBreakdown.map((activity) => ({
+            ...activity,
+            grossPay: costAvailable ? activity.grossPay : null,
+            avgHourlyRate: costAvailable ? activity.avgHourlyRate : null,
+          })),
+        }));
+        const presentedBusinessUnits = byBusinessUnit.map((businessUnit) => ({
+          ...businessUnit,
+          grossPay: costAvailable ? businessUnit.grossPay : null,
+          avgHourlyRate: costAvailable ? businessUnit.avgHourlyRate : null,
+        }));
 
         const result: Record<string, unknown> = {
           period: {
@@ -328,13 +333,19 @@ export function registerIntelligenceLaborCostTool(
           regularHours: totalRegularHours,
           overtimeHours: totalOvertimeHours,
           doubleOvertimeHours: totalDoubleOvertimeHours,
-          avgHourlyRate: round(safeDivide(totalGrossPay, totalHoursWorked), 2),
+          avgHourlyRate: costAvailable ? round(safeDivide(calculatedGrossPay, totalHoursWorked), 2) : null,
+          costAvailability: {
+            available: costAvailable,
+            reason: costAvailable
+              ? "GrossPay is present in the configured report binding."
+              : "ServiceTitan Report 166 provides hours but no gross-pay field; labor cost cannot be calculated from this source.",
+          },
           overtimePercent: round(
             safeDivide(totalOvertimeHours + totalDoubleOvertimeHours, totalHoursWorked) * 100,
             1,
           ),
-          employees,
-          byBusinessUnit,
+          employees: presentedEmployees,
+          byBusinessUnit: presentedBusinessUnits,
         };
 
         if (warnings.length > 0) {
@@ -343,7 +354,7 @@ export function registerIntelligenceLaborCostTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   buildParams,
   dateFilterParams,
@@ -9,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 const appointmentStatusSchema = z.enum([
@@ -85,6 +85,7 @@ const appointmentSummarySchema = z.object({
   notes: z.string().describe("Appointment summary notes"),
   technicianId: z.number().int().describe("Technician ID for the summary"),
 });
+const appointmentCreateSchema = officialRequestSchema("Appointments_Add") as z.ZodObject<z.ZodRawShape>;
 
 export function registerDispatchAppointmentTools(
   client: ServiceTitanClient,
@@ -105,7 +106,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.get(`/tenant/{tenant}/appointments/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -125,7 +126,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.delete(`/tenant/{tenant}/appointments/${id}`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -143,7 +144,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.get("/tenant/{tenant}/appointments", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -153,48 +154,15 @@ export function registerDispatchAppointmentTools(
     domain: "dispatch",
     operation: "write",
     description: "Create an appointment",
-    schema: {
-      jobId: z.number().int().describe("Job ID"),
-      appointmentNumber: z.string().describe("Appointment number"),
-      start: z.string().describe("Appointment start time"),
-      end: z.string().describe("Appointment end time"),
-      arrivalWindowStart: z
-        .string()
-        .optional()
-        .describe("Arrival window start timestamp"),
-      arrivalWindowEnd: z.string().optional().describe("Arrival window end timestamp"),
-      status: appointmentStatusSchema.optional().describe("Initial appointment status"),
-      specialInstructions: z
-        .string()
-        .optional()
-        .describe("Special instructions for dispatch"),
-      customerId: z.number().int().describe("Customer ID"),
-      createdById: z.number().int().describe("User ID creating the appointment"),
-      isConfirmed: z
-        .boolean()
-        .optional()
-        .describe("Whether the appointment is confirmed"),
-    },
+    schema: appointmentCreateSchema.shape,
     handler: async (params) => {
-      const typed = params as {
-        jobId: number;
-        appointmentNumber: string;
-        start: string;
-        end: string;
-        arrivalWindowStart?: string;
-        arrivalWindowEnd?: string;
-        status?: z.infer<typeof appointmentStatusSchema>;
-        specialInstructions?: string;
-        customerId: number;
-        createdById: number;
-        isConfirmed?: boolean;
-      };
+      const typed = appointmentCreateSchema.parse(params);
 
       try {
         const data = await client.post("/tenant/{tenant}/appointments", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -239,7 +207,7 @@ export function registerDispatchAppointmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -260,7 +228,7 @@ export function registerDispatchAppointmentTools(
         });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -272,15 +240,17 @@ export function registerDispatchAppointmentTools(
     description: "Put an appointment on hold",
     schema: {
       id: z.number().int().describe("Appointment ID"),
+      reasonId: z.number().int().describe("Hold reason ID"),
+      memo: z.string().describe("Reason the appointment is being put on hold"),
     },
     handler: async (params) => {
-      const { id } = params as { id: number };
+      const { id, reasonId, memo } = params as { id: number; reasonId: number; memo: string };
 
       try {
-        const data = await client.put(`/tenant/{tenant}/appointments/${id}/hold`);
+        const data = await client.put(`/tenant/{tenant}/appointments/${id}/hold`, { reasonId, memo });
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -300,7 +270,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.delete(`/tenant/{tenant}/appointments/${id}/hold`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -329,7 +299,7 @@ export function registerDispatchAppointmentTools(
         );
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -349,7 +319,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.put(`/tenant/{tenant}/appointments/${id}/confirmation`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -369,7 +339,7 @@ export function registerDispatchAppointmentTools(
         const data = await client.delete(`/tenant/{tenant}/appointments/${id}/confirmation`);
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

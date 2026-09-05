@@ -3,7 +3,6 @@ import { z } from "zod";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { buildParams, dateFilterParams, paginationParams, sortParam, toolError, toolResult } from "../../utils.js";
-import { getErrorMessage } from "../intelligence/helpers.js";
 
 const apPaymentsListSchema = dateFilterParams(
   paginationParams(
@@ -18,10 +17,14 @@ const apPaymentsListSchema = dateFilterParams(
 );
 
 const apPaymentsMarkAsExportedSchema = z.object({
-  ids: z
-    .array(z.number().int().describe("AP payment ID"))
+  items: z
+    .array(z.object({
+      apPaymentId: z.number().int().describe("AP payment ID"),
+      externalId: z.string().nullable().optional(),
+      externalMessage: z.string().nullable().optional(),
+    }))
     .min(1)
-    .describe("AP payment IDs to mark as exported"),
+    .describe("AP payments to mark as exported (sent as the API's top-level array)"),
 });
 
 export function registerApPaymentTools(
@@ -38,12 +41,10 @@ export function registerApPaymentTools(
       const input = apPaymentsMarkAsExportedSchema.parse(params);
 
       try {
-        const data = await client.post("/tenant/{tenant}/ap-payments/markasexported", {
-          ids: input.ids,
-        });
+        const data = await client.post("/tenant/{tenant}/ap-payments/markasexported", input.items);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -75,7 +76,7 @@ export function registerApPaymentTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

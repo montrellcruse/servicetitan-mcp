@@ -224,7 +224,7 @@ describe("ToolRegistry", () => {
     const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     await wrappedHandler({ id: 42, confirm: true, token: "secret-token" });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, undefined);
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42, token: "secret-token" }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
     expect(auditLogger.log).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -293,11 +293,11 @@ describe("ToolRegistry", () => {
 
     await wrappedHandler({ id: 42 });
 
-    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 }, undefined);
+    expect(handlerSpy).toHaveBeenCalledWith({ id: 42 }, expect.objectContaining({ signal: expect.any(AbortSignal) }));
     expect(auditLogger.log).toHaveBeenCalledTimes(1);
   });
 
-  it("registers write tools in readonly mode and blocks execution in middleware", async () => {
+  it("hides write tools from readonly discovery", async () => {
     const handlerSpy = vi.fn().mockResolvedValue({
       content: [{ type: "text", text: "updated" }],
     });
@@ -315,18 +315,13 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.registerTool).toHaveBeenCalledTimes(1);
-
-    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
-    const result = await wrappedHandler({ id: 42 });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(server.registerTool).not.toHaveBeenCalled();
+    expect(registry.getRegisteredTools()).toHaveLength(0);
     expect(handlerSpy).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
 
-  it("registers delete tools in readonly mode and blocks execution in middleware", async () => {
+  it("hides delete tools from readonly discovery", async () => {
     const handlerSpy = vi.fn().mockResolvedValue({
       content: [{ type: "text", text: "deleted" }],
     });
@@ -344,13 +339,8 @@ describe("ToolRegistry", () => {
       }),
     );
 
-    expect(server.registerTool).toHaveBeenCalledTimes(1);
-
-    const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
-    const result = await wrappedHandler({ id: 42, confirm: true });
-
-    expect(result.isError).toBe(true);
-    expect(result.content[0]?.text).toContain("Readonly mode: operation not permitted");
+    expect(server.registerTool).not.toHaveBeenCalled();
+    expect(registry.getRegisteredTools()).toHaveLength(0);
     expect(handlerSpy).not.toHaveBeenCalled();
     expect(auditLogger.log).not.toHaveBeenCalled();
   });
@@ -377,7 +367,7 @@ describe("ToolRegistry", () => {
     const [, , wrappedHandler] = server.registerTool.mock.calls[0] ?? [];
     const unauthorized = await wrappedHandler(
       { id: 42 },
-      { requestInfo: { headers: { "x-user-email": "mallory@example.com" } } },
+      { authInfo: { clientId: "mallory@example.com" } },
     );
 
     expect(unauthorized.isError).toBe(true);
@@ -386,13 +376,13 @@ describe("ToolRegistry", () => {
 
     await wrappedHandler(
       { id: 42 },
-      { requestInfo: { headers: { "x-user-email": "Alice@Example.com" } } },
+      { authInfo: { clientId: "Alice@Example.com" } },
     );
 
     expect(handlerSpy).toHaveBeenCalledWith(
       { id: 42 },
       expect.objectContaining({
-        requestInfo: { headers: { "x-user-email": "Alice@Example.com" } },
+        authInfo: { clientId: "Alice@Example.com" },
       }),
     );
   });

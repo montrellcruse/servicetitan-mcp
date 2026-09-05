@@ -2,11 +2,11 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
   formatCurrency,
-  getErrorMessage,
   isRecord,
   round,
   safeDivide,
@@ -214,18 +214,14 @@ export function registerIntelligenceInvoiceTrackingTool(
             warnings,
             "Invoices sent report (Report 2281)",
             () =>
-              client.post("/tenant/{tenant}/report-category/operations/reports/2281/data", {
-                parameters: baseParams,
-              }),
+              executeReport(client, "2281", baseParams, registry.reportBindings),
             null,
           ),
           fetchWithWarning(
             warnings,
             "Invoices not sent report (Report 2282)",
             () =>
-              client.post("/tenant/{tenant}/report-category/operations/reports/2282/data", {
-                parameters: baseParams,
-              }),
+              executeReport(client, "2282", baseParams, registry.reportBindings),
             null,
           ),
         ]);
@@ -295,7 +291,7 @@ export function registerIntelligenceInvoiceTrackingTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

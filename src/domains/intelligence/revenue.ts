@@ -2,12 +2,12 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
   fetchAllPagesBlind,
   fetchWithWarning,
-  getErrorMessage,
   round,
   safeDivide,
   sumBy,
@@ -21,7 +21,7 @@ const revenueSummarySchema = z.object({
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
-  includeCollections: z.boolean().optional().default(false).describe("Include payment/collections data (totalCollected, outstanding). Adds ~20s latency due to payment pagination. Default: false."),
+  includeCollections: z.boolean().optional().default(false).describe("Include payments received during the selected period. Default: false."),
   includeProductivityMetrics: z.boolean().optional().default(false).describe("Include BU-level productivity metrics (Report 177: rev/hr, billable efficiency, upsold, tasks/opp, recalls). Adds ~0.5-1s latency. Default: false."),
 });
 
@@ -585,10 +585,7 @@ export function registerIntelligenceRevenueTool(
             warnings,
             "Revenue report (Report 175)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data",
-                { parameters: reportParams },
-              ),
+              executeReport(client, "175", reportParams, registry.reportBindings) as Promise<unknown>,
             createEmptyReportResponse(),
           ),
           input.includeProductivityMetrics
@@ -596,10 +593,7 @@ export function registerIntelligenceRevenueTool(
                 warnings,
                 "Productivity report (Report 177)",
                 () =>
-                  client.post(
-                    "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data",
-                    { parameters: reportParams },
-                  ),
+                  executeReport(client, "177", reportParams, registry.reportBindings) as Promise<unknown>,
                 createEmptyReportResponse(),
               )
             : Promise.resolve(createEmptyReportResponse()),
@@ -607,10 +601,7 @@ export function registerIntelligenceRevenueTool(
             warnings,
             "Sales report (Report 179)",
             () =>
-              client.post(
-                "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data",
-                { parameters: reportParams },
-              ),
+              executeReport(client, "179", reportParams, registry.reportBindings) as Promise<unknown>,
             createEmptyReportResponse(),
           ),
           input.includeCollections
@@ -656,9 +647,6 @@ export function registerIntelligenceRevenueTool(
         // Collections only computed when explicitly requested
         const totalCollected = input.includeCollections
           ? round(sumBy(payments, paymentAmount), 2)
-          : undefined;
-        const outstanding = totalCollected !== undefined
-          ? round(totalRevenue - totalCollected, 2)
           : undefined;
 
         const result: Record<string, unknown> = {
@@ -710,8 +698,11 @@ export function registerIntelligenceRevenueTool(
               2,
             ),
           },
-          totalCollected,
-          outstanding,
+          paymentsReceivedInPeriod: totalCollected,
+          metricDefinitions: {
+            paymentsReceivedInPeriod: "Sum of payment amounts whose paidOn timestamp falls in the selected period; it is not accounts-receivable outstanding balance.",
+            overallConversionRate: "Converted jobs divided by opportunities across all included business units.",
+          },
           avgTicket,
           totalOpportunities,
           totalConvertedJobs,
@@ -725,7 +716,7 @@ export function registerIntelligenceRevenueTool(
 
         return toolResult(result, { shape: true });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

@@ -10,7 +10,6 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
 
 function withDescribedDateFilters<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -115,7 +114,7 @@ export function registerDispatchFormTools(
         const data = await client.get("/tenant/{tenant}/forms", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -133,7 +132,7 @@ export function registerDispatchFormTools(
         const data = await client.get("/tenant/{tenant}/submissions", buildParams(typed));
         return toolResult(data);
       } catch (error) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

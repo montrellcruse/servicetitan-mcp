@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
+import { officialRequestSchema } from "../../contracts/index.js";
 import {
   buildParams,
   dateFilterParams,
@@ -9,19 +10,14 @@ import {
   sortParam,
   toolError,
   toolResult,
-  getErrorMessage,
 } from "../../utils.js";
-const purchaseOrderMarkupPayloadSchema = z.object({
-  from: z.number().optional().describe("Starting value for this markup range"),
-  to: z.number().optional().describe("Ending value for this markup range"),
-  percent: z.number().optional().describe("Markup percentage for this range"),
-});
+const purchaseOrderMarkupPayloadSchema = officialRequestSchema("PurchaseOrdersMarkup_Create") as z.AnyZodObject;
 
 const purchaseOrderMarkupIdSchema = z.object({
   id: z.number().int().describe("Purchase order markup ID"),
 });
 
-const purchaseOrderMarkupUpdateSchema = purchaseOrderMarkupPayloadSchema.extend({
+const purchaseOrderMarkupUpdateSchema = (officialRequestSchema("PurchaseOrdersMarkup_Update") as z.AnyZodObject).extend({
   id: z.number().int().describe("Purchase order markup ID"),
 });
 
@@ -54,12 +50,12 @@ export function registerPurchaseOrderMarkupTools(
       try {
         const data = await client.post(
           "/tenant/{tenant}/purchase-order-markups",
-          buildParams(parsed),
+          parsed,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -77,7 +73,7 @@ export function registerPurchaseOrderMarkupTools(
         const data = await client.get(`/tenant/{tenant}/purchase-order-markups/${id}`);
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -109,7 +105,7 @@ export function registerPurchaseOrderMarkupTools(
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -127,12 +123,12 @@ export function registerPurchaseOrderMarkupTools(
       try {
         const data = await client.patch(
           `/tenant/{tenant}/purchase-order-markups/${id}`,
-          buildParams(payload),
+          payload,
         );
 
         return toolResult(data);
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });
@@ -150,7 +146,7 @@ export function registerPurchaseOrderMarkupTools(
         await client.delete(`/tenant/{tenant}/purchase-order-markups/${id}`);
         return toolResult({ success: true, message: "Purchase order markup deleted" });
       } catch (error: unknown) {
-        return toolError(getErrorMessage(error));
+        return toolError(error);
       }
     },
   });

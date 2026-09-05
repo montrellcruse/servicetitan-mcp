@@ -1,8 +1,11 @@
 node_modules/
 build/
 .env
+.env.*
+!.env.example
 *.tgz
 coverage/
 .DS_Store
 audit/
 .tmp-*
+benchmarks/results/

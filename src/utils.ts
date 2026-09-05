@@ -1,28 +1,37 @@
 import { z } from "zod";
 
 import { shapeResponse } from "./response-shaping.js";
+import { getRequestContext, updateRequestContext } from "./request-context.js";
+import { redactSensitiveText } from "./audit.js";
 import type { ToolResponse } from "./types.js";
 export { sanitizeParams } from "./audit.js";
 
-const DEFAULT_MAX_RESPONSE_CHARS = 100_000;
-let maxResponseChars = DEFAULT_MAX_RESPONSE_CHARS;
-let displayTimezone = "UTC";
+export const DEFAULT_MAX_RESPONSE_CHARS = 100_000;
+/** A smaller budget cannot reliably carry an explicit MCP error envelope. */
+export const MIN_RESPONSE_CHARS = 256;
 
 const ISO_TIMESTAMP_PATTERN =
   /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/;
 
 const formatterCache = new Map<string, Intl.DateTimeFormat>();
 
+/** @deprecated Scope configuration with withRequestContext at the server boundary. */
 export function setMaxResponseChars(value: number): void {
-  if (!Number.isInteger(value) || value <= 0) {
-    throw new Error(`maxResponseChars must be a positive integer. Received: ${value}`);
-  }
-
-  maxResponseChars = value;
+  validateResponseBudget(value);
+  updateRequestContext({ maxResponseChars: value });
 }
 
+export function validateResponseBudget(value: number): void {
+  if (!Number.isSafeInteger(value) || value < MIN_RESPONSE_CHARS) {
+    throw new Error(`maxResponseChars must be an integer of at least ${MIN_RESPONSE_CHARS}. Received: ${value}`);
+  }
+}
+
+/** @deprecated Scope configuration with withRequestContext at the server boundary. */
 export function setDisplayTimezone(timezone: string): void {
-  displayTimezone = timezone.trim() === "" ? "UTC" : timezone;
+  const normalized = timezone.trim() || "UTC";
+  new Intl.DateTimeFormat("en-US", { timeZone: normalized });
+  updateRequestContext({ timezone: normalized });
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -56,6 +65,7 @@ function getFormatter(timezone: string): Intl.DateTimeFormat {
     fractionalSecondDigits: 3,
   });
 
+  if (formatterCache.size >= 32) formatterCache.delete(formatterCache.keys().next().value!);
   formatterCache.set(timezone, formatter);
   return formatter;
 }
@@ -89,7 +99,10 @@ function utcToLocal(isoString: string, timezone: string): string {
   const offsetH = String(Math.floor(absMin / 60)).padStart(2, "0");
   const offsetM = String(absMin % 60).padStart(2, "0");
 
-  return `${localIso}${sign}${offsetH}:${offsetM}`;
+  // Date stores milliseconds, but ServiceTitan can return finer fractional precision.
+  const fraction = /\.(\d+)/.exec(isoString)?.[1];
+  const preciseLocalIso = fraction ? localIso.replace(/\.\d+$/, `.${fraction}`) : localIso;
+  return `${preciseLocalIso}${sign}${offsetH}:${offsetM}`;
 }
 
 // When a key name explicitly signals UTC (e.g. startUtc, endUtc, createdOnUtc),
@@ -136,53 +149,115 @@ export function convertTimestampsToLocal(
   return data;
 }
 
+function responseEnvelope(payload: Record<string, unknown>, isError = false): ToolResponse {
+  return {
+    content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
+    structuredContent: payload,
+    ...(isError ? { isError: true } : {}),
+  };
+}
+
+function responseBudget(): number {
+  const value = getRequestContext().maxResponseChars ?? DEFAULT_MAX_RESPONSE_CHARS;
+  validateResponseBudget(value);
+  return value;
+}
+
+function fitsBudget(response: ToolResponse, limit: number): boolean {
+  return JSON.stringify(response).length <= limit;
+}
+
+function oversizedResponse(payload: Record<string, unknown>, originalSize: number, limit: number): ToolResponse {
+  const pagination: Record<string, unknown> = {};
+  for (const key of ["page", "pageSize", "totalCount", "hasMore", "continueFrom", "nextPageToken", "paginationToken"]) {
+    if (payload[key] !== undefined) pagination[key] = payload[key];
+  }
+  const pageSize = typeof payload.pageSize === "number" ? payload.pageSize : undefined;
+  const isExport = typeof payload.continueFrom === "string";
+  const retrieval = isExport
+    ? { instruction: "This export batch was not delivered. Repeat from the ORIGINAL input cursor with a larger response budget or a bulk-data client; do not advance to continueFrom.", cursorUnsafeToAdvance: true }
+    : pageSize !== undefined && pageSize > 1
+      ? { instruction: "Retry the same page with a smaller pageSize; no records from this page were delivered.", page: payload.page, pageSize: Math.max(1, Math.floor(pageSize * limit / originalSize * 0.8)) }
+      : { instruction: "No records were delivered. Narrow the query, request less detail, or increase the response budget. A single record may exceed the budget." };
+  const detailed = responseEnvelope({
+    error: { code: "RESPONSE_TOO_LARGE", message: "Response unavailable within the configured budget.", originalSize, limit },
+    complete: false,
+    ...(Object.keys(pagination).length ? { upstreamPagination: pagination } : {}),
+    ...(payload._warnings !== undefined ? { _warnings: payload._warnings } : {}),
+    retrieval,
+  }, true);
+  if (fitsBudget(detailed, limit)) return detailed;
+  // Metadata or a long cursor can exceed even the error budget. Never return a
+  // partial record or an apparently successful cursor that skips omitted data.
+  const compact = responseEnvelope({ error: { code: "RESPONSE_TOO_LARGE", message: "No data delivered. Narrow the query or raise the response budget." } }, true);
+  if (fitsBudget(compact, limit)) return compact;
+  return responseEnvelope({ error: { code: "RESPONSE_TOO_LARGE" } }, true);
+}
+
 export function toolResult(
   data: unknown,
   options?: { shape?: boolean; timezone?: string },
 ): ToolResponse {
-  const shapedPayload = options?.shape ? shapeResponse(data) : data;
-  const timezone = options?.timezone ?? displayTimezone;
-  const payload = convertTimestampsToLocal(shapedPayload, timezone);
-  const json = JSON.stringify(payload, null, 2);
-
-  if (json.length > maxResponseChars) {
-    // Return a valid JSON object with a truncation marker instead of slicing mid-JSON
-    const truncationNotice = {
-      _truncated: true,
-      _originalSize: json.length,
-      _message: `Response was ${json.length.toLocaleString()} characters (limit: ${maxResponseChars.toLocaleString()}). Use pagination (page/pageSize) to get smaller result sets.`,
-      _preview: json.slice(0, Math.max(0, maxResponseChars - 256)),
-    };
-    return {
-      content: [
-        {
-          type: "text",
-          text: JSON.stringify(truncationNotice, null, 2),
-        },
-      ],
-    };
+  const limit = responseBudget();
+  try {
+    const shapedPayload = options?.shape ? shapeResponse(data) : data;
+    const timezone = options?.timezone ?? getRequestContext().timezone ?? "UTC";
+    const converted = convertTimestampsToLocal(shapedPayload, timezone);
+    const payload = isPlainObject(converted) ? converted : { data: converted ?? null };
+    // Normalize to the actual JSON contract so undefined fields cannot differ
+    // between structuredContent and the text consumed by older MCP clients.
+    const jsonPayload = JSON.parse(JSON.stringify(payload)) as Record<string, unknown>;
+    const response = responseEnvelope(jsonPayload);
+    const originalSize = JSON.stringify(response).length;
+    if (originalSize <= limit) return response;
+    const store = getRequestContext().storeOversized;
+    if (store) {
+      try {
+        const metadata = store(jsonPayload);
+        const stored = responseEnvelope({ ...metadata, delivery: "stored", complete: false });
+        if (fitsBudget(stored, limit)) return stored;
+      } catch { /* Full/unavailable storage retains the explicit unavailable fallback. */ }
+    }
+    return oversizedResponse(jsonPayload, originalSize, limit);
+  } catch {
+    const error = responseEnvelope({ error: { code: "INVALID_RESPONSE", message: "Response could not be represented as JSON." } }, true);
+    return fitsBudget(error, limit) ? error : responseEnvelope({ error: { code: "INVALID_RESPONSE" } }, true);
   }
-
-  return {
-    content: [
-      {
-        type: "text",
-        text: json,
-      },
-    ],
-  };
 }
 
-export function toolError(message: string): ToolResponse {
-  return {
-    content: [
-      {
-        type: "text",
-        text: `Error: ${message}`,
-      },
-    ],
-    isError: true,
-  };
+/** Preserve useful API diagnostics without ever serializing Axios config/body. */
+function errorPayload(error: unknown, fallbackCode: string): Record<string, unknown> {
+  const message = typeof error === "string" ? error : error instanceof Error ? error.message : "Tool execution failed";
+  const payload: Record<string, unknown> = { code: fallbackCode, message: redactSensitiveText(message) };
+  // Avoid a runtime dependency on client.ts (the client itself imports utils).
+  // Only the known API error shape is considered, and every field is validated.
+  if (!(error instanceof Error) || error.name !== "ServiceTitanApiError") return payload;
+  const apiError = error as Error & { status?: unknown; path?: unknown; details?: unknown };
+  if (typeof apiError.status === "number" && Number.isInteger(apiError.status) && apiError.status >= 0 && apiError.status <= 599) payload.status = apiError.status;
+  if (typeof apiError.path === "string" && /^\/[A-Za-z0-9{}_~./-]{0,1000}$/.test(apiError.path)) payload.path = redactSensitiveText(apiError.path);
+  if (!isPlainObject(apiError.details)) return payload;
+  const details = apiError.details;
+  if (typeof details.code === "string" && /^[A-Z0-9_]{1,80}$/.test(details.code)) payload.code = details.code;
+  if (typeof details.phase === "string" && ["auth", "resource", "queue"].includes(details.phase)) payload.phase = details.phase;
+  if (typeof details.traceId === "string" && /^[A-Za-z0-9_-]{1,200}$/.test(details.traceId)) payload.traceId = details.traceId;
+  if (typeof details.retryAfterMs === "number" && Number.isFinite(details.retryAfterMs) && details.retryAfterMs >= 0) payload.retryAfterMs = details.retryAfterMs;
+  for (const flag of ["retryable", "outcomeUnknown"]) if (typeof details[flag] === "boolean") payload[flag] = details[flag];
+  return payload;
+}
+
+export function toolError(error: unknown, code = "REQUEST_FAILED"): ToolResponse {
+  const limit = responseBudget();
+  const payload = errorPayload(error, code);
+  const response = responseEnvelope({ error: payload }, true);
+  if (fitsBudget(response, limit)) return response;
+  // Uncertain writes keep their essential safety meaning even at the minimum
+  // budget instead of degrading to a generic error that invites a replay.
+  if (payload.outcomeUnknown === true) {
+    const uncertain = responseEnvelope({ error: { code: "OUTCOME_UNKNOWN", outcomeUnknown: true } }, true);
+    if (fitsBudget(uncertain, limit)) return uncertain;
+  }
+  const compact = responseEnvelope({ error: { code, message: "Request failed; error details exceed the response budget." } }, true);
+  return fitsBudget(compact, limit) ? compact : responseEnvelope({ error: { code: "REQUEST_FAILED" } }, true);
 }
 
 export function paginationParams<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
