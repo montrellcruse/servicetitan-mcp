@@ -4,7 +4,7 @@ Version `3.0.0` prepares a stable release under the `readonly-v1` policy in [v3-
 
 ## Automated coverage
 
-The local matrix uses Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime passes 550 tests across 41 files, eleven built-process MCP wire tests, and two packaging exclusion tests. Contract checks, TypeScript checking, lint, builds, package installation, ESM imports, and declaration consumption also pass. [GitHub CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml) runs the automated gates and release-policy check on Linux with Node 22 and 24; consult the release commit's checks for its result.
+The local matrix uses Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime passes 581 tests across 42 files, fifteen MCP wire tests (eleven built-process cases and four built-factory SDK cases), and two packaging exclusion tests. Contract checks, TypeScript checking, lint, builds, package installation, ESM imports, and declaration consumption also pass. [GitHub CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml) runs the automated gates and release-policy check on Linux with Node 22 and 24; consult the release commit's checks for its result.
 
 | Area | Coverage |
 | --- | --- |
@@ -16,11 +16,13 @@ The local matrix uses Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime pass
 | Support policy | Default discovery contains 261 ServiceTitan-facing read tools plus three built-in system tools (264 total). All 194 mutations are labeled experimental and require explicit configuration; readonly takes priority. Missing opt-in fails startup in all four entrypoints. Embedded configurations and execution after configuration changes are checked, and fixture writes/deletes still require the configured confirmations and emit audits. |
 | Packaging | Fresh isolated installed consumer, command entrypoints, library exports, declarations, dummy-credential wire calls, and npm/Docker credential-file exclusion canaries. |
 
-Whole-source coverage is 59.80% statements, 70.23% branches, 59.22% functions, and 59.38% lines. Client line coverage is 96.90%, registry 94.19%, readiness 100%, and HTTP policy 100%. Coverage does not establish that every domain handler or write adapter has been executed.
+Whole-source coverage is 59.83% statements, 70.21% branches, 59.35% functions, and 59.40% lines. Client line coverage is 96.90%, registry 94.30%, readiness 100%, and HTTP policy 100%. Coverage does not establish that every domain handler or write adapter has been executed.
 
 Review regressions reproduce contradictory retry flags and false report-write classification with real Axios adapters. They cover both report consumers, exact operation matching, all four mutation methods, pre-dispatch failures, and preservation of safe flags in both JSON representations at the minimum 256-character response budget.
 
 Completed-mutation delivery regressions cover write/delete handlers through direct and SDK calls, circular/BigInt serialization failures, a result exceeding the four-megabyte store limit, retrieval handles that cannot fit the minimum response budget, stored-result retrieval/expiry, confirmation guards, and concurrent read/write isolation. Three built-stdio cases prove exactly one mutation and successful audit classification; failed delivery preserves `mutationCompleted: true` and `retryable: false`. Code-only custom errors cannot forge audit success.
+
+Audit-sink isolation adds 31 direct/SDK regressions for successful, failed, uncertain, and undeliverable results; synchronous exceptions; asynchronous rejection; pending promises; entry/serialization failures; and confirmation/read guards. Four built-package factory cases reproduce injected `audit`, fallback `info`, and diagnostic `error` failures, preserve the original MCP outcome, and prove exactly one mutation and one audit-sink attempt. Diagnostic messages carry neither sink exception text nor business data.
 
 Diagnostic regressions cover configured-secret canaries, nested errors, unsafe serializers, fallback paths, query-free SSE logging, and suppression of untrusted configuration values in all four built entrypoints' startup errors. Packaging tests use synthetic files with the real npm and Docker CLIs; the Docker test uses a loopback mock engine rather than a running daemon. The final locked-dependency audit reported zero known vulnerabilities.
 
@@ -38,7 +40,7 @@ No live business mutation was tested. Integration write behavior and cleanup, da
 
 Public validation material retains only aggregate statuses, counts, timings, and sanitized failure classifications. Credential files, secrets, tokens, tenant identifiers, local paths, and raw customer responses are not release evidence. Known credential/JWT scans found no matches in the current tracked files, final package, or new validation logs; earlier published-history, PR, and CI checks were also clean. Temporary output remains access-restricted and must be removed when no longer required. ServiceTitan's [API Terms](https://www.servicetitan.com/legal/api-terms) govern credential security and customer-content handling.
 
-The [benchmark summary](../BENCHMARKS.md) documents the methodology and available synthetic latency/load, caching, short-soak, and retained-memory evidence. The acceptance record distinguishes the full earlier runtime measurements from the focused client-load and report-cache refresh after the review fixes. These do not establish production capacity or a latency SLA.
+The [benchmark summary](../BENCHMARKS.md) documents the methodology and available synthetic latency/load, caching, short-soak, and retained-memory evidence. The acceptance record identifies the full earlier runtime measurements and the focused client-load/report-cache refresh at `d4801c6`. These were not repeated for the later audit-sink isolation fix; its callback failure behavior is covered by the new direct/SDK and built-package tests. These do not establish production capacity or a latency SLA.
 
 ## Revalidate before publication
 

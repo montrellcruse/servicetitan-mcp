@@ -124,7 +124,7 @@ export function sanitizeAuditError(error: string | undefined): string | undefine
 export class AuditLogger {
   constructor(private readonly logger: Logger) {}
 
-  log(entry: AuditEntry): void {
+  log(entry: AuditEntry): void | Promise<void> {
     // Truncate params to prevent multi-KB payloads in logs
     const MAX_PARAMS_SIZE = 2048;
     let auditParams = sanitizeParams(entry.params);
@@ -145,7 +145,9 @@ export class AuditLogger {
     // Real Logger.audit bypasses the diagnostic threshold. The fallback keeps
     // custom logger adapters compatible; adapters should provide an audit sink.
     const emit = this.logger.audit?.bind(this.logger) ?? this.logger.info.bind(this.logger);
-    emit(`[AUDIT] ${entry.operation.toUpperCase()} ${entry.tool}`, {
+    // Preserve an asynchronous adapter's return value so the registry can
+    // observe rejection without waiting on audit delivery or losing the result.
+    return emit(`[AUDIT] ${entry.operation.toUpperCase()} ${entry.tool}`, {
       timestamp: entry.timestamp,
       tool: entry.tool,
       operation: entry.operation,

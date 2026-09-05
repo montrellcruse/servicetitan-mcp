@@ -313,23 +313,18 @@ export class ToolRegistry {
         return toolResult(this.buildConfirmationPreview(tool, paramRecord));
       }
 
+      let result: ToolResponse;
       try {
-        const result = isMutating
+        result = isMutating
           ? await withRequestContext({ mutatingOperation: true }, () => originalHandler(executionParams, extra))
           : await originalHandler(executionParams, extra);
-
-        if (shouldAudit) {
-          this.auditLogger.log(
-            this.buildAuditEntry(tool, executionParams, !result.isError, result),
-          );
-        }
-
-        return result;
       } catch (error: unknown) {
-        const failure = toolError(error);
-        if (shouldAudit) this.auditLogger.log(this.buildAuditEntry(tool, executionParams, false, failure));
-        return failure;
+        result = toolError(error);
       }
+      // Auditing observes the business outcome; it must never replace that
+      // outcome or re-enter the handler failure path after a committed write.
+      if (shouldAudit) this.auditResult(tool, executionParams, result);
+      return result;
     };
 
     const wrappedHandler = async (params: unknown, extra?: ToolHandlerExtra): Promise<ToolResponse> => {
@@ -439,6 +434,25 @@ export class ToolRegistry {
           : `This will modify ${resource} data in ServiceTitan.`,
       confirm: `Call ${tool.name} again with confirm=true to proceed.`,
     };
+  }
+
+  private auditResult(tool: ToolDefinition, params: Record<string, unknown>, result: ToolResponse): void {
+    try {
+      // Entry construction can fail too (for example, an embedder's getter).
+      // Observe asynchronous adapters without delaying the business response.
+      const pending = this.auditLogger.log(this.buildAuditEntry(tool, params, !result.isError, result));
+      void Promise.resolve(pending).catch(() => this.reportAuditFailure());
+    } catch {
+      this.reportAuditFailure();
+    }
+  }
+
+  private reportAuditFailure(): void {
+    try {
+      // Do not forward sink errors, entry data, or results to another sink.
+      // A broken diagnostic adapter must not recurse or reject unhandled.
+      void Promise.resolve(this.logger.error("Audit recording failed; business result preserved.")).catch(() => {});
+    } catch { /* No functioning diagnostic sink is available. */ }
   }
 
   private buildAuditEntry(

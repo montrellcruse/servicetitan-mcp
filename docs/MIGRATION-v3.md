@@ -40,6 +40,8 @@ The response budget includes the serialized tool envelope. Large results can ret
 
 If a mutation completes but its response cannot be delivered or encoded, the error contains `mutationCompleted: true` and `retryable: false` alongside `RESPONSE_TOO_LARGE` or `INVALID_RESPONSE`. These flags survive the minimum response budget. Successful stored-result handles carry the same flags at the top level. Retrieve the stored result or inspect the resource through a read tool; do not repeat the completed mutation, including when its handle expires. Audit events record execution success separately from delivery failure and remain enabled independently of diagnostic verbosity.
 
+Each executed mutation handler receives one best-effort audit attempt outside business-result handling. Synchronous or asynchronous audit-sink failure cannot replace, cancel, or replay a committed mutation; pending audit promises are not awaited. The server emits only a fixed data-free fallback diagnostic and contains failures of that diagnostic, so custom audit-sink delivery is not guaranteed.
+
 ## Rollout procedure
 
 1. Preserve the existing v2 package/configuration for rollback; keep credentials out of commits.

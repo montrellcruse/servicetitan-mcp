@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "fa13c9a6dd1affc74320927372fd9ba94fcef795c2e803ef22cd9d7db1f4fec6",
+  "sourceFingerprint": "35393c027e2e8635a3f9eb7cec2f455363ee08737c3f533f0fd64e8a49957125",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -39,20 +39,21 @@
         "24.20.0"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 550,
-      "testFiles": 41,
-      "wireTestsPerRuntime": 11,
+      "testsPerRuntime": 581,
+      "testFiles": 42,
+      "wireTestsPerRuntime": 15,
       "summary": "VALIDATION-v3.md",
       "packagingTestsPerRuntime": 2
     },
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Fresh 148-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed."
+      "boundary": "Fresh 148-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed.",
+      "javascriptBuildSha256": "4d2447f7ac853d6c40fde562e57fc0dfacc3b4aa063aedb59e256bd579660c00"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery and query-filter changes; those were validated with deterministic adapters and built MCP processes.",
+      "boundary": "Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery, query-filter, and audit-isolation changes; those were validated with deterministic adapters, built MCP processes, and built-factory SDK checks.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -67,11 +68,12 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. After the error-delivery and query-filter fixes, current-source client-load and analytics refresh passed on both runtimes, including explicit unknown-write nonretryability assertions. The full protocol/soak/memory matrix was not repeated for these corrections. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
+      "boundary": "Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. Focused client-load and analytics refresh passed on both runtimes at d4801c6, including explicit unknown-write nonretryability assertions. Those measurements were not repeated for the later audit-sink isolation fix, which is covered by direct/SDK and built-package callback-failure tests; custom audit-sink latency and delivery are not measured. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
       "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
-      "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846"
+      "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
+      "focusedMatrixCommit": "d4801c6d49d53c8f518d1087685c321cbe6e92a3"
     }
   },
   "releaseDisposition": "stable-readonly"

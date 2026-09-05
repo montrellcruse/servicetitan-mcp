@@ -22,6 +22,7 @@ This branch prepares `3.0.0`; the earlier release candidate was not published.
 - OAuth failures cannot replay token requests through a business client or expose token payloads in tool results; concurrent stale 401s reuse fresh tokens.
 - Ambiguous write failures return `outcomeUnknown: true` and `retryable: false`, including size-limited error responses, and are not automatically replayed.
 - Completed mutations retain `mutationCompleted: true` and `retryable: false` when their results exceed delivery/storage limits or cannot be encoded. Stored-result expiry no longer suggests replaying the original operation; audit success uses internal delivery provenance rather than an error-code string.
+- Mutation auditing makes exactly one best-effort attempt outside business-result handling. Synchronous exceptions and rejected promises cannot replace the original result or trigger replay; pending audit promises are not awaited, and fallback diagnostic failures are contained.
 - Standard creation/modification filters match pinned query contracts across stable read tools; unsupported filters are removed from arrival windows, job attachments, templates, payment types, and payroll-adjustment exports. Payroll reads also forward the documented creation-date filters.
 - Official-operation lookup prefers literal routes over parameter placeholders when paths overlap.
 - Reporting data execution remains a read operation even though the official endpoint uses POST.
