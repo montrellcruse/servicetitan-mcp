@@ -21,6 +21,8 @@ node --env-file=.env build/index.js
 
 Required values are `ST_CLIENT_ID`, `ST_CLIENT_SECRET`, `ST_APP_KEY`, and `ST_TENANT_ID`. Select `ST_ENVIRONMENT=production` for a live company; the default is `integration`. Set the company's IANA timezone explicitly, such as `America/New_York`.
 
+Keep the credential file outside source control, restrict it to the account running the server, and never paste credentials or access tokens into logs, issues, pull requests, benchmark output, or MCP prompts. Integration and production credentials are environment-specific; keep each set with its matching auth/API environment. Grant only the ServiceTitan scopes needed by the selected tools, and replace credentials through the ServiceTitan Developer Portal if exposure is suspected. ServiceTitan recommends developing in integration before production and requires the client secret for OAuth plus the app key on resource calls. See [Make Your First API Call](https://developer.servicetitan.io/docs/get-going-first-api-call), [ServiceTitan's customer credential guidance](https://developer.servicetitan.io/docs/faqs-customers), and the [API Terms](https://www.servicetitan.com/legal/api-terms).
+
 Configure an MCP host to run `node` with `--env-file=/absolute/path/.env` and `/absolute/path/build/index.js`. Stdio reserves stdout for MCP protocol traffic. Logs and mutation audits go to stderr.
 
 The package also provides `servicetitan-mcp`, `servicetitan-mcp-http`, `servicetitan-mcp-sse`, and `servicetitan-mcp-check` command entrypoints. The published stable npm version may remain v2 while v3 acceptance gates are pending.
@@ -65,6 +67,8 @@ Successful tools provide the same JSON in `structuredContent` and the text conte
 
 `ST_MAX_RESPONSE_CHARS` defaults to 100,000 and covers the final serialized tool envelope, including both representations. Large results can return an opaque handle for `st_result_read`: start at offset 0, concatenate each text chunk in `nextOffset` order, and parse the assembled JSON. Stored results belong to one server/session, expire after five minutes, and are bounded to four entries and 4 MB total. Restarting or closing the session removes them. A full store may evict older entries.
 
+Stored chunks and normal tool responses can contain customer content. Protect the MCP channel and any client-side transcripts or exports, retrieve only what the workflow needs, and delete locally retained validation output when it is no longer needed. Do not publish raw live responses as test evidence.
+
 If the result or retrieval metadata cannot fit configured storage/budget limits, the tool returns an explicit delivery error with source-pagination guidance. It never passes a cut JSON preview off as complete data. The minimum accepted response budget is 256 characters; useful result handles require a larger budget such as 1,024 or more. A delivery failure after a successful mutation is recorded separately in its audit and does not imply that the mutation should be retried.
 
 ## Remote transports
@@ -103,12 +107,15 @@ npm run typecheck
 npm run lint
 npm run test:coverage
 npm run test:wire
+npm run test:packaging
 npm run docs:tools
 npm pack --dry-run
 npm run release:check
 ```
 
 The contract generator uses the [pinned official September 4, 2026 snapshot](docs/contracts/README.md); upstream changes require a reviewed manifest regeneration. Contract tests cover resolved paths and request payloads. The normal suite includes auth/retry, paging, cancellation, DST, schema/metric, configuration isolation, transport and response-budget regressions. Built-process tests use dummy credentials and do not execute ServiceTitan business reads or writes.
+
+Packaging tests use synthetic credential files to verify npm and Docker exclusions. The Docker check captures the installed CLI's context against a local mock engine, requires no running daemon, and skips explicitly when the CLI is unavailable. It never sends the repository or live credentials to a builder.
 
 CI tests Node 22 and 24. Release publication additionally requires a current source fingerprint and passed live integration/second-company gates; pending gates deliberately fail `release:check`. Releases keep npm Trusted Publishing and publish prereleases to `next`, stable versions to `latest`.
 

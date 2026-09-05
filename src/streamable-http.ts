@@ -73,7 +73,7 @@ function isInitializeRequest(body: unknown): boolean {
 async function main(): Promise<void> {
   const config = loadConfig();
   const version = VERSION;
-  const logger = new Logger(config.logLevel);
+  const logger = new Logger(config.logLevel, [config.clientSecret, config.appKey, API_KEY]);
   const client = new ServiceTitanClient(config);
   let stats = { registered: 0 };
   let pendingInitializations = 0;

@@ -28,6 +28,7 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run test:wire
+      - run: npm run test:packaging
       - name: Publish using npm Trusted Publishing
         run: |
           PKG_VERSION=$(node -p "require('./package.json').version")

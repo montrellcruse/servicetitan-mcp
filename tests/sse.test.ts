@@ -292,6 +292,17 @@ afterEach(() => {
 });
 
 describe("SSE transport HTTP handler", () => {
+  it("logs only pathnames for health and rejected requests, without query credentials", async () => {
+    const health = await dispatch({ url: "/health?api_key=QUERY_CANARY&data=OPAQUE_CANARY" });
+    const rejected = await dispatch({ url: "/sse?access_token=TOKEN_CANARY" });
+    expect(health.res.statusCode).toBe(200);
+    expect(rejected.res.statusCode).toBe(401);
+    const log = loggerInstances[0]!.info;
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/\] GET \/health$/));
+    expect(log).toHaveBeenCalledWith(expect.stringMatching(/\] GET \/sse$/));
+    expect(JSON.stringify(log.mock.calls)).not.toMatch(/QUERY_CANARY|OPAQUE_CANARY|TOKEN_CANARY|\?/);
+  });
+
   it("GET /sse creates a transport and sets SSE headers", async () => {
     const { req, res } = await dispatch({
       method: "GET",

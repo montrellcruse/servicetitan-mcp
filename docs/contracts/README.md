@@ -5,6 +5,8 @@ This directory contains the immutable official OpenAPI input used to generate an
 - `official-openapi-2026-09-04.tar.gz` contains the 24 public OpenAPI 3.1 documents retrieved from the [ServiceTitan API catalog](https://developer.servicetitan.io/api/docs/apis) on September 4, 2026.
 - `sources.json` records each official document URL, SHA-256 digest, byte size, server URL, and operation count.
 
+These are public API definitions and contain no ServiceTitan credentials, tenant configuration, customer records, or live-response captures. Contract generation and checking are offline and must not load `.env`.
+
 Regenerate the TypeScript operation and route manifests after deliberately replacing both pinned source files:
 
 ```sh

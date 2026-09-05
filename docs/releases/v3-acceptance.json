@@ -1,6 +1,6 @@
 {
   "version": "3.0.0-rc.1",
-  "sourceFingerprint": "42ba9630569bfe11080307e3f65023fd911b058a8f892e163840c81ed010783a",
+  "sourceFingerprint": "9223fde442ddfb9bb55dd00b8447af73ec5e4970f69414d3444d909acb300485",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -27,10 +27,11 @@
         "24.20.0"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 432,
-      "testFiles": 36,
+      "testsPerRuntime": 441,
+      "testFiles": 37,
       "wireTestsPerRuntime": 5,
-      "summary": "VALIDATION-v3.md"
+      "summary": "VALIDATION-v3.md",
+      "packagingTestsPerRuntime": 2
     },
     "packageSmoke": {
       "status": "passed",
@@ -38,7 +39,7 @@
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Only the bounded readonly plan; Scheduling Pro 403 remains; no production mutations or dashboard parity claim",
+      "boundary": "Bounded readonly validation of the initial candidate, before the diagnostic-redaction follow-up; Scheduling Pro 403 remains. No production mutations, dashboard parity, or repeat live run is claimed.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -51,7 +52,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Synthetic built-process latency/load, short soaks, caching, and retained-memory diagnostics on Node 22/24. No production capacity or latency SLA; Node 22 benchmark-client abort-listener warnings remain documented.",
+      "boundary": "Full synthetic Node 22/24 latency/load and retained-memory measurements describe baseline commit 3c48432 before diagnostic-redaction hardening; later regression checks are not replacement latency measurements. No production capacity or latency SLA; Node 22 benchmark-client warning remains documented.",
       "summary": "../BENCHMARKS.md"
     }
   },

@@ -45,4 +45,6 @@ The response budget includes the serialized tool envelope. Large results can ret
 5. Run the built-package protocol tests, runtime matrix, package-content/install smoke, and release gate checker against the exact source fingerprint.
 6. Publish only after every required gate passes. Revalidate saved workflows before enabling writes; integration fixtures should be disposable and explicitly scoped.
 
+Keep integration and production credentials separate and paired with the matching ServiceTitan environment. Do not copy `.env`, tokens, tenant identifiers, customer payloads, raw live-test output, or local paths into migration notes, CI artifacts, issues, or pull requests. Live acceptance evidence should contain only the minimum sanitized status, count, and timing data needed to establish the gate. Delete disposable records and temporary local output after verification, subject to company retention requirements and the [ServiceTitan API Terms](https://www.servicetitan.com/legal/api-terms).
+
 Live validation currently covers representative reads for one production company. Integration-environment mutations and an independent second company remain unverified in the [acceptance record](releases/v3-acceptance.json).

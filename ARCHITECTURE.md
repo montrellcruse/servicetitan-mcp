@@ -63,6 +63,8 @@ The registry applies unsupported-operation exclusion, readonly mode, profiles, e
 
 All calls share a bounded concurrency guard and deadline. Write and delete outcomes are audited with sensitive values redacted. MCP annotations derive from the operation classification; `readOnlyHint` cannot be overridden.
 
+The built-in logger also sanitizes diagnostic messages and nested data at the final stderr sink, using common credential/contact patterns and the secrets explicitly supplied by its runtime. Serialization failures use a sanitized fallback. This does not anonymize arbitrary business output or replace access controls on client transcripts and log storage.
+
 ## Responses and large results
 
 `src/utils.ts` emits the same payload as text and `structuredContent`, converts recognized UTC timestamps to the configured display timezone, and preserves sanitized ServiceTitan error metadata. When a response exceeds `ST_MAX_RESPONSE_CHARS`, the server attempts to place the complete payload in a five-minute session-local result store for bounded `st_result_read` retrieval. If storage or even its retrieval metadata cannot fit the configured limits, it returns an explicit `RESPONSE_TOO_LARGE` error without partial records. Closing the server clears the store.

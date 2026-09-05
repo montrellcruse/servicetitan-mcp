@@ -9,9 +9,12 @@ git clone https://github.com/montrellcruse/servicetitan-mcp.git
 cd servicetitan-mcp
 npm ci
 cp .env.example .env
+chmod 600 .env
 ```
 
 Credentials are needed only for explicitly authorized integration or production checks. Unit, contract, wire, and fixture tests must not depend on `.env` or make live ServiceTitan calls.
+
+Keep `.env` ignored and permission-restricted. Never include credentials, access tokens, tenant identifiers, customer records, local machine paths, or raw live responses in commits, issues, pull requests, snapshots, or test fixtures. Use dummy credentials with adapters for automated tests. If a live check is explicitly authorized, prefer integration, use the narrowest scopes and smallest bounded read or disposable fixture, disable redirects, stop on unexpected responses, and retain only sanitized aggregate evidence. Remove temporary local output after review. Follow ServiceTitan's [first-call environment guidance](https://developer.servicetitan.io/docs/get-going-first-api-call), [customer credential guidance](https://developer.servicetitan.io/docs/faqs-customers), and [API Terms](https://www.servicetitan.com/legal/api-terms).
 
 ## Development commands
 
@@ -21,6 +24,7 @@ npm run lint
 npm test
 npm run contracts:check
 npm run test:wire
+npm run test:packaging
 npm run build
 ```
 

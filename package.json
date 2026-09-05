@@ -51,7 +51,7 @@
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "lint": "eslint src/",
-    "prepublishOnly": "npm run release:check && npm run contracts:check && npm run typecheck && npm run lint && npm run test && npm run test:wire",
+    "prepublishOnly": "npm run release:check && npm run contracts:check && npm run typecheck && npm run lint && npm run test && npm run test:wire && npm run test:packaging",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "contracts:generate": "node scripts/generate-contract-manifest.mjs",
@@ -62,6 +62,7 @@
     "start:sse": "node build/sse.js",
     "start:streamable-http": "node build/streamable-http.js",
     "test:wire": "npm run build && node --test tests/wire/*.test.mjs",
+    "test:packaging": "node --test tests/packaging/*.test.mjs",
     "test:coverage": "vitest run --coverage",
     "release:check": "node scripts/check-release.mjs"
   },

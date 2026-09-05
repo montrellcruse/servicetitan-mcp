@@ -2,6 +2,16 @@ node_modules
 build
 .git
 .env
+.env.*
+**/.env
+**/.env.*
+audit
+benchmarks
+docs
+.tmp-*
+*.tgz
+*.tar
+*.tar.gz
 tests
 *.md
 coverage

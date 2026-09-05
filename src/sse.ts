@@ -21,6 +21,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "node:ht
 import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 
 import { loadConfig } from "./config.js";
+import { Logger } from "./logger.js";
 import { createMcpServer, VERSION } from "./server.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
 
@@ -48,7 +49,8 @@ function sendCorsHeaders(res: ServerResponse, corsOrigin: string): void {
 async function main(): Promise<void> {
   const config = loadConfig();
   const version = VERSION;
-  const { server, registry, logger } = await createMcpServer(config);
+  const logger = new Logger(config.logLevel, [config.clientSecret, config.appKey, API_KEY]);
+  const { server, registry } = await createMcpServer(config, { logger });
   registry.logSummary();
   const stats = registry.getStats();
 
@@ -70,7 +72,7 @@ async function main(): Promise<void> {
       }
 
 
-      logger.info(`[${requestId}] ${req.method} ${req.url}`);
+      logger.info(`[${requestId}] ${req.method} ${url.pathname}`);
 
       // Health endpoint (no auth)
       if (url.pathname === "/health" && req.method === "GET") {

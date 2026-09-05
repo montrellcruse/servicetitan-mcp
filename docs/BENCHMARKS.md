@@ -2,6 +2,8 @@
 
 Measured September 4, 2026 against v2.6.4 (`f6becd5`) on an Apple M4 with 10 logical CPUs, 16 GiB RAM, macOS arm64, and Node 22.23.2 / 24.20.0. Each comparison uses the same runtime and locked dependencies. See [benchmark instructions](../benchmarks/README.md) to reproduce the workloads.
 
+These measurements describe the initial v3 candidate represented by commit `3c48432`, before the diagnostic-log redaction follow-up. They are retained as baseline measurements; later changes require fresh measurements before claiming the same performance.
+
 V3 avoids repeated upstream work through complete-report caching and bounds overload. Ordinary reads remain close to v2; startup, structured responses, validation, and queueing add costs. These results do not establish a universal latency improvement.
 
 ## Protocol latency

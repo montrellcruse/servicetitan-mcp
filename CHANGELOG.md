@@ -23,6 +23,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Official request shapes for CRM/customer memberships, people, dispatch actions, task management, accounting actions, and inventory; explicit null/false/zero values are preserved.
 - Cache isolation across timezone/budget contexts, independent cancellation, bounded memory, and rejection of incomplete reference-data pages.
 - Typed contact/audit redaction, final response-size bounds, malformed Host handling, and transport/session cleanup.
+- Diagnostic messages and nested error data redact configured secrets and common credential forms; legacy SSE request logs omit query strings.
+- Docker contexts exclude environment-specific credential files, private audit output, and local review archives.
 
 ### Added
 - Readonly readiness CLI/tool with company report definition fingerprints and compatibility diagnostics.

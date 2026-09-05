@@ -4,8 +4,8 @@
 
 | Version | Supported              |
 |---------|------------------------|
-| 3.x     | ✅ Current              |
-| 2.x     | ⚠️ Security fixes only  |
+| 3.0 RC  | Release candidate; acceptance gates apply |
+| 2.x     | Stable line; security fixes only |
 | < 2     | ❌ Not supported        |
 
 ## Reporting a Vulnerability
@@ -45,7 +45,17 @@ You should receive an acknowledgment within 48 hours.
 - Delete operations require `confirm: true` in the tool call payload
 - Write operations (when `ST_CONFIRM_WRITES=true`) require `_confirmed: true` in the tool call payload
 - Audit logging records all write/delete operations with sensitive fields (including composite names such as `clientSecret`, `apiKey`, `accessToken`, and `authorization`) sanitized
-- Tool responses never include raw credentials or tokens
+- Authentication failures are sanitized before becoming tool errors; successful business responses can contain customer data and require appropriate access controls
+
+### Credentials and local validation
+
+Keep ServiceTitan client secrets, app keys, access tokens, and `ST_MCP_API_KEY` out of source, URLs, shell arguments, issue reports, and public logs. Supply credentials through protected environment files or your deployment's secret store. On Unix systems, use owner-only permissions (`600`) for credential files and `700` for directories holding live-test output. Git ignore rules do not protect permissions or Docker build contexts.
+
+The repository excludes `.env` and its environment-specific variants from Git and Docker contexts. npm uses an explicit package file list; only the placeholder `.env.example` belongs in the package. Build inputs must never contain live output, credential files, or private review archives. Provide runtime secrets when starting a container rather than baking them into its image.
+
+Built-in diagnostics redact configured secrets and common credential forms; HTTP request logs omit query strings. Redaction is a safeguard, not a reason to put secrets or customer records into log messages. Protect MCP client transcripts, retrieved result chunks, and intentionally captured business output. Delete temporary live captures when they are no longer needed; an ignored file, a local Git commit, or a backup can still retain sensitive data.
+
+If a credential is disclosed, revoke or rotate it using ServiceTitan's [credential-management guidance](https://developer.servicetitan.io/docs/get-going-manage-client-id-and-secret/) and review where it was copied. Deleting it from the latest commit does not remove earlier commits, artifacts, or logs. Report a suspected disclosure privately using the channel above.
 
 ## Authorization Model
 

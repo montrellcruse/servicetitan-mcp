@@ -16,7 +16,7 @@ export const VERSION = typeof __PACKAGE_VERSION__ === "string" ? __PACKAGE_VERSI
 
 export async function createMcpServer(config: ServiceTitanConfig, options: { client?: ServiceTitanClient; logger?: Logger } = {}) {
   const client = options.client ?? new ServiceTitanClient(config);
-  const logger = options.logger ?? new Logger(config.logLevel);
+  const logger = options.logger ?? new Logger(config.logLevel, [config.clientSecret, config.appKey]);
   const server = new McpServer({ name: "ServiceTitan", version: VERSION });
   const registry = new ToolRegistry(server, config, logger);
   registry.attachClient(client);
