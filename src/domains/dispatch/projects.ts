@@ -229,7 +229,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_projects_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a project by ID",
+    description: "Retrieve one project record by ID, optionally scoped to an external-data application. Returns the current project data; use dispatch_projects_list to search by customer, location, status, dates, or linked work.",
     schema: projectsGetSchema.shape,
     handler: async (params) => {
       const input = projectsGetSchema.parse(params);
@@ -252,7 +252,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_projects_list",
     domain: "dispatch",
     operation: "read",
-    description: "List projects",
+    description: "Search projects by IDs, customer, location, status, type, manager, dates, or linked jobs, appointments, and invoices. Returns one page; use dispatch_projects_get for a known ID.",
     schema: projectsListSchema.shape,
     handler: async (params) => {
       const input = projectsListSchema.parse(params);
@@ -371,7 +371,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_projects_notes_list",
     domain: "dispatch",
     operation: "read",
-    description: "List notes for a project",
+    description: "List one page of notes attached to a known project. Requires the project ID; use dispatch_projects_get for the project record itself.",
     schema: projectNotesListSchema.shape,
     handler: async (params) => {
       const input = projectNotesListSchema.parse(params);
@@ -437,7 +437,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_projects_custom_field_types_list",
     domain: "dispatch",
     operation: "read",
-    description: "List project custom field types",
+    description: "List one page of custom-field type definitions available to projects, with created and modified date filters. This returns field metadata, not values for one project.",
     schema: projectCustomFieldTypesListSchema.shape,
     handler: async (params) => {
       const input = projectCustomFieldTypesListSchema.parse(params);
@@ -458,7 +458,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_types_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a project type by ID",
+    description: "Retrieve one project-type definition by ID, including its configured type metadata. Use dispatch_project_types_list to browse the paginated type catalog when the ID is unknown.",
     schema: projectEntityGetSchema.shape,
     handler: async (params) => {
       const input = projectEntityGetSchema.parse(params);
@@ -476,7 +476,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_types_list",
     domain: "dispatch",
     operation: "read",
-    description: "List project types",
+    description: "List one page of project-type definitions. Use dispatch_project_types_get when a project-type ID is already known.",
     schema: projectTypesListSchema.shape,
     handler: async (params) => {
       const input = projectTypesListSchema.parse(params);
@@ -494,7 +494,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_statuses_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a project status by ID",
+    description: "Retrieve one project-status definition by ID, including its configured status metadata. Use dispatch_project_statuses_list to search the catalog and the sub-status list for finer classifications.",
     schema: projectEntityGetSchema.shape,
     handler: async (params) => {
       const input = projectEntityGetSchema.parse(params);
@@ -512,7 +512,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_statuses_list",
     domain: "dispatch",
     operation: "read",
-    description: "List project statuses",
+    description: "Search one page of project-status definitions by IDs, name, or created and modified ranges. Use the returned status IDs to classify projects, and dispatch_project_sub_statuses_list to find their finer-grained sub-statuses.",
     schema: projectStatusesListSchema.shape,
     handler: async (params) => {
       const input = projectStatusesListSchema.parse(params);
@@ -533,7 +533,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_sub_statuses_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a project sub-status by ID",
+    description: "Retrieve one project sub-status definition by ID, including its parent-status metadata. Use dispatch_project_sub_statuses_list to search by parent status, name, IDs, active state, or dates.",
     schema: projectEntityGetSchema.shape,
     handler: async (params) => {
       const input = projectEntityGetSchema.parse(params);
@@ -551,7 +551,7 @@ export function registerDispatchProjectTools(
     name: "dispatch_project_sub_statuses_list",
     domain: "dispatch",
     operation: "read",
-    description: "List project sub-statuses",
+    description: "Search one page of project sub-status definitions by parent status, IDs, name, active state, or date ranges. Returned records refine a project's status; use dispatch_project_statuses_list for the parent status catalog.",
     schema: projectSubStatusesListSchema.shape,
     handler: async (params) => {
       const input = projectSubStatusesListSchema.parse(params);

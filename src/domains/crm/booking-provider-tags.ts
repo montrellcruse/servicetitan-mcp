@@ -56,7 +56,7 @@ export function registerBookingProviderTagTools(
     name: "crm_booking_provider_tags_get",
     domain: "crm",
     operation: "read",
-    description: "Get a booking provider tag by ID",
+    description: "Retrieve one booking-provider tag record by ID, including its name and description. Use crm_booking_provider_tags_list to search by name, multiple IDs, or change dates.",
     schema: bookingProviderTagGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingProviderTagGetSchema>;
@@ -100,7 +100,7 @@ export function registerBookingProviderTagTools(
     name: "crm_booking_provider_tags_list",
     domain: "crm",
     operation: "read",
-    description: "List booking provider tags",
+    description: "Search booking-provider tag definitions by name, IDs, or created and modified ranges. Returns one page; use crm_booking_provider_tags_get when the tag ID is already known.",
     schema: bookingProviderTagListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingProviderTagListSchema>;

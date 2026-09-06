@@ -105,7 +105,7 @@ export function registerDispatchFormTools(
     name: "dispatch_forms_list",
     domain: "dispatch",
     operation: "read",
-    description: "List forms",
+    description: "Search dispatch form definitions by IDs, name, publication status, active state, conditional logic, triggers, and date ranges. Returns one page of form metadata; use dispatch_form_submissions_list for completed or pending submissions.",
     schema: formListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof formListSchema>;
@@ -123,7 +123,7 @@ export function registerDispatchFormTools(
     name: "dispatch_form_submissions_list",
     domain: "dispatch",
     operation: "read",
-    description: "List form submissions",
+    description: "Search submitted form records by form, creator, status, owner expression, submitted range, or active state. Returns one page; use this for submission results rather than form definitions.",
     schema: submissionListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof submissionListSchema>;

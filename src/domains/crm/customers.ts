@@ -171,7 +171,7 @@ export function registerCustomerTools(
     name: "crm_customers_get",
     domain: "crm",
     operation: "read",
-    description: "Get a customer by ID",
+    description: "Retrieve one customer record by ID, including the customer data returned by ServiceTitan. Use crm_customers_list to search by name, address, phone, external data, activity, or date ranges.",
     schema: customerIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerIdSchema>;
@@ -207,7 +207,7 @@ export function registerCustomerTools(
     name: "crm_customers_list",
     domain: "crm",
     operation: "read",
-    description: "List customers",
+    description: "Search customers by IDs, name, address, phone, coordinates, external data, activity, or created and modified ranges. Returns one page; use crm_customers_get for a known ID.",
     schema: customerListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerListSchema>;
@@ -254,7 +254,7 @@ export function registerCustomerTools(
     name: "crm_customers_notes_list",
     domain: "crm",
     operation: "read",
-    description: "List notes for a customer",
+    description: "List one page of notes attached to a known customer, optionally filtered by created or modified timestamps. Requires the customer ID.",
     schema: customerNotesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerNotesListSchema>;
@@ -349,7 +349,7 @@ export function registerCustomerTools(
     name: "crm_customers_contacts_list",
     domain: "crm",
     operation: "read",
-    description: "List customer contacts",
+    description: "List one page of contacts attached to a known customer. Use crm_customers_contacts_modified_list for cross-customer incremental contact queries.",
     schema: customerContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerContactsListSchema>;
@@ -438,7 +438,7 @@ export function registerCustomerTools(
     name: "crm_customers_contacts_modified_list",
     domain: "crm",
     operation: "read",
-    description: "List customer contacts modified in a time range",
+    description: "Search contact records across specified customers using created or modified time ranges. Returns one page; use crm_customers_contacts_list for all contacts of one known customer.",
     schema: customerModifiedContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerModifiedContactsListSchema>;
@@ -490,7 +490,7 @@ export function registerCustomerTools(
     name: "crm_customers_custom_field_types_list",
     domain: "crm",
     operation: "read",
-    description: "List customer custom field types",
+    description: "List one page of custom-field type definitions available to customers, with created and modified date filters. This returns field metadata, not values for one customer.",
     schema: customerCustomFieldTypesSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerCustomFieldTypesSchema>;

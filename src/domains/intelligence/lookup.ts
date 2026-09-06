@@ -102,8 +102,7 @@ export function registerIntelligenceLookupTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Look up reference data (technicians, business units, payment types, membership types). " +
-      "Returns IDs and names from a 30-minute cache. Use this to find IDs for other intel tool filters." +
+      "Look up technicians, business units, payment types, or membership types for use in intelligence-tool filters. Returns matching IDs and names from a 30-minute in-process cache; search performs a case-insensitive name match, while omission returns the available cached set." +
       '\n\nExamples:\n- "What are our business units?" -> type="business-units"' +
       '\n- "Find technician named John" -> type="technicians", search="John"' +
       '\n- "List all payment types" -> type="payment-types"' +

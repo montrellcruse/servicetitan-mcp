@@ -95,7 +95,7 @@ export function registerGlAccountTools(
     name: "accounting_gl_accounts_get",
     domain: "accounting",
     operation: "read",
-    description: "Get a GL account by ID",
+    description: "Retrieve a GL account by its ServiceTitan ID. Returns the single upstream record without pagination; use accounting_gl_accounts_list to search when the ID is unknown.",
     schema: glAccountGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof glAccountGetSchema>;
@@ -131,7 +131,7 @@ export function registerGlAccountTools(
     name: "accounting_gl_accounts_list",
     domain: "accounting",
     operation: "read",
-    description: "List GL accounts",
+    description: "List one requested page of general-ledger accounts, with filters for IDs, names, numbers, types, subtypes, source, description, and Intacct flags. Use accounting_gl_accounts_get for one known account and accounting_gl_account_types_list to resolve account-type metadata.",
     schema: glAccountsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof glAccountsListSchema>;
@@ -192,7 +192,7 @@ export function registerGlAccountTools(
     name: "accounting_gl_account_types_list",
     domain: "accounting",
     operation: "read",
-    description: "List GL account types",
+    description: "List one requested page of GL account-type definitions, filterable by type IDs, names, and active state. Use this catalog to resolve types for GL accounts; use accounting_gl_accounts_list for the actual ledger accounts.",
     schema: glAccountTypesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof glAccountTypesListSchema>;

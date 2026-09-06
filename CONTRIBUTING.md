@@ -42,6 +42,18 @@ Use `npm start` for stdio and `npm run start:streamable-http` for remote MCP. `n
 
 Tool names follow `<domain>_<resource>_<action>`. Files use kebab-case, functions and variables use camelCase, and types use PascalCase. Every tool needs an accurate description and operation classification. Mutation annotations may be narrowed only when ServiceTitan behavior supports it; `readOnlyHint` always comes from the operation.
 
+## Writing tool definitions
+
+Write for an agent choosing among the actual tools returned by `tools/list`. Lead with the concrete action, resource, and returned record type when ambiguous. Explain the closest alternative and when to use it. Add non-obvious input relationships and behavior such as one-page results, continuation tokens, cache freshness, report scheduling, or incomplete optional feeds only when supported by the pinned API operation and the handler.
+
+Use the six Glama TDQS dimensions as review questions: purpose, usage guidance, behavior, parameter meaning, conciseness, and sufficient context. A few useful sentences usually suffice; examples should resolve an actual invocation ambiguity. Keep constraints and formats in schema descriptions. Avoid repeating safety annotations or adding a uniform warning paragraph to every tool. Never claim automatic pagination, dashboard parity, guaranteed timing, or support for every company's modules without evidence.
+
+For equivalent endpoints, name the equivalent tool and explain that fetching both duplicates the same feed. Consider that profiles or allowlists can expose only one name. API versions, single-resource versus cross-resource lists, and incremental exports can have different contracts even when names are similar. Compare resolved routes, inputs, scopes, and returned data before calling tools equivalent.
+
+Descriptions remain at their registration sites; regenerate `TOOLS.md` with `npm run docs:tools`. The export factory inventory in `scripts/check-contracts.mjs` requires literal arguments on one line. If registration syntax changes, update its parser and prove that factory operations remain covered.
+
+`npm run discovery:check` compares real SDK discovery with the v3.0.0 contract fixture at `tests/fixtures/discovery-v3.0.0.json` across default, focused, filtered, and experimental configurations. It uses a client that rejects every upstream request and permits description changes while checking tool names, profile membership, validation constraints, and annotations. Build first with `npm run build`. Update the fixture only when intentionally changing the public tool contract, with the corresponding compatibility review.
+
 Readonly mode omits mutation tools from MCP discovery. Mutations are experimental outside the stable `readonly-v1` support policy and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. Test mutation adapters with fake clients or in-memory MCP unless a separate, explicit live-write authorization and cleanup plan exists.
 
 The `readonly-v1` release policy requires maintenance, contract, analytics, interface, runtime-matrix, package-smoke, bounded readonly production, and latency/load evidence. If integration or independent-company credentials are unavailable, record those gates as scoped out with their limits; never mark an unexecuted gate passed.

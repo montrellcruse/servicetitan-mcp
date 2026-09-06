@@ -95,7 +95,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_materials_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get a material by ID",
+    description: "Retrieve a material by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_materials_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Material ID"),
       externalDataApplicationGuid: z
@@ -126,7 +126,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_materials_list",
     domain: "pricebook",
     operation: "read",
-    description: "List material pricebook items",
+    description: "List one requested page of material pricebook items using IDs, cost-type IDs, other-direct-cost state, active state, timestamps, and external-data mappings. Use pricebook_materials_get for a known item, pricebook_materials_cost_types_list for cost metadata, or inventory tools for stock movement.",
     schema: materialsListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);
@@ -164,7 +164,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_materials_cost_types_list",
     domain: "pricebook",
     operation: "read",
-    description: "List material cost types",
+    description: "List the material cost-type definitions available to pricebook material records; this operation has no filters or caller-managed paging. Use pricebook_materials_list for material items and inventory tools for stock transactions.",
     schema: {},
     handler: async () => {
       try {
@@ -180,7 +180,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_materials_markup_list",
     domain: "pricebook",
     operation: "read",
-    description: "List material markup ranges",
+    description: "List one requested page of configured material markup ranges using paging, sorting, and total-count controls. Use pricebook_materials_markup_get for a known range ID; use pricebook_materials_list for the material items those pricing rules affect.",
     schema: materialsMarkupListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);
@@ -218,7 +218,7 @@ export function registerMaterialTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_materials_markup_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get a material markup range by ID",
+    description: "Retrieve a material markup range by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_materials_markup_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Material markup ID"),
     },

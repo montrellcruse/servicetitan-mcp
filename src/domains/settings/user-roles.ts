@@ -26,7 +26,7 @@ export function registerUserRoleTools(client: ServiceTitanClient, registry: Tool
     name: "settings_user_roles_list",
     domain: "settings",
     operation: "read",
-    description: "List user roles",
+    description: "List one requested page of user roles, optionally filtered by IDs, name, active state, creation date, or employee type. Use this catalog to resolve role IDs and availability.",
     schema: userRoleListSchema.shape,
     handler: async (params) => {
       const input = userRoleListSchema.parse(params);

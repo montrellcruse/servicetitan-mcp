@@ -30,7 +30,7 @@ const technicianScorecardSchema = z.object({
     .max(50)
     .optional()
     .describe("Max technicians to analyze (default 25, max 50)"),
-  includeExtendedMetrics: z.boolean().optional().default(false).describe("Include memberships sold, sales from tech leads, and sales from marketing leads (Reports 171/173/174). Adds ~0.5-1s latency. Default: false."),
+  includeExtendedMetrics: z.boolean().optional().default(false).describe("Include memberships sold and sales from technician and marketing leads by running Reports 171, 173, and 174. Default: false."),
 });
 
 const REVENUE_FIELD = {
@@ -649,7 +649,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Technician performance scorecard with completed jobs, revenue, opportunities, conversion rates, productivity, and lead generation. Set includeExtendedMetrics=true for memberships sold and sales from tech/marketing leads (adds ~0.5-1s)." +
+      "Build a technician scorecard for the selected date range from ServiceTitan technician reports. Returns revenue, converted jobs, opportunities, conversion, productivity, recalls, upsells, and lead-generation metrics; includeExtendedMetrics adds membership and tech/marketing-lead sales reports. Filter by technician or business unit when comparing a subset, and use limit to bound ranked results. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {

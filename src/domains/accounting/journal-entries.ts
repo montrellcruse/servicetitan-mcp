@@ -158,7 +158,7 @@ export function registerJournalEntryTools(
     name: "accounting_journal_entries_get_summary",
     domain: "accounting",
     operation: "read",
-    description: "Get journal entry summary rows",
+    description: "Retrieve journal-entry summary rows for the requested journal-entry IDs. Use this for header-level accounting totals; use accounting_journal_entries_get_details for the corresponding line-level detail rows.",
     schema: journalEntryPagingSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof journalEntryPagingSchema>;
@@ -183,7 +183,7 @@ export function registerJournalEntryTools(
     name: "accounting_journal_entries_get_details",
     domain: "accounting",
     operation: "read",
-    description: "Get journal entry detail rows",
+    description: "Retrieve journal-entry detail rows for the requested journal-entry IDs. Use this for line-level account and amount detail; use accounting_journal_entries_get_summary for header-level totals.",
     schema: journalEntryPagingSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof journalEntryPagingSchema>;
@@ -208,7 +208,7 @@ export function registerJournalEntryTools(
     name: "accounting_journal_entries_list",
     domain: "accounting",
     operation: "read",
-    description: "List journal entries",
+    description: "List one requested page of journal-entry headers using IDs, numbers, sync status, posted dates, and created or modified timestamps. Use this to discover entry IDs, then choose accounting_journal_entries_get_summary for summary rows or accounting_journal_entries_get_details for line-level rows.",
     schema: journalEntryListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof journalEntryListSchema>;

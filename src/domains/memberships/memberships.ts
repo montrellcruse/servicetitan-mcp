@@ -73,7 +73,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
     name: "memberships_list",
     domain: "memberships",
     operation: "read",
-    description: "List customer memberships",
+    description: "List one requested page of customer membership records using membership and customer IDs, status, active state, billing frequency, duration, and created or modified timestamps. Use memberships_get for one known sold membership and memberships_types_list for reusable membership-plan definitions.",
     schema: membershipsListSchema.shape,
     handler: async (params) => {
       const parsed = membershipsListSchema.parse(params);
@@ -109,7 +109,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
     name: "memberships_custom_fields_list",
     domain: "memberships",
     operation: "read",
-    description: "List membership custom field definitions",
+    description: "List one requested page of membership custom-field definitions using created and modified timestamp filters. Use this for field metadata; use memberships_list for customer membership records and their field values.",
     schema: membershipCustomFieldsListSchema.shape,
     handler: async (params) => {
       const parsed = membershipCustomFieldsListSchema.parse(params);
@@ -140,7 +140,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
     name: "memberships_get",
     domain: "memberships",
     operation: "read",
-    description: "Get a single customer membership by ID",
+    description: "Retrieve a single customer membership by its ServiceTitan ID. Returns the single upstream record without pagination; use memberships_list to search when the ID is unknown.",
     schema: membershipIdSchema.shape,
     handler: async (params) => {
       const { id } = membershipIdSchema.parse(params);
@@ -203,7 +203,7 @@ export function registerMembershipTools(client: ServiceTitanClient, registry: To
     name: "memberships_status_changes_list",
     domain: "memberships",
     operation: "read",
-    description: "List status changes for a customer membership",
+    description: "Retrieve the status-change history attached to one required customer membership ID. Use memberships_get for the current membership record or memberships_list when the membership ID must be discovered first.",
     schema: membershipIdSchema.shape,
     handler: async (params) => {
       const { id } = membershipIdSchema.parse(params);

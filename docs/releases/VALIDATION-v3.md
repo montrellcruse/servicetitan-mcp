@@ -1,8 +1,27 @@
 # V3 stable read-only validation
 
-Version `3.0.0` defines stable read-only support under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
+Version `3.0.1` retains stable read-only support under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
 
-## Automated coverage
+## v3.0.1 description and discovery patch
+
+All 264 read definitions were reviewed against pinned API contracts and their handlers. The patch preserves tool names, profile membership, defaults, validation constraints, annotations, request handlers, API routes, and response behavior. Dependencies and pinned contracts are unchanged. The retained `discovery:check` compares nine actual SDK configurations with the v3.0.0 contract fixture without upstream requests.
+
+| Profile | Tools | v3.0.0 discovery bytes | v3.0.1 discovery bytes |
+| --- | ---: | ---: | ---: |
+| Full/default | 264 | 283,857 | 336,710 |
+| CRM | 33 | 35,377 | 39,823 |
+| Dispatch | 75 | 83,450 | 95,942 |
+| Analytics | 34 | 36,706 | 43,244 |
+
+Bytes measure UTF-8 `JSON.stringify(tools)`, excluding the protocol envelope. Full discovery grows 18.6%; focused profiles remain materially smaller. The employee, activity, activity-code, and tag-type export pairs preserve equivalent request mappings and retain both names with reciprocal guidance. Media descriptions distinguish upstream audio/redirect contracts from the existing JSON/text wrapper; faithful binary delivery requires separate work.
+
+After artifact cleanup, local validation on Node 22.23.2 and 24.20.0 passes 583 tests in 43 files, packaging/link/exclusion checks, and all nine discovery configurations. The repacked 154-file archive passes installed imports, five-profile discovery, experimental safeguards, and stdio smoke checks on both runtimes with zero upstream requests. Runtime source, generated tool descriptions, dependencies, and declarations are unchanged by cleanup. The fifteen wire tests, typechecking, lint, and coverage from the original patch validation remain applicable; CI reruns these gates on every PR update.
+
+The focused synthetic protocol refresh on Node 22.23.2 and 24.20.0 passes 24 steady scenarios per runtime plus row/amount, expected-overload, recovery, session-churn, and controlled-upstream assertions. It uses 32 samples, one repetition, and a three-second soak against the retained v2.6.4 baseline. Aggregate results and measurement limits are in [BENCHMARKS.md](../BENCHMARKS.md).
+
+The sections below retain the original v3.0.0 validation identities and limits. Production, broad client-load, report-cache, and retained-memory measurements were **not rerun for v3.0.1**. Reuse relies on reviewed unchanged request logic, schemas, profiles, dependencies, and runtime safety behavior, together with renewed deterministic interface tests. It does not certify new live scopes, companies, dashboard totals, mutations, or binary media delivery.
+
+## Historical v3.0.0 automated coverage
 
 The runtime implementation at `af7f347` passed the local matrix on Node 22.23.2 and 24.20.0 on macOS arm64. Each runtime passed 581 tests across 42 files, fifteen MCP wire tests (eleven built-process cases and four built-factory SDK cases), and two packaging exclusion tests. Contract checks, TypeScript checking, lint, builds, package installation, ESM imports, and declaration consumption also pass. [GitHub CI](https://github.com/montrellcruse/servicetitan-mcp/actions/workflows/ci.yml) runs the automated gates and release-policy check on Linux with Node 22 and 24. The stable aggregate check named `ci` runs after the matrix and passes only on matrix success; failure, cancellation, and skipped work cannot satisfy it. Consult the release commit's checks for its result.
 

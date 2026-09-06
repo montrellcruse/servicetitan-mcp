@@ -88,7 +88,7 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
     name: "inventory_vendors_get",
     domain: "inventory",
     operation: "read",
-    description: "Get a vendor by ID",
+    description: "Retrieve a vendor by its ServiceTitan ID. Returns the single upstream record without pagination; use inventory_vendors_list to search when the ID is unknown.",
     schema: vendorGetSchema.shape,
     handler: async (params) => {
       const parsed = vendorGetSchema.parse(params);
@@ -114,7 +114,7 @@ export function registerVendorTools(client: ServiceTitanClient, registry: ToolRe
     name: "inventory_vendors_list",
     domain: "inventory",
     operation: "read",
-    description: "List vendors",
+    description: "List one requested page of inventory vendors using IDs, active state, created or modified timestamps, and external-data mapping filters. Use inventory_vendors_get for one known vendor; use inventory_purchase_orders_list for purchase-order records.",
     schema: vendorsListSchema.shape,
     handler: async (params) => {
       const parsed = vendorsListSchema.parse(params);

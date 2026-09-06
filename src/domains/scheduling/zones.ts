@@ -53,7 +53,7 @@ export function registerSchedulingZoneTools(
     name: "scheduling_zones_get",
     domain: "scheduling",
     operation: "read",
-    description: "Get a zone by ID",
+    description: "Retrieve a zone by its ServiceTitan ID. Returns the single upstream record without pagination; use scheduling_zones_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Zone ID"),
     },
@@ -73,7 +73,7 @@ export function registerSchedulingZoneTools(
     name: "scheduling_zones_list",
     domain: "scheduling",
     operation: "read",
-    description: "List zones",
+    description: "List one requested page of scheduling zones using active state and created or modified timestamp filters. Use scheduling_zones_get for one known zone ID; use scheduling_business_hours_list for configured operating hours rather than geographic zone definitions.",
     schema: zoneListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof zoneListSchema>;

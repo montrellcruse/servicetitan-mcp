@@ -140,7 +140,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheet_codes_get",
     domain: "payroll",
     operation: "read",
-    description: "Get a timesheet code by ID",
+    description: "Retrieve one timesheet code by its required ID. Use payroll_timesheet_codes_list to search when the ID is unknown.",
     schema: timesheetCodeGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof timesheetCodeGetSchema>;
@@ -158,7 +158,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheet_codes_list",
     domain: "payroll",
     operation: "read",
-    description: "List timesheet codes",
+    description: "Retrieve one requested page of timesheet codes. Use the available filters to narrow results and request subsequent pages explicitly.",
     schema: timesheetCodeListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof timesheetCodeListSchema>;
@@ -210,7 +210,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheets_non_job_get",
     domain: "payroll",
     operation: "read",
-    description: "Get a non-job timesheet by ID",
+    description: "Retrieve one non-job timesheet by its required ID. Use payroll_timesheets_non_job_list to search by employee, active state, or record dates when the ID is unknown.",
     schema: nonJobTimesheetIdSchema.shape,
     handler: async (params) => {
       const input = nonJobTimesheetIdSchema.parse(params);
@@ -249,7 +249,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheets_job_list",
     domain: "payroll",
     operation: "read",
-    description: "List job timesheets for a job",
+    description: "List one requested page of timesheets attached to a required job. Use this when the job ID is known; use payroll_timesheets_jobs_list to search across optional comma-delimited job IDs.",
     schema: jobTimesheetsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof jobTimesheetsListSchema>;
@@ -282,7 +282,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheets_jobs_list",
     domain: "payroll",
     operation: "read",
-    description: "List job timesheets across multiple jobs",
+    description: "List one requested page of job timesheets across jobs, optionally filtered by comma-delimited job IDs. Use payroll_timesheets_job_list when retrieving timesheets for one required job.",
     schema: jobsTimesheetsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof jobsTimesheetsListSchema>;
@@ -337,7 +337,7 @@ export function registerPayrollTimesheetTools(
     name: "payroll_timesheets_non_job_list",
     domain: "payroll",
     operation: "read",
-    description: "List non-job timesheets",
+    description: "List one requested page of non-job timesheets, optionally filtered by employee, employee type, dates, or active state. These records are not attached to jobs; use the job timesheet tools for job labor.",
     schema: nonJobTimesheetsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof nonJobTimesheetsListSchema>;

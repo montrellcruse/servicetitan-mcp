@@ -95,7 +95,7 @@ export function registerContactTools(
     name: "crm_contacts_get",
     domain: "crm",
     operation: "read",
-    description: "Get a contact by ID",
+    description: "Retrieve one CRM contact record by UUID, including its stored identity fields. Use crm_contacts_list to search by name, title, reference ID, archive status, or change dates.",
     schema: contactIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof contactIdSchema>;
@@ -204,7 +204,7 @@ export function registerContactTools(
     name: "crm_contacts_by_relationship_list",
     domain: "crm",
     operation: "read",
-    description: "List contacts by relationship ID",
+    description: "Search contact records associated with a known relationship ID, with optional identity, archive, and date filters. Returns one page; use crm_contact_relationships_list to inspect the links owned by one known contact.",
     schema: contactsByRelationshipListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof contactsByRelationshipListSchema>;
@@ -239,7 +239,7 @@ export function registerContactTools(
     name: "crm_contacts_list",
     domain: "crm",
     operation: "read",
-    description: "List contacts",
+    description: "Search CRM contacts by name, title, reference ID, archive status, or date ranges. Returns one page; use crm_contacts_get for a known UUID.",
     schema: contactListFiltersSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof contactListFiltersSchema>;
@@ -321,7 +321,7 @@ export function registerContactTools(
     name: "crm_contact_relationships_list",
     domain: "crm",
     operation: "read",
-    description: "List relationships for a contact",
+    description: "List one page of contact-to-entity relationship records for a known contact UUID, optionally filtered by related entity, type slug, type name, or creation time. Use crm_contacts_by_relationship_list for contacts associated with a known relationship ID.",
     schema: contactRelationshipListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof contactRelationshipListSchema>;

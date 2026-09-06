@@ -173,7 +173,7 @@ export function registerLocationTools(
     name: "crm_locations_get",
     domain: "crm",
     operation: "read",
-    description: "Get a location by ID",
+    description: "Retrieve one service-location record by ID, including its customer and address data. Use crm_locations_list to search by customer, address, external data, activity, or date ranges.",
     schema: locationIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationIdSchema>;
@@ -231,7 +231,7 @@ export function registerLocationTools(
     name: "crm_locations_list",
     domain: "crm",
     operation: "read",
-    description: "List locations",
+    description: "Search service locations by IDs, customer, name, address, coordinates, external data, activity, or date ranges. Returns one page; use crm_locations_get for a known ID.",
     schema: locationListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationListSchema>;
@@ -277,7 +277,7 @@ export function registerLocationTools(
     name: "crm_locations_notes_list",
     domain: "crm",
     operation: "read",
-    description: "List notes for a location",
+    description: "List one page of notes attached to a known service location, optionally filtered by created or modified timestamps. Requires the location ID.",
     schema: locationNotesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationNotesListSchema>;
@@ -347,7 +347,7 @@ export function registerLocationTools(
     name: "crm_locations_contacts_list",
     domain: "crm",
     operation: "read",
-    description: "List contacts for a location",
+    description: "List one page of contacts attached to a known service location. Use crm_locations_contacts_modified_list for cross-location incremental contact queries.",
     schema: locationContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationContactsListSchema>;
@@ -435,7 +435,7 @@ export function registerLocationTools(
     name: "crm_locations_contacts_modified_list",
     domain: "crm",
     operation: "read",
-    description: "List location contacts modified in a time range",
+    description: "Search contact records across specified locations using created or modified time ranges. Returns one page; use crm_locations_contacts_list for all contacts of one known location.",
     schema: locationModifiedContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationModifiedContactsListSchema>;
@@ -507,7 +507,7 @@ export function registerLocationTools(
     name: "crm_locations_custom_field_types_list",
     domain: "crm",
     operation: "read",
-    description: "List location custom field types",
+    description: "List one page of custom-field type definitions available to locations, with created and modified date filters. This returns field metadata, not values for one location.",
     schema: locationCustomFieldTypesSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationCustomFieldTypesSchema>;
@@ -537,7 +537,7 @@ export function registerLocationTools(
     name: "crm_location_labor_types_list",
     domain: "crm",
     operation: "read",
-    description: "List location labor types by locations",
+    description: "List one page of labor-type assignment records for specified location IDs, optionally filtered by active state or creation time. Use this to determine which labor types apply across known service locations.",
     schema: locationLaborTypesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationLaborTypesListSchema>;

@@ -155,7 +155,7 @@ export function registerPeopleTechnicianTools(
     name: "people_technicians_get",
     domain: "people",
     operation: "read",
-    description: "Get a technician by ID",
+    description: "Retrieve one technician by its required ID. Use people_technicians_list to search when the technician ID is unknown.",
     schema: technicianIdSchema.shape,
     handler: async (params) => {
       const input = technicianIdSchema.parse(params);
@@ -173,7 +173,7 @@ export function registerPeopleTechnicianTools(
     name: "people_technicians_list",
     domain: "people",
     operation: "read",
-    description: "List technicians",
+    description: "List one requested page of technicians, optionally filtered by IDs, user IDs, name, active state, or dates. Use the get tool for one known ID or the export feed for synchronization.",
     schema: technicianListSchema.shape,
     handler: async (params) => {
       const input = technicianListSchema.parse(params);
@@ -311,7 +311,7 @@ export function registerPeopleTechnicianTools(
     name: "people_technician_shifts_get",
     domain: "people",
     operation: "read",
-    description: "Get a technician shift by ID",
+    description: "Retrieve one technician shift by its required ID. Use people_technician_shifts_list to search when the shift ID is unknown.",
     schema: technicianShiftIdSchema.shape,
     handler: async (params) => {
       const input = technicianShiftIdSchema.parse(params);
@@ -329,7 +329,7 @@ export function registerPeopleTechnicianTools(
     name: "people_technician_shifts_list",
     domain: "people",
     operation: "read",
-    description: "List technician shifts",
+    description: "List one requested page of technician shifts, including normal, on-call, and time-off shifts. Filter by technician, time bounds, text, type, or active state; use the get tool for one known shift ID.",
     schema: technicianShiftListSchema.shape,
     handler: async (params) => {
       const input = technicianShiftListSchema.parse(params);
@@ -427,7 +427,7 @@ export function registerPeopleTechnicianTools(
     name: "people_performance_get",
     domain: "people",
     operation: "read",
-    description: "Get performance segmented by campaign/ad group/keyword",
+    description: "Retrieve one requested page of marketing performance metrics for a UTC period, segmented by campaign, ad group, or keyword. Use this to compare acquisition performance at one selected grain.",
     schema: performanceGetSchema.shape,
     handler: async (params) => {
       const input = performanceGetSchema.parse(params);

@@ -50,7 +50,7 @@ export function registerBusinessUnitTools(
     name: "settings_business_units_get",
     domain: "settings",
     operation: "read",
-    description: "Get a business unit by ID",
+    description: "Retrieve one business unit by its required ID. Use settings_business_units_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Business unit ID"),
       externalDataApplicationGuid: z
@@ -81,7 +81,7 @@ export function registerBusinessUnitTools(
     name: "settings_business_units_list",
     domain: "settings",
     operation: "read",
-    description: "List business units",
+    description: "List one requested page of business units, optionally filtered by IDs, name, active state, dates, or external-data application. Use the get tool for one known ID or the export feed for synchronization.",
     schema: businessUnitListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);

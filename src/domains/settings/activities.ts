@@ -66,7 +66,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_codes_get",
     domain: "settings",
     operation: "read",
-    description: "Get an activity code by ID",
+    description: "Retrieve one payroll activity code by its required ID. Use settings_activity_codes_list to search when the ID is unknown.",
     schema: activityCodeIdSchema.shape,
     handler: async (params) => {
       const { id } = activityCodeIdSchema.parse(params);
@@ -84,7 +84,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_codes_list",
     domain: "settings",
     operation: "read",
-    description: "List activity codes",
+    description: "List one requested page of payroll activity codes with active-state, date, and sort controls. Use the get tool for one known code or the export feed for synchronization.",
     schema: activityListSchema.shape,
     handler: async (params) => {
       const input = activityListSchema.parse(params);
@@ -115,7 +115,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_codes_export",
     domain: "settings",
     operation: "read",
-    description: "Export activity codes",
+    description: "Read the incremental activity-code export feed for Settings workflows. This is the same feed as export_activity_codes; use whichever name is available and do not fetch both. Continue immediately with continueFrom while hasMore is true; when false, retain it and wait before polling again. includeRecentChanges may repeat records.",
     schema: exportSchema.shape,
     handler: async (params) => {
       const input = exportSchema.parse(params);
@@ -139,7 +139,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_categories_get",
     domain: "settings",
     operation: "read",
-    description: "Get an activity category by ID",
+    description: "Retrieve one timesheet activity category by its required ID. Use settings_activity_categories_list to search when the ID is unknown.",
     schema: activityCategoryIdSchema.shape,
     handler: async (params) => {
       const { id } = activityCategoryIdSchema.parse(params);
@@ -157,7 +157,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_categories_list",
     domain: "settings",
     operation: "read",
-    description: "List activity categories",
+    description: "List one requested page of timesheet activity categories with active-state, date, and sort controls. Use the get tool for one known category or the export feed for synchronization.",
     schema: activityCategoryListSchema.shape,
     handler: async (params) => {
       const input = activityCategoryListSchema.parse(params);
@@ -188,7 +188,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_categories_export",
     domain: "settings",
     operation: "read",
-    description: "Export activity categories",
+    description: "Read the incremental activity-category export feed for Settings synchronization. Use the list or get tools for filtered browsing or a known ID. Continue immediately with continueFrom while hasMore is true; when false, retain it and wait before polling again. includeRecentChanges may repeat records.",
     schema: exportSchema.shape,
     handler: async (params) => {
       const input = exportSchema.parse(params);
@@ -212,7 +212,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_types_get",
     domain: "settings",
     operation: "read",
-    description: "Get an activity type by ID",
+    description: "Retrieve one timesheet activity type by its required ID. Use settings_activity_types_list to search when the ID is unknown.",
     schema: activityTypeIdSchema.shape,
     handler: async (params) => {
       const { id } = activityTypeIdSchema.parse(params);
@@ -230,7 +230,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activity_types_list",
     domain: "settings",
     operation: "read",
-    description: "List activity types",
+    description: "List one requested page of timesheet activity types with active-state, date, and sort controls. Use the get tool for one known type ID.",
     schema: activityTypeListSchema.shape,
     handler: async (params) => {
       const input = activityTypeListSchema.parse(params);
@@ -261,7 +261,7 @@ export function registerActivityTools(client: ServiceTitanClient, registry: Tool
     name: "settings_activities_export",
     domain: "settings",
     operation: "read",
-    description: "Export activities",
+    description: "Read the incremental timesheet-activity export feed for Settings workflows. This is the same feed as export_activities; use whichever name is available and do not fetch both. Continue immediately with continueFrom while hasMore is true; when false, retain it and wait before polling again. includeRecentChanges may repeat records.",
     schema: exportSchema.shape,
     handler: async (params) => {
       const input = exportSchema.parse(params);

@@ -133,7 +133,7 @@ export function registerRecurringServiceTools(
     name: "memberships_recurring_services_get",
     domain: "memberships",
     operation: "read",
-    description: "Get a recurring service by ID",
+    description: "Retrieve a recurring service by its ServiceTitan ID. Returns the single upstream record without pagination; use memberships_recurring_services_list to search when the ID is unknown.",
     schema: recurringServiceIdSchema.shape,
     handler: async (params) => {
       const { id } = recurringServiceIdSchema.parse(params);
@@ -151,7 +151,7 @@ export function registerRecurringServiceTools(
     name: "memberships_recurring_services_list",
     domain: "memberships",
     operation: "read",
-    description: "List recurring services",
+    description: "List one requested page of customer-location recurring services using service, membership, and location IDs, active state, and created or modified timestamps. Use memberships_recurring_services_get for one known service and memberships_types_recurring_service_items_list for plan-level service configuration.",
     schema: recurringServicesListSchema.shape,
     handler: async (params) => {
       const parsed = recurringServicesListSchema.parse(params);
@@ -208,7 +208,7 @@ export function registerRecurringServiceTools(
     name: "memberships_recurring_service_events_list",
     domain: "memberships",
     operation: "read",
-    description: "List recurring service events",
+    description: "List one requested page of recurring-service events using event IDs, status, job, location, and created or modified timestamp filters. Use memberships_recurring_services_get for the parent service record; use job tools for a job referenced by an event.",
     schema: recurringServiceEventsListSchema.shape,
     handler: async (params) => {
       const parsed = recurringServiceEventsListSchema.parse(params);
@@ -282,7 +282,7 @@ export function registerRecurringServiceTools(
     name: "memberships_recurring_service_types_get",
     domain: "memberships",
     operation: "read",
-    description: "Get a recurring service type by ID",
+    description: "Retrieve a recurring service type by its ServiceTitan ID. Returns the single upstream record without pagination; use memberships_recurring_service_types_list to search when the ID is unknown.",
     schema: recurringServiceTypeIdSchema.shape,
     handler: async (params) => {
       const { id } = recurringServiceTypeIdSchema.parse(params);
@@ -300,7 +300,7 @@ export function registerRecurringServiceTools(
     name: "memberships_recurring_service_types_list",
     domain: "memberships",
     operation: "read",
-    description: "List recurring service types",
+    description: "List one requested page of recurring-service type definitions using IDs, membership type, recurrence type, duration type, active state, and created or modified timestamps. Use memberships_recurring_service_types_get for one known type and memberships_recurring_services_list for customer-location service instances.",
     schema: recurringServiceTypesListSchema.shape,
     handler: async (params) => {
       const parsed = recurringServiceTypesListSchema.parse(params);

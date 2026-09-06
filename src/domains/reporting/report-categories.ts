@@ -13,7 +13,7 @@ export function registerReportCategoryTools(
     name: "reporting_report_categories_list",
     domain: "reporting",
     operation: "read",
-    description: "List report categories",
+    description: "List one requested page of report categories with paging and total-count controls. Start here to discover a category ID, then use reporting_reports_list for reports in that category and reporting_reports_get for a report parameter definition.",
     schema: reportCategoryListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);

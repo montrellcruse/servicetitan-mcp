@@ -83,7 +83,7 @@ export function registerDispatchArrivalWindowTools(
     name: "dispatch_arrival_windows_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get an arrival window by ID",
+    description: "Retrieve one arrival-window definition by ID, including its time span and applicable business units. Use dispatch_arrival_windows_list to browse by active state or creation time.",
     schema: {
       id: z.number().int().describe("Arrival window ID"),
     },
@@ -103,7 +103,7 @@ export function registerDispatchArrivalWindowTools(
     name: "dispatch_arrival_windows_list",
     domain: "dispatch",
     operation: "read",
-    description: "List arrival windows",
+    description: "List one page of arrival-window definitions, optionally filtered by active state or creation time. Each record supplies a configured window and applicable business units; use dispatch_arrival_windows_get for a known ID.",
     schema: arrivalWindowListSchema.shape,
     handler: async (params) => {
       const typed = arrivalWindowListSchema.parse(params);
@@ -145,7 +145,7 @@ export function registerDispatchArrivalWindowTools(
     name: "dispatch_arrival_window_configuration_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get arrival window configuration",
+    description: "Retrieve the tenant-wide arrival-window configuration as one unpaged response. It returns scheduling configuration rather than an individual window; use dispatch_arrival_windows_get or list for window definitions.",
     schema: {},
     handler: async () => {
       try {

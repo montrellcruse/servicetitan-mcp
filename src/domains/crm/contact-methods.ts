@@ -64,7 +64,7 @@ export function registerContactMethodTools(
     name: "crm_contact_methods_get",
     domain: "crm",
     operation: "read",
-    description: "Get a contact method",
+    description: "Retrieve one contact-method record using its parent contact UUID and contact-method UUID. Use crm_contact_methods_list to search that contact's methods when the method ID is unknown.",
     schema: contactMethodPathSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof contactMethodPathSchema>;
@@ -109,7 +109,7 @@ export function registerContactMethodTools(
     name: "crm_contact_methods_list",
     domain: "crm",
     operation: "read",
-    description: "List contact methods for a contact",
+    description: "Search one contact's phone, email, or other contact methods by reference, type, value, or date filters. Returns one page and requires contactId.",
     schema: listContactMethodsSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof listContactMethodsSchema>;

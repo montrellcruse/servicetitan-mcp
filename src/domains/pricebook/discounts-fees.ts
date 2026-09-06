@@ -56,7 +56,7 @@ export function registerDiscountAndFeeTools(
     name: "pricebook_discounts_fees_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get a discount or fee by ID",
+    description: "Retrieve a discount or fee by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_discounts_fees_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Discount/Fee ID"),
       externalDataApplicationGuid: z
@@ -87,7 +87,7 @@ export function registerDiscountAndFeeTools(
     name: "pricebook_discounts_fees_list",
     domain: "pricebook",
     operation: "read",
-    description: "List discounts and fees",
+    description: "List one requested page of pricebook discount and fee items using IDs, active state, created or modified timestamps, and external-data mappings. Use pricebook_discounts_fees_get for a known item; membership-type discounts are a separate plan-level benefit.",
     schema: discountAndFeeListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);

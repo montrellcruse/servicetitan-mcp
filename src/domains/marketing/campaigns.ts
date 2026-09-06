@@ -86,7 +86,7 @@ export function registerMarketingCampaignTools(
     name: "marketing_campaigns_get",
     domain: "marketing",
     operation: "read",
-    description: "Get a campaign by ID",
+    description: "Retrieve one marketing campaign record by ID, including its configured campaign data. Use marketing_campaigns_list to search by name, phone number, active state, IDs, or date ranges.",
     schema: campaignGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof campaignGetSchema>;
@@ -104,7 +104,7 @@ export function registerMarketingCampaignTools(
     name: "marketing_campaigns_list",
     domain: "marketing",
     operation: "read",
-    description: "List campaigns",
+    description: "Search campaigns by IDs, name, phone number, active state, or created and modified ranges. Returns one page; use marketing_campaigns_get for a known campaign ID.",
     schema: campaignsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof campaignsListSchema>;
@@ -157,7 +157,7 @@ export function registerMarketingCampaignTools(
     name: "marketing_campaigns_costs_list",
     domain: "marketing",
     operation: "read",
-    description: "List costs for a campaign",
+    description: "List one page of costs for a required campaign ID, optionally filtered by year or month. Use marketing_campaign_costs_list for a broader cost search across campaigns.",
     schema: campaignCostsByCampaignSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof campaignCostsByCampaignSchema>;

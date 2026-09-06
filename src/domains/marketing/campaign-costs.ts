@@ -80,7 +80,7 @@ export function registerMarketingCampaignCostTools(
     client,
     registry,
     "marketing_campaign_costs_list",
-    "List campaign costs",
+    "Search campaign costs across campaigns by campaign ID, year, or month. Returns one page; use marketing_campaigns_costs_list when a specific campaign ID is the required path scope.",
   );
 
   registry.register({
@@ -105,7 +105,7 @@ export function registerMarketingCampaignCostTools(
     name: "marketing_campaign_costs_get",
     domain: "marketing",
     operation: "read",
-    description: "Get a campaign cost by ID",
+    description: "Retrieve one campaign-cost record by cost ID. Use marketing_campaign_costs_list to search when the cost ID is unknown.",
     schema: campaignCostIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof campaignCostIdSchema>;

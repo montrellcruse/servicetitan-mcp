@@ -160,7 +160,7 @@ export function registerEstimateTemplateTools(
     name: "estimates_estimate_templates_list",
     domain: "estimates",
     operation: "read",
-    description: "List estimate templates",
+    description: "List one requested page of estimate templates, filterable by active state and modified timestamps. Use estimates_estimate_templates_get for a known template ID; use estimates_list for customer estimates created from templates.",
     schema: estimateTemplateListSchema.shape,
     handler: async (params) => {
       const input = estimateTemplateListSchema.parse(params);
@@ -178,7 +178,7 @@ export function registerEstimateTemplateTools(
     name: "estimates_estimate_templates_get",
     domain: "estimates",
     operation: "read",
-    description: "Get an estimate template by ID",
+    description: "Retrieve an estimate template by its ServiceTitan ID. Returns the single upstream record without pagination; use estimates_estimate_templates_list to search when the ID is unknown.",
     schema: templateIdSchema.shape,
     handler: async (params) => {
       const input = templateIdSchema.parse(params);
@@ -263,7 +263,7 @@ export function registerProposalTemplateTools(
     name: "estimates_proposal_templates_list",
     domain: "estimates",
     operation: "read",
-    description: "List proposal templates",
+    description: "List one requested page of proposal templates, filterable by active state, modified timestamps, and proposal type ID. Use estimates_proposal_templates_get for a known template and estimates_proposal_types_list to resolve the type filter.",
     schema: proposalTemplateListSchema.shape,
     handler: async (params) => {
       const input = proposalTemplateListSchema.parse(params);
@@ -281,7 +281,7 @@ export function registerProposalTemplateTools(
     name: "estimates_proposal_templates_get",
     domain: "estimates",
     operation: "read",
-    description: "Get a proposal template by ID",
+    description: "Retrieve a proposal template by its ServiceTitan ID. Returns the single upstream record without pagination; use estimates_proposal_templates_list to search when the ID is unknown.",
     schema: templateIdSchema.shape,
     handler: async (params) => {
       const input = templateIdSchema.parse(params);
@@ -366,7 +366,7 @@ export function registerProposalTypeTools(
     name: "estimates_proposal_types_list",
     domain: "estimates",
     operation: "read",
-    description: "List proposal types",
+    description: "List proposal-type definitions available for grouping and filtering proposal templates. Use estimates_proposal_templates_list to retrieve the templates that reference these types.",
     schema: proposalTypesListSchema.shape,
     handler: async (params) => {
       const input = proposalTypesListSchema.parse(params);

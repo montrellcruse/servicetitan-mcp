@@ -59,7 +59,7 @@ test("npm package includes public runtime files and excludes private evidence", 
     const excluded = [
       ".env", ".env.integration", ".env.secondary", "docs/reviews/live.json",
       "docs/releases/private.json", "audit/live.json", "benchmarks/run.mjs", "benchmarks/results/live.json",
-      "private-review.tar", "private-package.tgz",
+      "private-review.tar", "private-package.tgz", "tests/fixtures/discovery-v3.0.0.json",
       "docs/contracts/official-openapi-2026-09-04.tar.gz", "scripts/private.mjs", "tests/private.test.mjs",
     ];
     for (const file of excluded) await put(temporary, file, "PRIVATE_CANARY\n");

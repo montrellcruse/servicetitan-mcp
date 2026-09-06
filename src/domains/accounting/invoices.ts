@@ -233,7 +233,7 @@ export function registerInvoiceTools(
     name: "accounting_invoices_list",
     domain: "accounting",
     operation: "read",
-    description: "List invoices",
+    description: "List one requested page of customer invoice headers using customer, job, business-unit, invoice, date, amount, balance, review, and assignment filters. Use this for filtered invoice search; use estimates or invoice-item tools when the required grain is an estimate or individual line item.",
     schema: invoicesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof invoicesListSchema>;
@@ -288,7 +288,7 @@ export function registerInvoiceTools(
     name: "accounting_invoices_custom_field_types_list",
     domain: "accounting",
     operation: "read",
-    description: "List invoice custom field types",
+    description: "List one requested page of invoice custom-field definitions, with paging and total-count controls. Use this to resolve the metadata for invoice custom fields; use accounting_invoices_list to retrieve invoice records and their values.",
     schema: invoiceCustomFieldTypesSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof invoiceCustomFieldTypesSchema>;

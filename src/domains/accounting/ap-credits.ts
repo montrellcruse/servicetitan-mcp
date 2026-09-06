@@ -49,7 +49,7 @@ export function registerApCreditTools(
     name: "accounting_ap_credits_list",
     domain: "accounting",
     operation: "read",
-    description: "List AP credits",
+    description: "List one requested page of vendor AP credits, filterable by credit IDs and created or modified timestamps. Use this for credits on vendor accounts; use accounting_ap_payments_list for AP disbursements and accounting_payments_list for customer receipts.",
     schema: apCreditsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof apCreditsListSchema>;

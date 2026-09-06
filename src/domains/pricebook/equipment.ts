@@ -49,7 +49,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
     name: "pricebook_equipment_list",
     domain: "pricebook",
     operation: "read",
-    description: "List equipment pricebook items",
+    description: "List one requested page of equipment pricebook items using IDs, active state, created or modified timestamps, and external-data mappings. Use pricebook_equipment_get for a known pricebook item; use installed-equipment tools for equipment attached to customer locations.",
     schema: equipmentListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);
@@ -67,7 +67,7 @@ export function registerEquipmentTools(client: ServiceTitanClient, registry: Too
     name: "pricebook_equipment_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get equipment item by ID",
+    description: "Retrieve equipment item by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_equipment_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Equipment ID"),
       externalDataApplicationGuid: z

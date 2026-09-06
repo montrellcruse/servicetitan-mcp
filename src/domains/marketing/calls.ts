@@ -81,7 +81,7 @@ export function registerMarketingCallTools(
     name: "marketing_calls_v3_list",
     domain: "marketing",
     operation: "read",
-    description: "List calls from v3 calls endpoint",
+    description: "Search calls through Marketing Calls v3 using comma-delimited IDs, caller number, active state, agents, campaign, duration, timestamps, or sort. Returns one page; prefer this for ordinary call search, and use v2 only for its numeric ID array, activeOnly, or orderBy contract.",
     schema: v3CallsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof v3CallsListSchema>;
@@ -124,7 +124,7 @@ export function registerMarketingCallTools(
     name: "marketing_calls_get",
     domain: "marketing",
     operation: "read",
-    description: "Get call details by ID (v2)",
+    description: "Retrieve one Marketing Calls v2 call record by numeric ID, including the call details returned by ServiceTitan. Use a call-list tool when the ID is unknown, and the recording or voicemail tools for those media resources.",
     schema: callIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof callIdSchema>;
@@ -160,7 +160,7 @@ export function registerMarketingCallTools(
     name: "marketing_calls_recording_get",
     domain: "marketing",
     operation: "read",
-    description: "Get call recording metadata or payload (v2)",
+    description: "Request the audio recording for a known Marketing Calls v2 call ID. ServiceTitan documents an audio/mpeg stream, but this wrapper delivers client-decoded data through its standard JSON/text envelope; use a binary-capable API client when faithful audio bytes are required. Use marketing_calls_get for the call record itself.",
     schema: callIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof callIdSchema>;
@@ -178,7 +178,7 @@ export function registerMarketingCallTools(
     name: "marketing_calls_voice_mail_get",
     domain: "marketing",
     operation: "read",
-    description: "Get call voicemail metadata or payload (v2)",
+    description: "Request the voicemail audio for a known Marketing Calls v2 call ID. ServiceTitan documents an audio/mpeg stream, but this wrapper delivers client-decoded data through its standard JSON/text envelope; use a binary-capable API client when faithful audio bytes are required. Use marketing_calls_get for the call record itself.",
     schema: callIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof callIdSchema>;
@@ -196,7 +196,7 @@ export function registerMarketingCallTools(
     name: "marketing_calls_v2_list",
     domain: "marketing",
     operation: "read",
-    description: "List calls from v2 calls endpoint",
+    description: "Search calls through Marketing Calls v2 using its activeOnly flag, explicit orderBy and direction, numeric ID array, agents, campaign, duration, phone, or timestamps. Returns one page; prefer v3 unless these v2-specific filter or sorting semantics are required.",
     schema: v2CallsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof v2CallsListSchema>;

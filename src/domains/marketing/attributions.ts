@@ -178,7 +178,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_attributed_leads_get",
     domain: "marketing",
     operation: "read",
-    description: "Get attributed leads",
+    description: "Search attributed leads within a required UTC time window, optionally filtered by lead type. Returns one page of leads linked to marketing attribution activity.",
     schema: attributedLeadsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof attributedLeadsListSchema>;
@@ -207,7 +207,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_client_side_data_get",
     domain: "marketing",
     operation: "read",
-    description: "Get marketing client-side data",
+    description: "Retrieve tenant task reference data: employees, business units, priorities, statuses, types, sources, and resolutions. This Task Management client-side-data operation returns one unpaged response with no inputs; use it to populate task filters or forms, not for marketing analytics.",
     schema: {},
     handler: async () => {
       try {
@@ -223,7 +223,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_client_specific_pricing_get_all_rate_sheets",
     domain: "marketing",
     operation: "read",
-    description: "List all client-specific pricing rate sheets",
+    description: "Search client-specific pricing rate sheets by IDs, search term, or active state. Returns one page of pricing definitions; despite the legacy name, pagination still applies. Use the rate-sheet ID from this result when updating a sheet.",
     schema: clientSpecificPricingListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof clientSpecificPricingListSchema>;
@@ -274,7 +274,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_reviews",
     domain: "marketing",
     operation: "read",
-    description: "List marketing reviews",
+    description: "Search customer review records by text, rating, source, response type, review status, location, technician, campaign, and date ranges. Returns one page; use inclusion flags when reviews missing those associations must remain in the result.",
     schema: reviewsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof reviewsListSchema>;
@@ -320,7 +320,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_scheduler_schedulers",
     domain: "marketing",
     operation: "read",
-    description: "List schedulers",
+    description: "List one page of marketing scheduler records, optionally filtered by created or modified timestamps. Use marketing_scheduler_scheduler_performance for metrics about one known scheduler.",
     schema: schedulerListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof schedulerListSchema>;
@@ -350,7 +350,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_scheduler_scheduler_performance",
     domain: "marketing",
     operation: "read",
-    description: "Get scheduler performance",
+    description: "Retrieve one scheduler's performance metrics over a required session-created time window. Returns the scheduler performance response for that exact ID and period; use marketing_scheduler_schedulersessions for individual sessions.",
     schema: schedulerPerformanceSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof schedulerPerformanceSchema>;
@@ -376,7 +376,7 @@ export function registerMarketingAttributionTools(
     name: "marketing_scheduler_schedulersessions",
     domain: "marketing",
     operation: "read",
-    description: "List scheduler sessions",
+    description: "List one page of sessions for a known scheduler, optionally filtered by created or modified timestamps. Use scheduler performance when aggregated metrics are needed.",
     schema: schedulerSessionsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof schedulerSessionsListSchema>;

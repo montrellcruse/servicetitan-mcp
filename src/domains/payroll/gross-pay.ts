@@ -111,7 +111,7 @@ export function registerPayrollGrossPayTools(
     name: "payroll_gross_pay_items_list",
     domain: "payroll",
     operation: "read",
-    description: "List gross pay items",
+    description: "List one requested page of gross-pay line items, optionally scoped by employee, payroll IDs, or pay date range. Use this to inspect pay components rather than payroll-period summaries.",
     schema: grossPayItemListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof grossPayItemListSchema>;

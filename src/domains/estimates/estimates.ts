@@ -160,7 +160,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     name: "estimates_get",
     domain: "estimates",
     operation: "read",
-    description: "Get a single estimate by ID",
+    description: "Retrieve a single estimate by its ServiceTitan ID. Returns the single upstream record without pagination; use estimates_list to search when the ID is unknown.",
     schema: estimateGetSchema.shape,
     handler: async (params) => {
       const { id } = estimateGetSchema.parse(params);
@@ -178,7 +178,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     name: "estimates_list",
     domain: "estimates",
     operation: "read",
-    description: "List estimates with filters",
+    description: "Search one requested page of estimates by job, project, location, status, dates, salesperson, or total amount. Use estimates_get for one known estimate; use estimates_export_estimates for incremental synchronization.",
     schema: estimateListSchema.shape,
     handler: async (params) => {
       const parsed = estimateListSchema.parse(params);
@@ -328,7 +328,7 @@ export function registerEstimateTools(client: ServiceTitanClient, registry: Tool
     name: "estimates_export_estimates",
     domain: "estimates",
     operation: "read",
-    description: "Export estimates",
+    description: "Read the incremental estimate export feed for synchronization. Supply from as the change-window start and continue with the response continuation token when present; use estimates_list for interactive filtered browsing and estimates_get for a known ID.",
     schema: estimateExportSchema.shape,
     handler: async (params) => {
       const input = estimateExportSchema.parse(params);

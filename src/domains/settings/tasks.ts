@@ -77,7 +77,7 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
     name: "settings_tasks_get",
     domain: "settings",
     operation: "read",
-    description: "Get a task by ID",
+    description: "Retrieve one task by its required ID. Use settings_tasks_list to search when the ID is unknown.",
     schema: taskGetSchema.shape,
     handler: async (params) => {
       const input = taskGetSchema.parse(params);
@@ -98,7 +98,7 @@ export function registerTaskTools(client: ServiceTitanClient, registry: ToolRegi
     name: "settings_tasks_list",
     domain: "settings",
     operation: "read",
-    description: "List tasks",
+    description: "List one requested page of employee tasks using status, assignment, related-record, date, priority, and other filters. Use settings_tasks_get for one known task ID; statuses is preferred over deprecated isClosed.",
     schema: taskListSchema.shape,
     handler: async (params) => {
       const input = taskListSchema.parse(params);

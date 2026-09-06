@@ -53,7 +53,7 @@ export function registerEstimateItemTools(client: ServiceTitanClient, registry: 
     name: "estimates_items_list",
     domain: "estimates",
     operation: "read",
-    description: "List estimate items with optional filters",
+    description: "Search one requested page of estimate line items by estimate ID, item IDs, active state, or creation and modification dates. Each result represents an item attached to an estimate, rather than an estimate header returned by estimates_list.",
     schema: estimateItemsListSchema.shape,
     handler: async (params) => {
       const parsed = estimateItemsListSchema.parse(params);

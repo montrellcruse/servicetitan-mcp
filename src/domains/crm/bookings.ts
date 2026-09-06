@@ -95,7 +95,7 @@ export function registerBookingTools(
     name: "crm_bookings_get",
     domain: "crm",
     operation: "read",
-    description: "Get a booking by ID",
+    description: "Retrieve one tenant booking record by booking ID. Use crm_bookings_list to search when the ID is unknown, or the provider-scoped get when the booking provider must be part of the route.",
     schema: bookingIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingIdSchema>;
@@ -113,7 +113,7 @@ export function registerBookingTools(
     name: "crm_bookings_provider_get",
     domain: "crm",
     operation: "read",
-    description: "Get a provider-scoped booking",
+    description: "Retrieve one booking record from a specified booking provider using both provider and booking IDs. Use crm_bookings_get for the tenant-wide ID route, or the provider list when the booking ID is unknown.",
     schema: bookingProviderScopedIdSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingProviderScopedIdSchema>;
@@ -133,7 +133,7 @@ export function registerBookingTools(
     name: "crm_bookings_contacts_list",
     domain: "crm",
     operation: "read",
-    description: "List contacts for a booking",
+    description: "List one page of contacts attached to a tenant booking. Supply the booking ID; use page and pageSize to continue through results.",
     schema: bookingContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingContactsListSchema>;
@@ -159,7 +159,7 @@ export function registerBookingTools(
     name: "crm_bookings_list",
     domain: "crm",
     operation: "read",
-    description: "List bookings",
+    description: "Search tenant bookings by IDs, external ID, or created and modified ranges. Returns one page; use crm_bookings_get for a known booking ID.",
     schema: bookingListFilterSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingListFilterSchema>;
@@ -264,7 +264,7 @@ export function registerBookingTools(
     name: "crm_bookings_provider_list",
     domain: "crm",
     operation: "read",
-    description: "List bookings for a booking provider",
+    description: "Search one booking provider's bookings by IDs, external ID, or created and modified ranges. Returns one page and requires the provider ID.",
     schema: bookingProviderListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingProviderListSchema>;
@@ -297,7 +297,7 @@ export function registerBookingTools(
     name: "crm_bookings_provider_contacts_list",
     domain: "crm",
     operation: "read",
-    description: "List contacts for a provider-scoped booking",
+    description: "List one page of contacts for a booking within a specified booking provider. Requires both provider and booking IDs.",
     schema: bookingProviderContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof bookingProviderContactsListSchema>;

@@ -119,7 +119,7 @@ export function registerSchedulingAppointmentAssignmentTools(
     name: "scheduling_appointment_assignments_list",
     domain: "scheduling",
     operation: "read",
-    description: "List appointment assignments",
+    description: "Find one page of technician-to-appointment assignments by assignment IDs, appointment IDs, job ID, active state, or creation and modification dates. Use dispatch_appointments_get or dispatch_appointments_list for the appointment records themselves; this tool returns the assignment relationships.",
     schema: appointmentAssignmentListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof appointmentAssignmentListSchema>;

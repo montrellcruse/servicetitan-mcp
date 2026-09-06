@@ -1,6 +1,6 @@
 {
   "name": "@rowvyn/servicetitan-mcp",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "ServiceTitan MCP server with verified API contracts, configurable company analytics, and read-only readiness checks",
   "author": "Montrell Cruse <montrell@rowvyn.com> (https://rowvyn.com)",
   "license": "MIT",
@@ -57,7 +57,7 @@
     "dev": "tsc --watch",
     "start": "node build/index.js",
     "lint": "eslint src/",
-    "prepublishOnly": "npm run release:check && npm run contracts:check && npm run typecheck && npm run lint && npm run test && npm run test:wire && npm run test:packaging",
+    "prepublishOnly": "npm run release:check && npm run contracts:check && npm run typecheck && npm run lint && npm run test && npm run test:wire && npm run discovery:check && npm run test:packaging",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "contracts:generate": "node scripts/generate-contract-manifest.mjs",
@@ -70,7 +70,8 @@
     "test:wire": "npm run build && node --test tests/wire/*.test.mjs",
     "test:packaging": "node --test tests/packaging/*.test.mjs",
     "test:coverage": "vitest run --coverage",
-    "release:check": "node scripts/check-release.mjs"
+    "release:check": "node scripts/check-release.mjs",
+    "discovery:check": "node scripts/discovery-audit.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",

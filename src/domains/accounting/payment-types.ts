@@ -32,7 +32,7 @@ export function registerPaymentTypeTools(
     name: "accounting_payment_types_get",
     domain: "accounting",
     operation: "read",
-    description: "Get a payment type by ID",
+    description: "Retrieve a payment type by its ServiceTitan ID. Returns the single upstream record without pagination; use accounting_payment_types_list to search when the ID is unknown.",
     schema: paymentTypeGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof paymentTypeGetSchema>;
@@ -50,7 +50,7 @@ export function registerPaymentTypeTools(
     name: "accounting_payment_types_list",
     domain: "accounting",
     operation: "read",
-    description: "List payment types",
+    description: "List one requested page of customer payment-type definitions, filterable by IDs, active state, and creation timestamps. Use this catalog to interpret or select payment methods; use accounting_payments_list for actual customer payment transactions.",
     schema: paymentTypesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof paymentTypesListSchema>;
