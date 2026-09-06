@@ -130,7 +130,7 @@ export function registerDispatchInstalledEquipmentTools(
     name: "dispatch_installed_equipment_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get installed equipment by ID",
+    description: "Retrieve one installed-equipment record by ID, including its location and equipment details. Use dispatch_installed_equipment_list to search by location, IDs, active state, or date ranges.",
     schema: installedEquipmentIdSchema.shape,
     handler: async (params) => {
       const input = installedEquipmentIdSchema.parse(params);
@@ -148,7 +148,7 @@ export function registerDispatchInstalledEquipmentTools(
     name: "dispatch_installed_equipment_list",
     domain: "dispatch",
     operation: "read",
-    description: "List installed equipment",
+    description: "Search installed-equipment records by IDs, location IDs, active state, or created and modified ranges. Returns one page; use dispatch_installed_equipment_get for a known ID.",
     schema: installedEquipmentListSchema.shape,
     handler: async (params) => {
       const input = installedEquipmentListSchema.parse(params);
@@ -251,7 +251,7 @@ export function registerDispatchInstalledEquipmentTools(
     name: "dispatch_installed_equipment_attachments_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get installed equipment attachment metadata by storage path",
+    description: "Request an installed-equipment attachment by its ServiceTitan storage path. Returns the client-decoded attachment response; the pinned API does not define a response-body schema. Supply the exact known path; use dispatch_installed_equipment_get for the equipment record itself.",
     schema: installedEquipmentAttachmentsGetSchema.shape,
     handler: async (params) => {
       const input = installedEquipmentAttachmentsGetSchema.parse(params);

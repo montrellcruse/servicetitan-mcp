@@ -31,7 +31,7 @@ export function registerTaxZoneTools(
     name: "accounting_tax_zones_list",
     domain: "accounting",
     operation: "read",
-    description: "List tax zones",
+    description: "List one requested page of tax-zone definitions, filterable by IDs, active state, and created or modified timestamps. Use this catalog to resolve tax treatment identifiers; it does not return invoice transactions or calculated tax totals.",
     schema: taxZonesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof taxZonesListSchema>;

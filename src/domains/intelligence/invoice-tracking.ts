@@ -176,7 +176,7 @@ export function registerIntelligenceInvoiceTrackingTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Invoice email tracking with sent vs not-sent counts, send rate, dollar impact, and unsent breakdown by business unit and technician" +
+      "Track invoice email delivery for the selected date range by combining and deduplicating Reports 2281 and 2282. Returns sent and not-sent counts, send rate, invoice amount and balance impact, and unsent breakdowns by business unit and technician; an optional business-unit filter applies to both reports. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "What percent of invoices were sent this week?" -> startDate="2026-03-02", endDate="2026-03-09"\n- "Which techs are not sending invoices?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show invoice send rate for plumbing last month" -> startDate="2026-02-01", endDate="2026-03-01", businessUnitName="Plumbing"',
     schema: invoiceTrackingSchema.shape,
     handler: async (params) => {

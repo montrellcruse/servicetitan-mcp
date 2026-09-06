@@ -1,0 +1,2558 @@
+{
+  "schemaVersion": 1,
+  "scope": {
+    "domains": [
+      "crm",
+      "dispatch",
+      "marketing"
+    ],
+    "supportedReadToolCount": 87,
+    "baselineVersion": "3.0.0",
+    "contractArchive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+    "rubric": {
+      "source": "Glama TDQS framework",
+      "revision": "b9881b0cfec88969e42672c92544487ca191a992",
+      "anchors": "Appendix A"
+    }
+  },
+  "reviewStatus": "author review complete; independent accuracy review not claimed",
+  "reviews": [
+    {
+      "tool": "crm_bookings_get",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/bookings/{id}",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_bookings_provider_get",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_GetForProvider",
+        "operation": "GET /crm/v2/tenant/{tenant}/booking-provider/{booking_provider}/bookings/{id}",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "bookingProvider",
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_bookings_contacts_list",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_GetContactList",
+        "operation": "GET /crm/v2/tenant/{tenant}/bookings/{id}/contacts",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_bookings_list",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/bookings",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "externalId",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_bookings_provider_list",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_GetList2",
+        "operation": "GET /crm/v2/tenant/{tenant}/booking-provider/{booking_provider}/bookings",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "externalId",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "bookingProvider"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_bookings_provider_contacts_list",
+      "source": "src/domains/crm/bookings.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Bookings_GetContactList2",
+        "operation": "GET /crm/v2/tenant/{tenant}/booking-provider/{booking_provider}/bookings/{id}/contacts",
+        "scopes": [
+          "tn.crm.bookings:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/bookings.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "bookingProvider",
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_booking_provider_tags_get",
+      "source": "src/domains/crm/booking-provider-tags.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "BookingProviderTags_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/booking-provider-tags/{id}",
+        "scopes": [
+          "tn.crm.bookingprovidertags:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/booking-provider-tags.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_booking_provider_tags_list",
+      "source": "src/domains/crm/booking-provider-tags.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "BookingProviderTags_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/booking-provider-tags",
+        "scopes": [
+          "tn.crm.bookingprovidertags:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/booking-provider-tags.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "name",
+          "ids",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contact_methods_get",
+      "source": "src/domains/crm/contact-methods.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "ContactMethods_GetContactMethod",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts/{contactId}/contact-methods/{contactMethodId}",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contact-methods.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "contactId",
+          "contactMethodId"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contact_methods_list",
+      "source": "src/domains/crm/contact-methods.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "ContactMethods_GetContactMethods",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts/{contactId}/contact-methods",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contact-methods.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "contactId",
+          "referenceId",
+          "type",
+          "value",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contacts_get",
+      "source": "src/domains/crm/contacts.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Contacts_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts/{id}",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contacts.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contacts_by_relationship_list",
+      "source": "src/domains/crm/contacts.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Contacts_GetByRelationshipId",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts/relationships/{relationshipId}",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contacts.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "name",
+          "title",
+          "referenceId",
+          "isArchived",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "relationshipId"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contacts_list",
+      "source": "src/domains/crm/contacts.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Contacts_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contacts.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "name",
+          "title",
+          "referenceId",
+          "isArchived",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_contact_relationships_list",
+      "source": "src/domains/crm/contacts.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Contacts_GetContactRelationshipList",
+        "operation": "GET /crm/v2/tenant/{tenant}/contacts/{contactId}/relationships",
+        "scopes": [
+          "tn.crm.contacts:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/contacts.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "contactId",
+          "relatedEntityId",
+          "typeSlug",
+          "typeName",
+          "createdBefore",
+          "createdOnOrAfter",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_get",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers/{id}",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_list",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "excludeAccountingChangesFromModifiedDateRange",
+          "name",
+          "street",
+          "unit",
+          "city",
+          "state",
+          "zip",
+          "country",
+          "latitude",
+          "longitude",
+          "phone",
+          "active",
+          "externalDataApplicationGuid",
+          "externalDataKey",
+          "externalDataValues",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_notes_list",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_GetNotes",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers/{id}/notes",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_contacts_list",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_GetContactList",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers/{id}/contacts",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_contacts_modified_list",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_GetModifiedContactsList",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers/contacts",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "customerIds",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_customers_custom_field_types_list",
+      "source": "src/domains/crm/customers.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Customers_GetCustomFieldTypes",
+        "operation": "GET /crm/v2/tenant/{tenant}/customers/custom-fields",
+        "scopes": [
+          "tn.crm.customers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/customers.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_leads_get",
+      "source": "src/domains/crm/leads.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Leads_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/leads/{id}",
+        "scopes": [
+          "tn.crm.leads:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/leads.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_leads_notes_list",
+      "source": "src/domains/crm/leads.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Leads_GetNotes",
+        "operation": "GET /crm/v2/tenant/{tenant}/leads/{id}/notes",
+        "scopes": [
+          "tn.crm.leads:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/leads.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_leads_list",
+      "source": "src/domains/crm/leads.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Leads_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/leads",
+        "scopes": [
+          "tn.crm.leads:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/leads.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "customerId",
+          "isProspect",
+          "withoutCustomer",
+          "status",
+          "customerCity",
+          "customerState",
+          "customerZip",
+          "customerCreatedOnOrAfter",
+          "customerCreatedBefore",
+          "customerModifiedOnOrAfter",
+          "sort",
+          "genPermUrl",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_get",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_Get",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations/{id}",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_GetList",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "name",
+          "customerId",
+          "street",
+          "unit",
+          "city",
+          "state",
+          "zip",
+          "country",
+          "latitude",
+          "longitude",
+          "active",
+          "externalDataApplicationGuid",
+          "externalDataKey",
+          "externalDataValues",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_notes_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_GetNotes",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations/{id}/notes",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_contacts_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_GetContactList",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations/{id}/contacts",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_contacts_modified_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_GetLocationsContactsList",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations/contacts",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "locationIds",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_locations_custom_field_types_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-crm-v2.json",
+        "operationId": "Locations_GetCustomFieldTypes",
+        "operation": "GET /crm/v2/tenant/{tenant}/locations/custom-fields",
+        "scopes": [
+          "tn.crm.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "crm_location_labor_types_list",
+      "source": "src/domains/crm/locations.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-payroll-v2.json",
+        "operationId": "LocationLaborType_GetListByLocations",
+        "operation": "GET /payroll/v2/tenant/{tenant}/locations/rates",
+        "scopes": [
+          "tn.prl.locations:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/crm/locations.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "locationIds",
+          "createdBefore",
+          "createdOnOrAfter",
+          "sort",
+          "active",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_arrival_windows_get",
+      "source": "src/domains/dispatch/arrival-windows.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-dispatch-v2.json",
+        "operationId": "ArrivalWindows_Get",
+        "operation": "GET /dispatch/v2/tenant/{tenant}/arrival-windows/{id}",
+        "scopes": [
+          "tn.dis.arrivalwindows:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/arrival-windows.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_arrival_windows_list",
+      "source": "src/domains/dispatch/arrival-windows.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-dispatch-v2.json",
+        "operationId": "ArrivalWindows_GetList",
+        "operation": "GET /dispatch/v2/tenant/{tenant}/arrival-windows",
+        "scopes": [
+          "tn.dis.arrivalwindows:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/arrival-windows.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "createdBefore",
+          "createdOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_arrival_window_configuration_get",
+      "source": "src/domains/dispatch/arrival-windows.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-dispatch-v2.json",
+        "operationId": "ArrivalWindows_GetConfiguration",
+        "operation": "GET /dispatch/v2/tenant/{tenant}/arrival-windows/configuration",
+        "scopes": [
+          "tn.dis.arrivalwindows:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/arrival-windows.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": []
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_appointments_get",
+      "source": "src/domains/dispatch/appointments.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Appointments_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/appointments/{id}",
+        "scopes": [
+          "tn.jpm.appointments:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/appointments.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_appointments_list",
+      "source": "src/domains/dispatch/appointments.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Appointments_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/appointments",
+        "scopes": [
+          "tn.jpm.appointments:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/appointments.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "ids",
+          "jobId",
+          "projectId",
+          "number",
+          "status",
+          "startsOnOrAfter",
+          "startsBefore",
+          "technicianId",
+          "customerId",
+          "unused",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_get_attachment",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-forms-v2.json",
+        "operationId": "Jobs_Get",
+        "operation": "GET /forms/v2/tenant/{tenant}/jobs/attachment/{id}",
+        "scopes": [
+          "tn.frm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_list_attachments",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-forms-v2.json",
+        "operationId": "Jobs_GetJobAttachments",
+        "operation": "GET /forms/v2/tenant/{tenant}/jobs/{jobId}/attachments",
+        "scopes": [
+          "tn.frm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "jobId",
+          "createdBefore",
+          "createdOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_call_reasons_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jbce-v2.json",
+        "operationId": "CallReasons_Get",
+        "operation": "GET /jbce/v2/tenant/{tenant}/call-reasons",
+        "scopes": [
+          "tn.jbce.callreasons:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_cancel_reasons_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "JobCancelReasons_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/job-cancel-reasons",
+        "scopes": [
+          "tn.jpm.jobcancelreasons:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Paginated, filterable cancellation-reason catalog; do not substitute the known-ID Jobs lookup.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_hold_reasons_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "JobHoldReasons_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/job-hold-reasons",
+        "scopes": [
+          "tn.jpm.jobholdreasons:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_get",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id",
+          "externalDataApplicationGuid"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "ids",
+          "number",
+          "projectId",
+          "bookingId",
+          "jobStatus",
+          "appointmentStatus",
+          "priority",
+          "firstAppointmentStartsOnOrAfter",
+          "firstAppointmentStartsBefore",
+          "appointmentStartsOnOrAfter",
+          "appointmentStartsBefore",
+          "technicianId",
+          "customerId",
+          "locationId",
+          "soldById",
+          "jobTypeId",
+          "campaignId",
+          "businessUnitId",
+          "invoiceId",
+          "equipmentIds",
+          "completedOnOrAfter",
+          "completedBefore",
+          "tagTypeIds",
+          "externalDataApplicationGuid",
+          "externalDataKey",
+          "externalDataValues",
+          "hasUnusedAppointments",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_equipment_get",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "JobEquipment_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}/equipment",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_notes_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetNotes",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}/notes",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_cancel_reasons_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetCancelReasons",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/cancel-reasons",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "ids"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-ID Jobs lookup; do not substitute the paginated cancellation-reason catalog.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_history_get",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetHistory",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}/history",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_canceled_logs_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetJobCanceledLogs",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}/canceled-log",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_booked_log_get",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetBookedLog",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/{id}/booked-log",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_jobs_custom_field_types_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Jobs_GetCustomFieldTypes",
+        "operation": "GET /jpm/v2/tenant/{tenant}/jobs/custom-fields",
+        "scopes": [
+          "tn.jpm.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_splits_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-payroll-v2.json",
+        "operationId": "JobSplits_GetList",
+        "operation": "GET /payroll/v2/tenant/{tenant}/jobs/{job}/splits",
+        "scopes": [
+          "tn.prl.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "jobId",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_splits_by_jobs_list",
+      "source": "src/domains/dispatch/jobs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-payroll-v2.json",
+        "operationId": "JobSplits_GetListByJobs",
+        "operation": "GET /payroll/v2/tenant/{tenant}/jobs/splits",
+        "scopes": [
+          "tn.prl.jobs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/jobs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "jobIds",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_types_get",
+      "source": "src/domains/dispatch/job-types.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "JobTypes_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/job-types/{id}",
+        "scopes": [
+          "tn.jpm.jobtypes:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/job-types.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id",
+          "externalDataApplicationGuid"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_job_types_list",
+      "source": "src/domains/dispatch/job-types.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "JobTypes_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/job-types",
+        "scopes": [
+          "tn.jpm.jobtypes:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/job-types.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "name",
+          "minDuration",
+          "maxDuration",
+          "priority",
+          "ids",
+          "orderBy",
+          "orderByDirection",
+          "externalDataApplicationGuid",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_projects_get",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Projects_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/projects/{id}",
+        "scopes": [
+          "tn.jpm.projects:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id",
+          "externalDataApplicationGuid"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_projects_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Projects_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/projects",
+        "scopes": [
+          "tn.jpm.projects:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "ids",
+          "customerId",
+          "locationId",
+          "projectTypeId",
+          "invoiceId",
+          "technicianId",
+          "jobId",
+          "appointmentId",
+          "projectManagerIds",
+          "businessUnitIds",
+          "startsBefore",
+          "startsOnOrAfter",
+          "completedBefore",
+          "completedOnOrAfter",
+          "targetCompletionDateBefore",
+          "targetCompletionDateOnOrAfter",
+          "status",
+          "externalDataApplicationGuid",
+          "externalDataKey",
+          "externalDataValues",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_projects_notes_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Projects_GetNotes",
+        "operation": "GET /jpm/v2/tenant/{tenant}/projects/{id}/notes",
+        "scopes": [
+          "tn.jpm.projects:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_projects_custom_field_types_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "Projects_GetCustomFieldTypes",
+        "operation": "GET /jpm/v2/tenant/{tenant}/projects/custom-fields",
+        "scopes": [
+          "tn.jpm.projects:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_types_get",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectTypes_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-types/{id}",
+        "scopes": [
+          "tn.jpm.projecttypes:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_types_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectTypes_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-types",
+        "scopes": [
+          "tn.jpm.projecttypes:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_statuses_get",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectStatuses_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-statuses/{id}",
+        "scopes": [
+          "tn.jpm.projectstatuses:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_statuses_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectStatuses_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-statuses",
+        "scopes": [
+          "tn.jpm.projectstatuses:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "sort",
+          "name",
+          "ids",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_sub_statuses_get",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectSubStatuses_Get",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-substatuses/{id}",
+        "scopes": [
+          "tn.jpm.projectsubstatuses:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_project_sub_statuses_list",
+      "source": "src/domains/dispatch/projects.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-jpm-v2.json",
+        "operationId": "ProjectSubStatuses_GetList",
+        "operation": "GET /jpm/v2/tenant/{tenant}/project-substatuses",
+        "scopes": [
+          "tn.jpm.projectsubstatuses:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/projects.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "name",
+          "statusId",
+          "ids",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_installed_equipment_get",
+      "source": "src/domains/dispatch/installed-equipment.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-equipment-systems-v2.json",
+        "operationId": "InstalledEquipment_Get",
+        "operation": "GET /equipmentsystems/v2/tenant/{tenant}/installed-equipment/{id}",
+        "scopes": [
+          "tn.eqs.installedequipment:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/installed-equipment.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_installed_equipment_list",
+      "source": "src/domains/dispatch/installed-equipment.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-equipment-systems-v2.json",
+        "operationId": "InstalledEquipment_GetList",
+        "operation": "GET /equipmentsystems/v2/tenant/{tenant}/installed-equipment",
+        "scopes": [
+          "tn.eqs.installedequipment:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/installed-equipment.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "locationIds",
+          "ids",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_installed_equipment_attachments_get",
+      "source": "src/domains/dispatch/installed-equipment.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-equipment-systems-v2.json",
+        "operationId": "InstalledEquipment_Get2",
+        "operation": "GET /equipmentsystems/v2/tenant/{tenant}/installed-equipment/attachments",
+        "scopes": [
+          "tn.eqs.installedequipment:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/installed-equipment.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "path"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_images_get",
+      "source": "src/domains/dispatch/images.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-pricebook-v2.json",
+        "operationId": "Images_Get",
+        "operation": "GET /pricebook/v2/tenant/{tenant}/images",
+        "scopes": [
+          "tn.pb.images:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/images.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "path"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_forms_list",
+      "source": "src/domains/dispatch/forms.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-forms-v2.json",
+        "operationId": "Form_GetForms",
+        "operation": "GET /forms/v2/tenant/{tenant}/forms",
+        "scopes": [
+          "tn.frm.forms:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/forms.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "hasConditionalLogic",
+          "hasTriggers",
+          "name",
+          "status",
+          "ids",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "dispatch_form_submissions_list",
+      "source": "src/domains/dispatch/forms.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-forms-v2.json",
+        "operationId": "FormSubmission_GetFormSubmissions",
+        "operation": "GET /forms/v2/tenant/{tenant}/submissions",
+        "scopes": [
+          "tn.frm.submissions:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/dispatch/forms.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "sort",
+          "formIds",
+          "createdById",
+          "status",
+          "submittedOnOrAfter",
+          "submittedBefore",
+          "ownerType",
+          "owners",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_attributed_leads_get",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-ads-v2.json",
+        "operationId": "AttributedLeads_Get",
+        "operation": "GET /marketingads/v2/tenant/{tenant}/attributed-leads",
+        "scopes": [
+          "tn.mads.attributedleads:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "fromUtc",
+          "toUtc",
+          "leadType",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_client_side_data_get",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-task-management-v2.json",
+        "operationId": "ClientSideData_Get",
+        "operation": "GET /taskmanagement/v2/tenant/{tenant}/data",
+        "scopes": [
+          "tn.tsm.data:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": []
+      },
+      "overlapClassification": "no material overlap identified",
+      "selectionGuidance": "Use this no-input Task Management reference-data read to populate task filters and forms; it is not a marketing analytics operation.",
+      "accuracyNotes": "Corrected after independent review: the pinned ClientSideData_Get operation belongs to Task Management and returns employees, business units, priorities, statuses, types, sources, and resolutions. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_client_specific_pricing_get_all_rate_sheets",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-pricebook-v2.json",
+        "operationId": "ClientSpecificPricing_GetAllRateSheets",
+        "operation": "GET /pricebook/v2/tenant/{tenant}/clientspecificpricing",
+        "scopes": [
+          "tn.pb.csp:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "ids",
+          "searchTerm",
+          "active",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_reviews",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-reputation-v2.json",
+        "operationId": "reviews",
+        "operation": "GET /marketingreputation/v2/tenant/{tenant}/reviews",
+        "scopes": [
+          "tn.mrep.reviews:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "search",
+          "reportType",
+          "sort",
+          "createdOnOrAfter",
+          "createdBefore",
+          "modifiedOnOrAfter",
+          "modifiedBefore",
+          "fromDate",
+          "toDate",
+          "responseTypes",
+          "locationIds",
+          "sources",
+          "reviewStatuses",
+          "technicianIds",
+          "campaignIds",
+          "fromRating",
+          "toRating",
+          "includeReviewsWithoutLocation",
+          "includeReviewsWithoutCampaign",
+          "includeReviewsWithoutTechnician",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "no material overlap identified",
+      "selectionGuidance": "Operation has a distinct resource or response purpose in this reviewed surface.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_scheduler_schedulers",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-scheduling-pro-v2.json",
+        "operationId": "Scheduler_Schedulers",
+        "operation": "GET /schedulingpro/v2/tenant/{tenant}/schedulers",
+        "scopes": [
+          "tn.sp.schedulers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "no material overlap identified",
+      "selectionGuidance": "Operation has a distinct resource or response purpose in this reviewed surface.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_scheduler_scheduler_performance",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-scheduling-pro-v2.json",
+        "operationId": "Scheduler_SchedulerPerformance",
+        "operation": "GET /schedulingpro/v2/tenant/{tenant}/schedulers/{id}/performance",
+        "scopes": [
+          "tn.sp.schedulers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id",
+          "sessionCreatedOnOrAfter",
+          "sessionCreatedBefore"
+        ]
+      },
+      "overlapClassification": "no material overlap identified",
+      "selectionGuidance": "Operation has a distinct resource or response purpose in this reviewed surface.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_scheduler_schedulersessions",
+      "source": "src/domains/marketing/attributions.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-scheduling-pro-v2.json",
+        "operationId": "Scheduler_SchedulerSessions",
+        "operation": "GET /schedulingpro/v2/tenant/{tenant}/schedulers/{id}/sessions",
+        "scopes": [
+          "tn.sp.schedulers:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/attributions.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "page",
+          "pageSize",
+          "includeTotal",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter"
+        ]
+      },
+      "overlapClassification": "no material overlap identified",
+      "selectionGuidance": "Operation has a distinct resource or response purpose in this reviewed surface.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_campaign_costs_list",
+      "source": "src/domains/marketing/campaign-costs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-v2.json",
+        "operationId": "CampaignCosts_GetList",
+        "operation": "GET /marketing/v2/tenant/{tenant}/costs",
+        "scopes": [
+          "tn.mrk.costs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/campaign-costs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "year",
+          "month",
+          "campaignId",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Search costs across campaigns; use the campaign-scoped route when one campaign ID defines the resource scope.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_campaign_costs_get",
+      "source": "src/domains/marketing/campaign-costs.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-v2.json",
+        "operationId": "CampaignCosts_Get",
+        "operation": "GET /marketing/v2/tenant/{tenant}/costs/{id}",
+        "scopes": [
+          "tn.mrk.costs:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/campaign-costs.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_campaigns_get",
+      "source": "src/domains/marketing/campaigns.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-v2.json",
+        "operationId": "Campaigns_Get",
+        "operation": "GET /marketing/v2/tenant/{tenant}/campaigns/{id}",
+        "scopes": [
+          "tn.mrk.campaigns:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/campaigns.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_campaigns_list",
+      "source": "src/domains/marketing/campaigns.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-v2.json",
+        "operationId": "Campaigns_GetList",
+        "operation": "GET /marketing/v2/tenant/{tenant}/campaigns",
+        "scopes": [
+          "tn.mrk.campaigns:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/campaigns.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "ids",
+          "name",
+          "campaignPhoneNumber",
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_campaigns_costs_list",
+      "source": "src/domains/marketing/campaigns.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-marketing-v2.json",
+        "operationId": "Campaigns_GetCosts",
+        "operation": "GET /marketing/v2/tenant/{tenant}/campaigns/{id}/costs",
+        "scopes": [
+          "tn.mrk.campaigns:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/campaigns.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "id",
+          "year",
+          "month",
+          "sort",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "List costs under one required campaign; use the broader cost search for cross-campaign queries.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_calls_v3_list",
+      "source": "src/domains/marketing/calls.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "Calls_Calls",
+        "operation": "GET /telecom/v3/tenant/{tenant}/calls",
+        "scopes": [
+          "tn.tlc.calls:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/calls.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "active",
+          "ids",
+          "createdAfter",
+          "modifiedAfter",
+          "campaignId",
+          "agentId",
+          "minDuration",
+          "phoneNumberCalled",
+          "callerPhoneNumber",
+          "agentName",
+          "agentIsExternal",
+          "agentExternalId",
+          "sort",
+          "createdBefore",
+          "createdOnOrAfter",
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Preferred ordinary call search; comma-delimited IDs plus v3 active and sort semantics differ from v2.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_calls_get",
+      "source": "src/domains/marketing/calls.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "Calls_GetDetails",
+        "operation": "GET /telecom/v2/tenant/{tenant}/calls/{id}",
+        "scopes": [
+          "tn.tlc.calls:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/calls.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_calls_recording_get",
+      "source": "src/domains/marketing/calls.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "Calls_GetRecording",
+        "operation": "GET /telecom/v2/tenant/{tenant}/calls/{id}/recording",
+        "scopes": [
+          "tn.tlc.calls:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/calls.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_calls_voice_mail_get",
+      "source": "src/domains/marketing/calls.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "Calls_GetVoiceMail",
+        "operation": "GET /telecom/v2/tenant/{tenant}/calls/{id}/voicemail",
+        "scopes": [
+          "tn.tlc.calls:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/calls.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": [
+          "id"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Known-identifier retrieval; corresponding list tools serve search or browsing when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_calls_v2_list",
+      "source": "src/domains/marketing/calls.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "Calls_GetCalls",
+        "operation": "GET /telecom/v2/tenant/{tenant}/calls",
+        "scopes": [
+          "tn.tlc.calls:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/calls.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler performs one request with page/pageSize controls; it does not auto-paginate.",
+        "parameters": [
+          "modifiedBefore",
+          "modifiedOnOrAfter",
+          "createdOnOrAfter",
+          "modifiedAfter",
+          "minDuration",
+          "phoneNumberCalled",
+          "campaignId",
+          "agentId",
+          "agentName",
+          "agentIsExternal",
+          "agentExternalId",
+          "orderBy",
+          "orderByDirection",
+          "activeOnly",
+          "createdAfter",
+          "createdBefore",
+          "ids",
+          "page",
+          "pageSize",
+          "includeTotal"
+        ]
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Use for a numeric ID array, activeOnly, or explicit orderBy semantics; its v2 filter contract remains separate from v3.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    },
+    {
+      "tool": "marketing_opt_in_outs_list",
+      "source": "src/domains/marketing/opt-in-out.ts",
+      "officialOperation": {
+        "archive": "docs/contracts/official-openapi-2026-09-04.tar.gz",
+        "contract": "st-specs/tenant-telecom.json",
+        "operationId": "OptInOut_GetAllOptOuts",
+        "operation": "GET /telecom/v3/tenant/{tenant}/optinouts/optouts",
+        "scopes": [
+          "tn.tlc.optinout:r"
+        ]
+      },
+      "behaviorEvidence": {
+        "handler": "src/domains/marketing/opt-in-out.ts registers the read and forwards validated inputs to the cited GET operation.",
+        "pagination": "Handler exposes no page/pageSize loop; description does not claim automatic pagination.",
+        "parameters": []
+      },
+      "overlapClassification": "related but distinct",
+      "selectionGuidance": "Filtered or scoped collection retrieval; corresponding get tools serve known identifiers when available.",
+      "accuracyNotes": "Author checked the revised purpose, input guidance, result scope, and nearest-alternative wording against the registered schema and handler. This is author evidence only; no grade or independent-review status is claimed. Operation identity refreshed from actual recorded handler dispatch and pinned resolver; final description accuracy is in the independent round3 report."
+    }
+  ]
+}

@@ -49,7 +49,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
     name: "pricebook_services_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get a service by ID",
+    description: "Retrieve a service by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_services_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Service ID"),
       externalDataApplicationGuid: z
@@ -80,7 +80,7 @@ export function registerServiceTools(client: ServiceTitanClient, registry: ToolR
     name: "pricebook_services_list",
     domain: "pricebook",
     operation: "read",
-    description: "List service pricebook items",
+    description: "List one requested page of service pricebook items using IDs, active state, created or modified timestamps, and external-data mappings. Use pricebook_services_get for one known item; use estimates or invoices for services quoted or sold on customer transactions.",
     schema: servicesListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);

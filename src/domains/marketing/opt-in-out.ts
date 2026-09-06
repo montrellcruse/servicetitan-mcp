@@ -125,7 +125,7 @@ export function registerMarketingOptInOutTools(
     client,
     registry,
     "marketing_opt_in_outs_list",
-    "List all opt-out records",
+    "Retrieve the tenant's marketing phone opt-out records from the v3 opt-in/out endpoint. This operation accepts no filters or pagination inputs.",
   );
 
   registerOptOutCreateTool(

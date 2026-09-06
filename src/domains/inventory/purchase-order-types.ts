@@ -84,7 +84,7 @@ export function registerPurchaseOrderTypeTools(
     name: "inventory_purchase_order_types_list",
     domain: "inventory",
     operation: "read",
-    description: "List purchase order types",
+    description: "List one requested page of purchase-order type definitions, with active-state and created or modified timestamp filters. Use this catalog to interpret order classifications; use inventory_purchase_orders_list for issued purchase-order records.",
     schema: purchaseOrderTypesListSchema.shape,
     handler: async (params) => {
       const parsed = purchaseOrderTypesListSchema.parse(params);

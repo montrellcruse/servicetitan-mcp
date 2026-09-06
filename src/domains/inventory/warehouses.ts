@@ -67,7 +67,7 @@ export function registerWarehouseTools(
     name: "inventory_warehouses_list",
     domain: "inventory",
     operation: "read",
-    description: "List warehouses",
+    description: "List one requested page of warehouse definitions using IDs, active state, created or modified dates, and external-data mapping filters. Use this to resolve warehouse and inventory-location identifiers; use inventory transfers or purchase orders for stock movement and procurement.",
     schema: warehousesListSchema.shape,
     handler: async (params) => {
       const input = warehousesListSchema.parse(params);

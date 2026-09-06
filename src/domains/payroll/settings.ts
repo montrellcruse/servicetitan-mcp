@@ -79,7 +79,7 @@ export function registerPayrollSettingsTools(
     name: "payroll_payroll_settings_employee_get",
     domain: "payroll",
     operation: "read",
-    description: "Get payroll settings for an employee",
+    description: "Retrieve payroll settings for one employee by the required employee ID. Use payroll_payroll_settings_list to search across workers when the ID is unknown.",
     schema: employeePayrollSettingsSchema.shape,
     handler: async (params) => {
       const input = employeePayrollSettingsSchema.parse(params);
@@ -120,7 +120,7 @@ export function registerPayrollSettingsTools(
     name: "payroll_payroll_settings_list",
     domain: "payroll",
     operation: "read",
-    description: "List payroll settings",
+    description: "List one requested page of payroll-setting records across employees and technicians, with active, employee-type, created, and modified filters. Use the employee or technician get tool when a worker ID is known.",
     schema: payrollSettingsListSchema.shape,
     handler: async (params) => {
       const input = payrollSettingsListSchema.parse(params);
@@ -151,7 +151,7 @@ export function registerPayrollSettingsTools(
     name: "payroll_payroll_settings_technician_get",
     domain: "payroll",
     operation: "read",
-    description: "Get payroll settings for a technician",
+    description: "Retrieve payroll settings for one technician by the required technician ID. Use payroll_payroll_settings_list to search across workers when the ID is unknown.",
     schema: technicianPayrollSettingsSchema.shape,
     handler: async (params) => {
       const input = technicianPayrollSettingsSchema.parse(params);

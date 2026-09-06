@@ -64,7 +64,7 @@ export function registerPurchaseOrderMarkupTools(
     name: "inventory_purchase_order_markups_get",
     domain: "inventory",
     operation: "read",
-    description: "Get a purchase order markup by ID",
+    description: "Retrieve a purchase order markup by its ServiceTitan ID. Returns the single upstream record without pagination; use inventory_purchase_order_markups_list to search when the ID is unknown.",
     schema: purchaseOrderMarkupIdSchema.shape,
     handler: async (params) => {
       const { id } = purchaseOrderMarkupIdSchema.parse(params);
@@ -82,7 +82,7 @@ export function registerPurchaseOrderMarkupTools(
     name: "inventory_purchase_order_markups_list",
     domain: "inventory",
     operation: "read",
-    description: "List purchase order markups",
+    description: "List one requested page of purchase-order markup definitions, filterable by IDs and created or modified timestamps. Use inventory_purchase_order_markups_get for one known markup ID; use inventory_purchase_orders_list for purchase-order transactions.",
     schema: purchaseOrderMarkupsListSchema.shape,
     handler: async (params) => {
       const parsed = purchaseOrderMarkupsListSchema.parse(params);

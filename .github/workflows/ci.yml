@@ -24,6 +24,8 @@ jobs:
       - run: npm run lint
       - run: npm run test:coverage
       - run: npm run test:wire
+      - run: npm run discovery:check
+      - run: npm run evaluation:check
       - run: npm run test:packaging
       - run: npm run release:check
       - run: npm pack --dry-run

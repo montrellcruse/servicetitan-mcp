@@ -156,7 +156,7 @@ export function registerIntelligenceDailySnapshotTool(
       };
     },
     description:
-      "Daily operational snapshot with appointments, job progress, revenue to-date, call outcomes, next-day upcoming jobs, and plain-English highlights" +
+      "Build a one-day operational snapshot in the configured tenant timezone from all fetched appointment, job, invoice, payment, estimate, and call pages plus Report 163 for the next day. Returns appointment progress, daily invoiced revenue and collections, sold-estimate value, call outcomes, highlights, and at most 20 upcoming jobs; truncation and partial source failures appear in _warnings. Results are cached for 60 seconds." +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
     schema: dailySnapshotSchema.shape,
     handler: async (params) => {

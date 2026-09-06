@@ -52,7 +52,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_categories_get",
     domain: "pricebook",
     operation: "read",
-    description: "Get a pricebook category by ID",
+    description: "Retrieve a pricebook category by its ServiceTitan ID. Returns the single upstream record without pagination; use pricebook_categories_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Category ID"),
     },
@@ -72,7 +72,7 @@ export function registerCategoryTools(client: ServiceTitanClient, registry: Tool
     name: "pricebook_categories_list",
     domain: "pricebook",
     operation: "read",
-    description: "List pricebook categories",
+    description: "List one requested page of pricebook categories using category type, active state, and created or modified timestamps. Use pricebook_categories_get for one known category ID; use the service, material, or equipment list tool for sellable items.",
     schema: categoryListSchema.shape,
     handler: async (params) => {
       const query = buildParams(params as Record<string, unknown>);

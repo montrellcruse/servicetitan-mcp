@@ -95,7 +95,7 @@ export function registerDispatchAppointmentTools(
     name: "dispatch_appointments_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get an appointment by ID",
+    description: "Retrieve one appointment record by ID, including its dispatch and scheduling data. Use dispatch_appointments_list to search by job, customer, technician, status, start time, or other filters.",
     schema: {
       id: z.number().int().describe("Appointment ID"),
     },
@@ -135,7 +135,7 @@ export function registerDispatchAppointmentTools(
     name: "dispatch_appointments_list",
     domain: "dispatch",
     operation: "read",
-    description: "List appointments",
+    description: "Search appointments by IDs, job, project, customer, technician, status, start range, or created and modified ranges. Returns one page; use dispatch_appointments_get for a known ID.",
     schema: appointmentListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof appointmentListSchema>;

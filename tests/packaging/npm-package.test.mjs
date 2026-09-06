@@ -12,7 +12,7 @@ const repo = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const publicDocumentation = [
   "README.md", "CHANGELOG.md", "TOOLS.md", "CONTRIBUTING.md",
   "docs/MIGRATION-v3.md", "docs/contracts/README.md", "docs/BENCHMARKS.md",
-  "docs/releases/VALIDATION-v3.md", "docs/releases/v3-acceptance.json", "benchmarks/README.md",
+  "docs/releases/VALIDATION-v3.md", "docs/releases/v3-acceptance.json", "benchmarks/README.md", "docs/evaluation/README.md",
 ];
 
 async function put(root, path, contents = "fixture\n") {
@@ -59,7 +59,7 @@ test("npm package includes public runtime files and excludes private evidence", 
     const excluded = [
       ".env", ".env.integration", ".env.secondary", "docs/reviews/live.json",
       "docs/releases/private.json", "audit/live.json", "benchmarks/run.mjs", "benchmarks/results/live.json",
-      "private-review.tar", "private-package.tgz",
+      "private-review.tar", "private-package.tgz", "docs/evaluation/selection-candidate.json", "docs/evaluation/round3-tools.json",
       "docs/contracts/official-openapi-2026-09-04.tar.gz", "scripts/private.mjs", "tests/private.test.mjs",
     ];
     for (const file of excluded) await put(temporary, file, "PRIVATE_CANARY\n");

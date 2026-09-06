@@ -1,0 +1,537 @@
+{
+  "evaluator": "gpt-5.6-sol",
+  "reasoningEffort": "low",
+  "method": "single-pass synthetic tool selection; no business calls",
+  "results": [
+    {
+      "id": "customer_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "crm_customers_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The customer ID is known, so the single-record customer route is appropriate."
+    },
+    {
+      "id": "customer_search",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "crm_customers_list",
+          "arguments": {
+            "name": "Acme",
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The customer list route supports name filtering and caller-managed paging."
+    },
+    {
+      "id": "location_contacts",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "crm_locations_contacts_list",
+          "arguments": {
+            "id": 42,
+            "page": 1
+          }
+        }
+      ],
+      "reason": "This route lists contacts attached to a known location."
+    },
+    {
+      "id": "location_contact_sync",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_locations_contacts",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The export feed is the catalog route for incremental location-contact synchronization."
+    },
+    {
+      "id": "customer_payments",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "accounting_payments_list",
+          "arguments": {
+            "page": 1
+          }
+        }
+      ],
+      "reason": "This route returns customer payment transactions rather than vendor disbursements."
+    },
+    {
+      "id": "vendor_payments",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "accounting_ap_payments_list",
+          "arguments": {
+            "page": 1
+          }
+        }
+      ],
+      "reason": "This route returns accounts-payable disbursements to vendors."
+    },
+    {
+      "id": "cancel_catalog",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "dispatch_job_cancel_reasons_list",
+          "arguments": {
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The paginated catalog route is intended for browsing cancellation reason definitions."
+    },
+    {
+      "id": "cancel_ids",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "dispatch_jobs_cancel_reasons_list",
+          "arguments": {
+            "ids": "7,8"
+          }
+        }
+      ],
+      "reason": "The Jobs lookup resolves a supplied comma-delimited set of known cancellation-reason IDs."
+    },
+    {
+      "id": "calls_current",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "marketing_calls_v3_list",
+          "arguments": {
+            "ids": "7,8",
+            "active": "True",
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The v3 route uses comma-delimited IDs and the active enum filter."
+    },
+    {
+      "id": "calls_legacy",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "marketing_calls_v2_list",
+          "arguments": {
+            "ids": [
+              7,
+              8
+            ],
+            "activeOnly": true,
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The v2 route accepts a numeric ID array and activeOnly."
+    },
+    {
+      "id": "costs_broad",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "marketing_campaign_costs_list",
+          "arguments": {
+            "year": 2026,
+            "month": 8,
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The broad campaign-cost search works across campaigns and supports year and month filters."
+    },
+    {
+      "id": "costs_one",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "marketing_campaigns_costs_list",
+          "arguments": {
+            "id": 42,
+            "year": 2026,
+            "month": 8,
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The campaign-scoped costs route requires the campaign ID and supports year and month filters."
+    },
+    {
+      "id": "timesheets_one",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "payroll_timesheets_job_list",
+          "arguments": {
+            "jobId": 42,
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The job-scoped route is intended for timesheets attached to one known job."
+    },
+    {
+      "id": "timesheets_many",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "payroll_timesheets_jobs_list",
+          "arguments": {
+            "jobIds": "42,43",
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The cross-job route accepts comma-delimited job IDs."
+    },
+    {
+      "id": "employees_sync",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_employees",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "This is one of the equivalent employee export feeds exposed in the profile; only one is selected."
+    },
+    {
+      "id": "employees_focused",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "people_employees_export",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The dispatch profile exposes the People-scoped employee export feed."
+    },
+    {
+      "id": "activity_codes_sync",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_activity_codes",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "This is one of the equivalent activity-code feeds exposed in the profile; only one is selected."
+    },
+    {
+      "id": "activity_codes_focused",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "settings_activity_codes_export",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The dispatch profile exposes the Settings-scoped activity-code export feed."
+    },
+    {
+      "id": "activities_sync",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_activities",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "This is one of the equivalent activity export feeds exposed in the profile; only one is selected."
+    },
+    {
+      "id": "activities_focused",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "settings_activities_export",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The dispatch profile exposes the Settings-scoped activities export feed."
+    },
+    {
+      "id": "tag_types_sync",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_tag_types",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "This is one of the equivalent tag-type export feeds exposed in the profile; only one is selected."
+    },
+    {
+      "id": "tag_types_focused",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "settings_tag_types_export",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The dispatch profile exposes the Settings-scoped tag-type export feed."
+    },
+    {
+      "id": "estimate_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "estimates_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The estimate ID is known, so the single-record route is appropriate."
+    },
+    {
+      "id": "purchase_order_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "inventory_purchase_orders_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The purchase-order ID is known, so the single-record route is appropriate."
+    },
+    {
+      "id": "membership_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "memberships_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The customer-membership ID is known, so the single-record route is appropriate."
+    },
+    {
+      "id": "service_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "pricebook_services_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The pricebook service ID is known, so the single-record route is appropriate."
+    },
+    {
+      "id": "zone_known",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "scheduling_zones_get",
+          "arguments": {
+            "id": 42
+          }
+        }
+      ],
+      "reason": "The scheduling-zone ID is known, so the single-record route is appropriate."
+    },
+    {
+      "id": "report_definition",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "reporting_reports_get",
+          "arguments": {
+            "reportCategory": "accounting",
+            "reportId": 42
+          }
+        }
+      ],
+      "reason": "This retrieves the known report definition and parameter contract without executing data."
+    },
+    {
+      "id": "report_execution",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "reporting_reports_data_create",
+          "arguments": {
+            "reportCategory": "accounting",
+            "reportId": 42,
+            "parameters": [],
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The report and category are supplied, and the prompt states that the definition requires no parameters."
+    },
+    {
+      "id": "report_values",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "reporting_dynamic_value_sets_get",
+          "arguments": {
+            "dynamicSetId": "businessUnits",
+            "page": 1
+          }
+        }
+      ],
+      "reason": "The dynamic-value-set route resolves selectable choices for the supplied set identifier."
+    },
+    {
+      "id": "revenue",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "intel_revenue_summary",
+          "arguments": {
+            "startDate": "2026-08-01",
+            "endDate": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The intelligence revenue summary accepts the supplied reporting-period boundaries."
+    },
+    {
+      "id": "snapshot",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "intel_daily_snapshot",
+          "arguments": {
+            "date": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The daily snapshot route accepts the requested snapshot date."
+    },
+    {
+      "id": "technician_lookup",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "intel_lookup",
+          "arguments": {
+            "type": "technicians",
+            "search": "Sam"
+          }
+        }
+      ],
+      "reason": "The intelligence lookup resolves technician names and IDs with a partial-name search."
+    },
+    {
+      "id": "health",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "st_health_check",
+          "arguments": {}
+        }
+      ],
+      "reason": "The health check verifies authentication and representative tenant read access."
+    },
+    {
+      "id": "readiness",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "st_readiness_check",
+          "arguments": {
+            "reports": true
+          }
+        }
+      ],
+      "reason": "Readiness with report validation checks enabled modules and report-definition compatibility without report-data execution."
+    },
+    {
+      "id": "stored_chunk",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "st_result_read",
+          "arguments": {
+            "resultId": "00000000-0000-4000-8000-000000000001",
+            "offset": 0
+          }
+        }
+      ],
+      "reason": "Stored results are read from zero offset for the first chunk."
+    },
+    {
+      "id": "no_customer_id",
+      "action": "clarify",
+      "calls": [],
+      "reason": "An exact customer cannot be selected without an ID or identifying search criteria."
+    },
+    {
+      "id": "missing_revenue_period",
+      "action": "clarify",
+      "calls": [],
+      "reason": "The revenue summary requires both startDate and endDate, and no reporting period was chosen."
+    },
+    {
+      "id": "unavailable_payroll",
+      "action": "unavailable",
+      "calls": [],
+      "reason": "The CRM-only profile exposes no employee payroll tool."
+    },
+    {
+      "id": "unavailable_mutation",
+      "action": "unavailable",
+      "calls": [],
+      "reason": "The current readonly catalog exposes no customer-contact deletion operation."
+    },
+    {
+      "id": "explicit_employee",
+      "action": "call",
+      "calls": [
+        {
+          "tool": "export_employees",
+          "arguments": {
+            "from": "2026-09-01"
+          }
+        }
+      ],
+      "reason": "The explicitly enabled profile exposes equivalent employee feeds; this selects exactly one."
+    }
+  ],
+  "corpusHash": "1ed8474dc2ab68a8d422dfaa2176743c73ad1808c3a94a0bc84a8a333a55a792",
+  "definitionHash": "4c412bb98c371dc5331d7dea2b991391616066958bcb77a0f92491631aac620f",
+  "provenance": "Hashes bind the exact tasks/catalog provided to the fresh version-blinded selection agent; added during harness validation."
+}

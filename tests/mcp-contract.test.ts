@@ -145,7 +145,7 @@ describe("MCP wire contract: tools/list", () => {
     const { tools } = await listAllDomainTools();
 
     // Literal copied from src/domains/crm/customers.ts, not read from the registry.
-    expect(toolNamed(tools, "crm_customers_get").description).toBe("Get a customer by ID");
+    expect(toolNamed(tools, "crm_customers_get").description).toBe("Retrieve one customer record by ID, including the customer data returned by ServiceTitan. Use crm_customers_list to search by name, address, phone, external data, activity, or date ranges.");
   });
 
   it("delivers the input schema alongside the description", async () => {

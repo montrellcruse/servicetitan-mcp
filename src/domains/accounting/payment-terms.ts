@@ -26,7 +26,7 @@ export function registerPaymentTermTools(
     name: "accounting_payment_terms_get",
     domain: "accounting",
     operation: "read",
-    description: "Get a payment term by ID",
+    description: "Retrieve a payment term by its ServiceTitan ID. Returns the single upstream record without pagination; use accounting_payment_terms_list to search when the ID is unknown.",
     schema: paymentTermGetSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof paymentTermGetSchema>;
@@ -44,7 +44,7 @@ export function registerPaymentTermTools(
     name: "accounting_payment_terms_list",
     domain: "accounting",
     operation: "read",
-    description: "List payment terms",
+    description: "List one requested page of invoice payment-term definitions, filterable by IDs and created or modified timestamps. Use accounting_payment_terms_get for one known term; use accounting_invoices_list for invoice transactions.",
     schema: paymentTermsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof paymentTermsListSchema>;

@@ -37,13 +37,16 @@ export async function createMcpServer(config: ServiceTitanConfig, options: { cli
   });
   registry.register({
     name: "st_readiness_check", domain: "_system", operation: "read",
-    schema: { reports: z.boolean().optional().describe("Validate configured intelligence report definitions without executing report data") },
+    schema: { reports: z.boolean().optional().describe("When true, also fetch and validate configured intelligence report definitions; report data is never executed") },
     description: "Read-only compatibility manifest: authentication, representative module read access, report fields/parameters and definition fingerprints. Does not certify write scopes or metric totals.",
     handler: async (params) => toolResult(await checkReadiness(client, config, { reports: (params as { reports?: boolean }).reports })),
   });
   registry.register({
     name: "st_result_read", domain: "_system", operation: "read",
-    schema: { resultId: z.string().uuid(), offset: z.number().int().min(0).optional().default(0) },
+    schema: {
+      resultId: z.string().uuid().describe("Session-owned result identifier returned by a tool whose response exceeded the inline limit"),
+      offset: z.number().int().min(0).optional().default(0).describe("Zero-based character offset for the next JSON text chunk; start at 0 and then use nextOffset"),
+    },
     description: "Retrieve a stored large result as bounded JSON text chunks. Start at offset 0, concatenate text in nextOffset order, then parse JSON. Results expire after five minutes and belong to this session.",
     handler: async params => { const { resultId, offset = 0 } = params as { resultId: string; offset?: number }; return toolResult(registry.readResult(resultId, offset)); },
   });

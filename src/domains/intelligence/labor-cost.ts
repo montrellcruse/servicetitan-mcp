@@ -108,7 +108,7 @@ export function registerIntelligenceLaborCostTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Reported labor hours by employee from Report 166. The default report does not expose gross pay, so cost and hourly-rate fields are returned as unavailable." +
+      "Summarize employee regular, overtime, double-overtime, and total hours from Report 166 for the selected date range. When the tenant report exposes GrossPay, the tool also derives cost and effective hourly rate; otherwise those fields are unavailable rather than estimated. Report execution may wait for per-report/client spacing, and source failures are returned in _warnings." +
       '\n\nExamples:\n- "What labor hours were reported this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime hours by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"',
     schema: laborCostSchema.shape,
     handler: async (params) => {

@@ -123,7 +123,7 @@ export function registerTransferTools(
     name: "inventory_transfers_list",
     domain: "inventory",
     operation: "read",
-    description: "List transfers",
+    description: "List one requested page of inventory transfers using IDs, number, status, transfer type, source and destination locations, dates, sync status, and external-data filters. Use this for stock moved between locations; use inventory_returns_list for stock returned to a vendor.",
     schema: transfersListSchema.shape,
     handler: async (params) => {
       const input = transfersListSchema.parse(params);

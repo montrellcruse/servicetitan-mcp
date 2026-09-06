@@ -1,0 +1,1341 @@
+{
+  "schemaVersion": 1,
+  "version": "3.0.1",
+  "round": 3,
+  "definitionHash": "4c412bb98c371dc5331d7dea2b991391616066958bcb77a0f92491631aac620f",
+  "rubricRevision": "b9881b0cfec88969e42672c92544487ca191a992",
+  "evaluator": "Independent cross-review by Codex gpt-5.6-sol at low effort; authors do not score their own batches. This is a local rubric estimate, not Glama hosted scoring or a statistical performance estimate.",
+  "reviewed": 264,
+  "accuracyPassed": 264,
+  "mean": 4.411363636363636,
+  "minimum": 4,
+  "descriptionQuality": 4.2,
+  "coherenceAssumption": 2.5,
+  "projectedOverall": 3.7,
+  "rawMean": 4.396401515151518,
+  "rawMinimum": 4,
+  "conservativeUnroundedOverall": 3.716488636363638,
+  "targetPassed": true,
+  "scores": [
+    {
+      "tool": "st_health_check",
+      "raw": 4.35,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "st_readiness_check",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "st_result_read",
+      "raw": 5,
+      "tdqs": 5
+    },
+    {
+      "tool": "accounting_ap_credits_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_ap_payments_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_gl_accounts_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_gl_accounts_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_gl_account_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_invoices_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_invoices_custom_field_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_journal_entries_get_summary",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "accounting_journal_entries_get_details",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "accounting_journal_entries_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payments_custom_field_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payments_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payment_types_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payment_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payment_terms_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_payment_terms_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "accounting_tax_zones_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "crm_bookings_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_bookings_provider_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_bookings_contacts_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_bookings_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_bookings_provider_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_bookings_provider_contacts_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_booking_provider_tags_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_booking_provider_tags_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_contact_methods_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_contact_methods_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_contacts_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_contacts_by_relationship_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_contacts_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_contact_relationships_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_customers_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_customers_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_customers_notes_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_customers_contacts_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_customers_contacts_modified_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_customers_custom_field_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_leads_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_leads_notes_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_leads_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_locations_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_locations_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_locations_notes_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_locations_contacts_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_locations_contacts_modified_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "crm_locations_custom_field_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "crm_location_labor_types_list",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "dispatch_arrival_windows_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_arrival_windows_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_arrival_window_configuration_get",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "dispatch_appointments_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_appointments_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_jobs_get_attachment",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_jobs_list_attachments",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "dispatch_call_reasons_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "dispatch_job_cancel_reasons_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_job_hold_reasons_list",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "dispatch_jobs_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_jobs_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_jobs_equipment_get",
+      "raw": 4.5,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_jobs_notes_list",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "dispatch_jobs_cancel_reasons_list",
+      "raw": 4.5,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_jobs_history_get",
+      "raw": 4.5,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_jobs_canceled_logs_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "dispatch_jobs_booked_log_get",
+      "raw": 4.5,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_jobs_custom_field_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "dispatch_job_splits_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_job_splits_by_jobs_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_job_types_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_job_types_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_projects_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_projects_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_projects_notes_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "dispatch_projects_custom_field_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "dispatch_project_types_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_project_types_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_project_statuses_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_project_statuses_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_project_sub_statuses_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_project_sub_statuses_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_installed_equipment_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_installed_equipment_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_installed_equipment_attachments_get",
+      "raw": 4.6,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "dispatch_images_get",
+      "raw": 4.6,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "dispatch_forms_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "dispatch_form_submissions_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "estimates_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_export_estimates",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "estimates_items_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_estimate_templates_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_estimate_templates_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_proposal_templates_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_proposal_templates_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "estimates_proposal_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "export_invoices",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_invoice_items",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_invoice_templates",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_payments",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_adjustments",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_inventory_bills",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_payroll_adjustments",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_customers",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_customers_contacts",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_locations_contacts",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_locations",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_leads",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_bookings",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_jobs",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_job_notes",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_job_history",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_job_canceled_logs",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_job_splits",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_appointments",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_appointment_assignments",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_projects",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_project_notes",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_installed_equipment",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_technicians",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_employees",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_services",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_materials",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_equipment",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_memberships",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_membership_types",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_membership_status_changes",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_service_agreements",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_recurring_service_types",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_calls",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_timesheet_codes",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_gross_pay_items",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_payroll_settings",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_activities",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_activity_codes",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_business_units",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_tag_types",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_purchase_orders",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_returns",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "export_transfers",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "intel_lookup",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_revenue_summary",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_technician_scorecard",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_membership_health",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_estimate_pipeline",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_campaign_performance",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_daily_snapshot",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_csr_performance",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_labor_cost",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "intel_invoice_tracking",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "inventory_purchase_orders_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_purchase_orders_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_purchase_orders_requests_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "inventory_purchase_order_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_purchase_order_markups_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_purchase_order_markups_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_returns_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_return_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_transfers_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_vendors_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_vendors_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_warehouses_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "inventory_receipts_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "marketing_attributed_leads_get",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "marketing_client_side_data_get",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "marketing_client_specific_pricing_get_all_rate_sheets",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "marketing_reviews",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "marketing_scheduler_schedulers",
+      "raw": 4.15,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "marketing_scheduler_scheduler_performance",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "marketing_scheduler_schedulersessions",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "marketing_campaign_costs_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "marketing_campaign_costs_get",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "marketing_campaigns_get",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "marketing_campaigns_list",
+      "raw": 4.3,
+      "tdqs": 4.3
+    },
+    {
+      "tool": "marketing_campaigns_costs_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "marketing_calls_v3_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "marketing_calls_get",
+      "raw": 4,
+      "tdqs": 4
+    },
+    {
+      "tool": "marketing_calls_recording_get",
+      "raw": 4.6,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "marketing_calls_voice_mail_get",
+      "raw": 4.6,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "marketing_calls_v2_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "marketing_opt_in_outs_list",
+      "raw": 4.45,
+      "tdqs": 4.5
+    },
+    {
+      "tool": "memberships_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_custom_fields_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_status_changes_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_types_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_types_recurring_service_items_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_types_discounts_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "memberships_types_duration_billing_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_recurring_services_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_recurring_services_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_recurring_service_events_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_recurring_service_types_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_recurring_service_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_service_agreements_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "memberships_service_agreements_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "payroll_payrolls_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_technicians_payrolls_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "payroll_employees_payrolls_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "payroll_payroll_settings_employee_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_payroll_settings_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_payroll_settings_technician_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_timesheet_codes_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_timesheet_codes_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_timesheets_job_list",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "payroll_timesheets_jobs_list",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "payroll_timesheets_non_job_list",
+      "raw": 4.35,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "payroll_gross_pay_items_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_payroll_adjustments_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "payroll_payroll_adjustments_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "people_employees_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_employees_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_employees_export",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "people_technicians_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_technicians_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_technician_shifts_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_technician_shifts_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "people_performance_get",
+      "raw": 4.35,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "people_trucks_list",
+      "raw": 4.35,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_categories_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_categories_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_discounts_fees_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_discounts_fees_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_equipment_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_equipment_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_materials_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_materials_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_materials_cost_types_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_materials_markup_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_materials_markup_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_services_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "pricebook_services_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "reporting_dynamic_value_sets_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "reporting_report_categories_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "reporting_reports_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "reporting_reports_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "reporting_reports_data_create",
+      "raw": 4.75,
+      "tdqs": 4.8
+    },
+    {
+      "tool": "scheduling_appointment_assignments_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_business_hours_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "scheduling_non_job_appointments_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_non_job_appointments_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_teams_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_teams_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_zones_get",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "scheduling_zones_list",
+      "raw": 4.4,
+      "tdqs": 4.4
+    },
+    {
+      "tool": "settings_business_units_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_business_units_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_tag_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_tag_types_export",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "settings_activity_codes_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activity_codes_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activity_codes_export",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "settings_activity_categories_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activity_categories_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activity_categories_export",
+      "raw": 4.65,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "settings_activity_types_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activity_types_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_activities_export",
+      "raw": 4.7,
+      "tdqs": 4.7
+    },
+    {
+      "tool": "settings_tasks_get",
+      "raw": 4.2,
+      "tdqs": 4.2
+    },
+    {
+      "tool": "settings_tasks_list",
+      "raw": 4.55,
+      "tdqs": 4.6
+    },
+    {
+      "tool": "settings_user_roles_list",
+      "raw": 4.2,
+      "tdqs": 4.2
+    }
+  ]
+}

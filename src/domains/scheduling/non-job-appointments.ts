@@ -73,7 +73,7 @@ export function registerSchedulingNonJobAppointmentTools(
     name: "scheduling_non_job_appointments_get",
     domain: "scheduling",
     operation: "read",
-    description: "Get a non-job appointment by ID",
+    description: "Retrieve a non-job appointment by its ServiceTitan ID. Returns the single upstream record without pagination; use scheduling_non_job_appointments_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Non-job appointment ID"),
     },
@@ -134,7 +134,7 @@ export function registerSchedulingNonJobAppointmentTools(
     name: "scheduling_non_job_appointments_list",
     domain: "scheduling",
     operation: "read",
-    description: "List non-job appointments",
+    description: "List one requested page of non-job appointments using IDs, technician, timesheet code, schedule visibility, active state, start bounds, and created or modified timestamps. Use scheduling_non_job_appointments_get for a known appointment; use dispatch appointment tools for appointments attached to jobs.",
     schema: nonJobAppointmentListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof nonJobAppointmentListSchema>;

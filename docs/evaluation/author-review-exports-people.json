@@ -1,0 +1,1748 @@
+{
+  "scope": "Supported read tools in export, settings, people, and payroll",
+  "authority": [
+    "Pinned official OpenAPI archive docs/contracts/official-openapi-2026-09-04.tar.gz",
+    "Current registration schemas and handlers",
+    "Captured v3.0.0 runtime tools/list baseline used by the release evaluation"
+  ],
+  "reviewType": "Author factual review; no independent-review or numeric-grade claim",
+  "toolCount": 83,
+  "tools": [
+    {
+      "tool": "export_invoices",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-accounting-v2.json",
+        "operationId": "Export_Invoices",
+        "path": "/tenant/{tenant}/export/invoices",
+        "summary": "Provides export feed for invoices"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/invoices",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_invoice_items",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-accounting-v2.json",
+        "operationId": "Export_InvoiceItems",
+        "path": "/tenant/{tenant}/export/invoice-items",
+        "summary": "Provides export feed for invoice items"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/invoice-items",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_invoice_templates",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-memberships-v2.json",
+        "operationId": "Export_InvoiceTemplates",
+        "path": "/tenant/{tenant}/export/invoice-templates",
+        "summary": "Provides export feed for invoice templates"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/invoice-templates",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_payments",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-accounting-v2.json",
+        "operationId": "Export_Payments",
+        "path": "/tenant/{tenant}/export/payments",
+        "summary": "Provides export feed for payments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/payments",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_adjustments",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-inventory-v2.json",
+        "operationId": "Export_Adjustments",
+        "path": "/tenant/{tenant}/export/adjustments",
+        "summary": "Provides export feed for adjustments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/adjustments",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_inventory_bills",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-accounting-v2.json",
+        "operationId": "Export_InventoryBills",
+        "path": "/tenant/{tenant}/export/inventory-bills",
+        "summary": "Provides export feed for inventory bills"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/inventory-bills",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_payroll_adjustments",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_PayrollAdjustments",
+        "path": "/tenant/{tenant}/export/payroll-adjustments",
+        "summary": "Provides export feed for payroll adjustments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/payroll-adjustments",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_customers",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportCustomers_GetCustomers",
+        "path": "/tenant/{tenant}/export/customers",
+        "summary": "Provides export feed for customers"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/customers",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_customers_contacts",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportContacts_CustomersContacts",
+        "path": "/tenant/{tenant}/export/customers/contacts",
+        "summary": "Provides export feed for customer contacts"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/customers/contacts",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_locations_contacts",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportContacts_LocationsContacts",
+        "path": "/tenant/{tenant}/export/locations/contacts",
+        "summary": "Provides export feed for locations contacts"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/locations/contacts",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_locations",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportLocations_Locations",
+        "path": "/tenant/{tenant}/export/locations",
+        "summary": "Provides export feed for appointments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/locations",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_leads",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportLeads_Leads",
+        "path": "/tenant/{tenant}/export/leads",
+        "summary": "Provides export feed for leads"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/leads",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_bookings",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-crm-v2.json",
+        "operationId": "ExportBookings_Get",
+        "path": "/tenant/{tenant}/export/bookings",
+        "summary": "Provides export feed for bookings"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/bookings",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_jobs",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_Jobs",
+        "path": "/tenant/{tenant}/export/jobs",
+        "summary": "Provides export feed for jobs"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/jobs",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_job_notes",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_JobNotes",
+        "path": "/tenant/{tenant}/export/job-notes",
+        "summary": "Provides export feed for job notes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/job-notes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_job_history",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_JobHistory",
+        "path": "/tenant/{tenant}/export/job-history",
+        "summary": "Provides export feed for job status history."
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/job-history",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_job_canceled_logs",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_JobCancelReasons",
+        "path": "/tenant/{tenant}/export/job-canceled-logs",
+        "summary": "Provides export feed for job canceled logs"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/job-canceled-logs",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_job_splits",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_JobSplits",
+        "path": "/tenant/{tenant}/export/jobs/splits",
+        "summary": "Provides export feed for job splits"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/jobs/splits",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_appointments",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_Appointments",
+        "path": "/tenant/{tenant}/export/appointments",
+        "summary": "Provides export feed for appointments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/appointments",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_appointment_assignments",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-dispatch-v2.json",
+        "operationId": "Export_AppointmentAssignments",
+        "path": "/tenant/{tenant}/export/appointment-assignments",
+        "summary": "Provides export feed for appointment assignments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/appointment-assignments",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_projects",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_Projects",
+        "path": "/tenant/{tenant}/export/projects",
+        "summary": "Provides export feed for projects"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/projects",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_project_notes",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-jpm-v2.json",
+        "operationId": "Export_ProjectNotes",
+        "path": "/tenant/{tenant}/export/project-notes",
+        "summary": "Provides export feed for project notes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/project-notes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_installed_equipment",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-equipment-systems-v2.json",
+        "operationId": "Export_ExportInstalledEquipment",
+        "path": "/tenant/{tenant}/export/installed-equipment",
+        "summary": null
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/installed-equipment",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_technicians",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_Technicians",
+        "path": "/tenant/{tenant}/export/technicians",
+        "summary": "Provides export feed for technicians"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/technicians",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_employees",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_Employees",
+        "path": "/tenant/{tenant}/export/employees",
+        "summary": "Provides export feed for employees"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/employees",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "people_employees_export"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_services",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-pricebook-v2.json",
+        "operationId": "Export_Services",
+        "path": "/tenant/{tenant}/export/services",
+        "summary": "Provides export feed for services"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/services",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_materials",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-pricebook-v2.json",
+        "operationId": "Export_Materials",
+        "path": "/tenant/{tenant}/export/materials",
+        "summary": "Provides export feed for materials"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/materials",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_equipment",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-pricebook-v2.json",
+        "operationId": "Export_Equipment",
+        "path": "/tenant/{tenant}/export/equipment",
+        "summary": "Provides export feed for equipment"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/equipment",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_memberships",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-memberships-v2.json",
+        "operationId": "Export_Memberships",
+        "path": "/tenant/{tenant}/export/memberships",
+        "summary": "Provides export feed for customer memberships"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/memberships",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_membership_types",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-memberships-v2.json",
+        "operationId": "Export_MembershipTypes",
+        "path": "/tenant/{tenant}/export/membership-types",
+        "summary": "Provides export feed for membership types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/membership-types",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_membership_status_changes",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-memberships-v2.json",
+        "operationId": "Export_MembershipStatusChanges",
+        "path": "/tenant/{tenant}/export/membership-status-changes",
+        "summary": "Provides export feed for customer membership status changes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/membership-status-changes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_service_agreements",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-service-agreements-v2.json",
+        "operationId": "Export_ServiceAgreements",
+        "path": "/tenant/{tenant}/export/service-agreements",
+        "summary": "Provides export feed for service agreements"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/service-agreements",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_recurring_service_types",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-memberships-v2.json",
+        "operationId": "Export_RecurringServiceTypes",
+        "path": "/tenant/{tenant}/export/recurring-service-types",
+        "summary": "Provides export feed for recurring service types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/recurring-service-types",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_calls",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-telecom.json",
+        "operationId": "Export_Calls",
+        "path": "/v2/tenant/{tenant}/export/calls",
+        "summary": "Provides export feed for calls"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/calls",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_timesheet_codes",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_TimesheetCodes",
+        "path": "/tenant/{tenant}/export/timesheet-codes",
+        "summary": "Provides export feed for timesheet codes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/timesheet-codes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_gross_pay_items",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_GrossPayItems",
+        "path": "/tenant/{tenant}/export/gross-pay-items",
+        "summary": "Provides export feed for gross pay items"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/gross-pay-items",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_payroll_settings",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_PayrollSettings",
+        "path": "/tenant/{tenant}/export/payroll-settings",
+        "summary": "Provides export feed for payroll settings"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/payroll-settings",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_activities",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "Export_Activities",
+        "path": "/tenant/{tenant}/export/activities",
+        "summary": "Provides export feed for activity."
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/activities",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "settings_activities_export"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_activity_codes",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_ActivityCodes",
+        "path": "/tenant/{tenant}/export/activity-codes",
+        "summary": "Provides export feed for activity codes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/activity-codes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "settings_activity_codes_export"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_business_units",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_BusinessUnits",
+        "path": "/tenant/{tenant}/export/business-units",
+        "summary": "Provides export feed for business units"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/business-units",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_tag_types",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_TagTypes",
+        "path": "/tenant/{tenant}/export/tag-types",
+        "summary": "Provides export feed for tag types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/tag-types",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "settings_tag_types_export"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_purchase_orders",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-inventory-v2.json",
+        "operationId": "Export_PurchaseOrders",
+        "path": "/tenant/{tenant}/export/purchase-orders",
+        "summary": "Provides export feed for purchase orders"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/purchase-orders",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_returns",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-inventory-v2.json",
+        "operationId": "Export_Returns",
+        "path": "/tenant/{tenant}/export/returns",
+        "summary": "Provides export feed for returns"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/returns",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "export_transfers",
+      "source": "src/domains/export/exporters.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-inventory-v2.json",
+        "operationId": "Export_Transfers",
+        "path": "/tenant/{tenant}/export/transfers",
+        "summary": "Provides export feed for transfers"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/transfers",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payrolls_list",
+      "source": "src/domains/payroll/payrolls.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Payrolls_GetList",
+        "path": "/tenant/{tenant}/payrolls",
+        "summary": "Gets a list of payrolls"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/payrolls",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_technicians_payrolls_list",
+      "source": "src/domains/payroll/payrolls.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Payrolls_GetTechnicianPayrolls",
+        "path": "/tenant/{tenant}/technicians/{technician}/payrolls",
+        "summary": "Gets a list of technician payrolls"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technicians/{id}/payrolls",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_employees_payrolls_list",
+      "source": "src/domains/payroll/payrolls.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Payrolls_GetEmployeePayrolls",
+        "path": "/tenant/{tenant}/employees/{employee}/payrolls",
+        "summary": "Gets a list of employee payrolls"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/employees/{id}/payrolls",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payroll_settings_employee_get",
+      "source": "src/domains/payroll/settings.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "PayrollSettings_GetEmployeePayrollSettings",
+        "path": "/tenant/{tenant}/employees/{employee}/payroll-settings",
+        "summary": "Gets the employee payroll settings"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/employees/{id}/payroll-settings",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payroll_settings_list",
+      "source": "src/domains/payroll/settings.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "PayrollSettings_GetPayrollSettingsList",
+        "path": "/tenant/{tenant}/payroll-settings",
+        "summary": "Gets the payroll settings list"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/payroll-settings",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_payroll_settings_employee_get",
+          "payroll_payroll_settings_technician_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payroll_settings_technician_get",
+      "source": "src/domains/payroll/settings.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "PayrollSettings_GetTechnicianPayrollSettings",
+        "path": "/tenant/{tenant}/technicians/{technician}/payroll-settings",
+        "summary": "Gets the technician payroll settings"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technicians/{id}/payroll-settings",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_timesheet_codes_get",
+      "source": "src/domains/payroll/timesheets.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "TimesheetCodes_Get",
+        "path": "/tenant/{tenant}/timesheet-codes/{id}",
+        "summary": "Gets timesheet code specified by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/timesheet-codes/{id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_timesheet_codes_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_timesheet_codes_list",
+      "source": "src/domains/payroll/timesheets.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "TimesheetCodes_GetList",
+        "path": "/tenant/{tenant}/timesheet-codes",
+        "summary": "Gets a list of timesheet codes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/timesheet-codes",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_timesheet_codes_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_timesheets_job_list",
+      "source": "src/domains/payroll/timesheets.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Timesheets_GetJobTimesheets",
+        "path": "/tenant/{tenant}/jobs/{job}/timesheets",
+        "summary": "Gets a list of job timesheets"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/jobs/{id}/timesheets",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_timesheets_job_list",
+          "payroll_timesheets_jobs_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_timesheets_jobs_list",
+      "source": "src/domains/payroll/timesheets.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Timesheets_GetJobTimesheetsByJobs",
+        "path": "/tenant/{tenant}/jobs/timesheets",
+        "summary": "Gets a list of job timesheets by multiple jobs"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/jobs/timesheets",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_timesheets_job_list",
+          "payroll_timesheets_jobs_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_timesheets_non_job_list",
+      "source": "src/domains/payroll/timesheets.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Timesheets_GetNonJobTimesheets",
+        "path": "/tenant/{tenant}/non-job-timesheets",
+        "summary": "Gets a list of non job timesheets for employee"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/non-job-timesheets",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_gross_pay_items_list",
+      "source": "src/domains/payroll/gross-pay.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "GrossPayItems_GetList",
+        "path": "/tenant/{tenant}/gross-pay-items",
+        "summary": "Gets a list of gross pay items"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/gross-pay-items",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payroll_adjustments_get",
+      "source": "src/domains/payroll/adjustments.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "PayrollAdjustments_Get",
+        "path": "/tenant/{tenant}/payroll-adjustments/{id}",
+        "summary": "Gets payroll adjustment specified by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/payroll-adjustments/{id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_payroll_adjustments_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "payroll_payroll_adjustments_list",
+      "source": "src/domains/payroll/adjustments.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "PayrollAdjustments_GetList",
+        "path": "/tenant/{tenant}/payroll-adjustments",
+        "summary": "Gets a list of payroll adjustments"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/payroll-adjustments",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "payroll_payroll_adjustments_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_employees_get",
+      "source": "src/domains/people/employees.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Employees_Get",
+        "path": "/tenant/{tenant}/employees/{id}",
+        "summary": "Gets a employee by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/employees/${id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_employees_list",
+          "people_employees_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_employees_list",
+      "source": "src/domains/people/employees.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Employees_GetList",
+        "path": "/tenant/{tenant}/employees",
+        "summary": "Gets a list of employees"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/employees",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_employees_get",
+          "people_employees_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_employees_export",
+      "source": "src/domains/people/employees.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_Employees",
+        "path": "/tenant/{tenant}/export/employees",
+        "summary": "Provides export feed for employees"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/employees",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "export_employees"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_technicians_get",
+      "source": "src/domains/people/technicians.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Technicians_Get",
+        "path": "/tenant/{tenant}/technicians/{id}",
+        "summary": "Gets a technician by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technicians/{id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_technicians_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_technicians_list",
+      "source": "src/domains/people/technicians.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Technicians_GetList",
+        "path": "/tenant/{tenant}/technicians",
+        "summary": "Gets a list of technicians"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technicians",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_technicians_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_technician_shifts_get",
+      "source": "src/domains/people/technicians.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-dispatch-v2.json",
+        "operationId": "TechnicianShifts_Get",
+        "path": "/tenant/{tenant}/technician-shifts/{id}",
+        "summary": "Gets a specific technician shift"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technician-shifts/{id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_technician_shifts_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_technician_shifts_list",
+      "source": "src/domains/people/technicians.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-dispatch-v2.json",
+        "operationId": "TechnicianShifts_GetList",
+        "path": "/tenant/{tenant}/technician-shifts",
+        "summary": "Gets a list of technician shifts"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/technician-shifts",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "people_technician_shifts_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_performance_get",
+      "source": "src/domains/people/technicians.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-marketing-ads-v2.json",
+        "operationId": "Performance_Get",
+        "path": "/tenant/{tenant}/performance",
+        "summary": "Returns performance data."
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/performance",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "people_trucks_list",
+      "source": "src/domains/people/trucks.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-inventory-v2.json",
+        "operationId": "Trucks_GetList",
+        "path": "/tenant/{tenant}/trucks",
+        "summary": "Get a list of trucks"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/trucks",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_business_units_get",
+      "source": "src/domains/settings/business-units.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "BusinessUnits_Get",
+        "path": "/tenant/{tenant}/business-units/{id}",
+        "summary": "Gets a business unit by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/business-units/${id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_business_units_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_business_units_list",
+      "source": "src/domains/settings/business-units.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "BusinessUnits_GetList",
+        "path": "/tenant/{tenant}/business-units",
+        "summary": "Gets a list of business units"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/business-units",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_business_units_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_tag_types_list",
+      "source": "src/domains/settings/tag-types.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "TagTypes_GetList",
+        "path": "/tenant/{tenant}/tag-types",
+        "summary": "Gets a list of tag types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/tag-types",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_tag_types_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_tag_types_export",
+      "source": "src/domains/settings/tag-types.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "Export_TagTypes",
+        "path": "/tenant/{tenant}/export/tag-types",
+        "summary": "Provides export feed for tag types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/tag-types",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "export_tag_types"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_codes_get",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivitiesControllers_Get",
+        "path": "/tenant/{tenant}/activities/{id}",
+        "summary": "Gets activity specified by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activities/${id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_codes_list",
+          "settings_activity_codes_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_codes_list",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivitiesControllers_GetList",
+        "path": "/tenant/{tenant}/activities",
+        "summary": "Gets a list of activities"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activities",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_codes_get",
+          "settings_activity_codes_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_codes_export",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-payroll-v2.json",
+        "operationId": "Export_ActivityCodes",
+        "path": "/tenant/{tenant}/export/activity-codes",
+        "summary": "Provides export feed for activity codes"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/activity-codes",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "export_activity_codes"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_categories_get",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivityCategories_Get",
+        "path": "/tenant/{tenant}/activity-categories/{id}",
+        "summary": "Gets activity category specified by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activity-categories/${id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_categories_list",
+          "settings_activity_categories_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_categories_list",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivityCategories_GetList",
+        "path": "/tenant/{tenant}/activity-categories",
+        "summary": "Gets a list of activity categories"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activity-categories",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_categories_get",
+          "settings_activity_categories_export"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_categories_export",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "Export_ActivityCategories",
+        "path": "/tenant/{tenant}/export/activity-categories",
+        "summary": "Provides export feed for activity categories."
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/activity-categories",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_categories_get",
+          "settings_activity_categories_list"
+        ],
+        "selectionNote": "Incremental export feed for synchronization; list/get operations serve browsing or known-ID retrieval."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_types_get",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivityTypes_Get",
+        "path": "/tenant/{tenant}/activity-types/{id}",
+        "summary": "Gets activity types specified by ID"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activity-types/${id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_types_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activity_types_list",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "ActivityTypes_GetList",
+        "path": "/tenant/{tenant}/activity-types",
+        "summary": "Gets a list of activity types"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/activity-types",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_activity_types_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_activities_export",
+      "source": "src/domains/settings/activities.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-timesheets-v2.json",
+        "operationId": "Export_Activities",
+        "path": "/tenant/{tenant}/export/activities",
+        "summary": "Provides export feed for activity."
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/export/activities",
+        "notes": "Handler performs one GET to the continuation-based export endpoint; callers continue immediately with continueFrom while hasMore is true, retain the token and wait before polling when false, and may receive duplicates with includeRecentChanges."
+      },
+      "overlap": {
+        "classification": "proven equivalent",
+        "relatedTools": [
+          "export_activities"
+        ],
+        "selectionNote": "Same upstream feed and route. Choose the available name matching the workflow; calling both duplicates the feed."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_tasks_get",
+      "source": "src/domains/settings/tasks.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-task-management-v2.json",
+        "operationId": "Tasks_GetTask",
+        "path": "/tenant/{tenant}/tasks/{id}",
+        "summary": "Get a Task by Id"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/tasks/{id}",
+        "notes": "Handler performs one GET for the required identifier and returns that record."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_tasks_list"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_tasks_list",
+      "source": "src/domains/settings/tasks.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-task-management-v2.json",
+        "operationId": "Tasks_GetTasks",
+        "path": "/tenant/{tenant}/tasks",
+        "summary": "Get a list of tasks"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/tasks",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "related but distinct",
+        "relatedTools": [
+          "settings_tasks_get"
+        ],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    },
+    {
+      "tool": "settings_user_roles_list",
+      "source": "src/domains/settings/user-roles.ts",
+      "officialEvidence": {
+        "archiveEntry": "docs/contracts/official-openapi-2026-09-04.tar.gz!st-specs/tenant-settings-v2.json",
+        "operationId": "UserRoles_GetList",
+        "path": "/tenant/{tenant}/user-roles",
+        "summary": "Gets a list of user roles"
+      },
+      "behaviorEvidence": {
+        "handlerRoute": "/tenant/{tenant}/user-roles",
+        "notes": "Handler performs one GET and returns one requested page; it does not auto-paginate."
+      },
+      "overlap": {
+        "classification": "distinct",
+        "relatedTools": [],
+        "selectionNote": "Endpoint and input contract reviewed as its own operation."
+      },
+      "accuracyNotes": "Description is limited to behavior represented by the pinned operation and current handler; schema constraints, defaults, route, and response behavior are unchanged."
+    }
+  ]
+}

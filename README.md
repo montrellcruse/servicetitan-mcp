@@ -6,7 +6,70 @@
 
 A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [Rowvyn](https://rowvyn.com). Version **3.0.0** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+Built by [Rowvyn](https://rowvyn.com). Version **3.0.1** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+
+## Start with a focused profile
+
+Choose the workflow your agent needs before connecting. These counts include the three system tools for health, readiness, and stored-result retrieval:
+
+| Workflow | `ST_TOOL_PROFILE` | Read tools |
+| --- | --- | ---: |
+| Customer and location work | `crm` | 33 |
+| Revenue and operational analytics | `analytics` | 34 |
+| Dispatch, scheduling, people, and settings | `dispatch` | 75 |
+| Full API coverage | `full` (default when omitted) | 264 |
+
+Use Node 22 or 24. The following complete stdio configurations install the versioned npm package. Replace all four credential placeholders with credentials for your company. They explicitly select `production` for a live company; use `integration` with matching integration credentials when validating there. Set `ST_TIMEZONE` to your company's IANA timezone. Each server process serves one independently configured company.
+
+For analytics:
+
+```json
+{
+  "mcpServers": {
+    "servicetitan": {
+      "command": "npx",
+      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.1"],
+      "env": {
+        "ST_CLIENT_ID": "your-client-id",
+        "ST_CLIENT_SECRET": "your-client-secret",
+        "ST_APP_KEY": "your-app-key",
+        "ST_TENANT_ID": "your-tenant-id",
+        "ST_ENVIRONMENT": "production",
+        "ST_TIMEZONE": "America/New_York",
+        "ST_READONLY": "true",
+        "ST_TOOL_PROFILE": "analytics"
+      }
+    }
+  }
+}
+```
+
+For CRM:
+
+```json
+{
+  "mcpServers": {
+    "servicetitan": {
+      "command": "npx",
+      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.1"],
+      "env": {
+        "ST_CLIENT_ID": "your-client-id",
+        "ST_CLIENT_SECRET": "your-client-secret",
+        "ST_APP_KEY": "your-app-key",
+        "ST_TENANT_ID": "your-tenant-id",
+        "ST_ENVIRONMENT": "production",
+        "ST_TIMEZONE": "America/New_York",
+        "ST_READONLY": "true",
+        "ST_TOOL_PROFILE": "crm"
+      }
+    }
+  }
+}
+```
+
+For dispatch, change only `ST_TOOL_PROFILE` in either configuration to `dispatch`. Choose `full` for all 264 read tools. The profile, `ST_DOMAINS`, and `ST_TOOLS` filters intersect; a tool must satisfy each configured filter. For example, adding `ST_TOOLS=crm_customers_get` to the CRM configuration exposes that customer lookup plus the three system tools. Profiles select tools and do not grant ServiceTitan scopes. Start with `st_health_check` for authentication/read access and `st_readiness_check` for module and report compatibility.
+
+The [tool catalog](TOOLS.md) explains selection among list, get, and export operations. Four export feeds retain equivalent generic and domain-specific names for compatibility; use one available name per feed. Focused profiles naturally exclude the generic `export` domain. Every existing v3.0.0 name remains available under its original configuration in v3.0.1.
 
 ## Run from source
 
@@ -112,6 +175,7 @@ npm run test:coverage
 npm run test:wire
 npm run test:packaging
 npm run docs:tools
+npm run discovery:check
 npm pack --dry-run
 npm run release:check
 ```

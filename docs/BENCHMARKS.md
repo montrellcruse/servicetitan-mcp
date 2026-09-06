@@ -1,5 +1,11 @@
 # V3 latency and load measurements
 
+## v3.0.1 focused protocol refresh
+
+On September 6, 2026 UTC, the unchanged protocol harness was rerun on Node 22.23.2 and 24.20.0 with v2.6.4 as its retained baseline and v3.0.1 as the candidate. Each run uses 32 samples, one repetition, and a three-second soak, covering 24 steady scenarios plus discovery, overload/recovery, arrival load, and session churn. All five correctness assertions pass, with synthetic upstream adapters only. Full stdio initialization/discovery totals are 176.3 ms and 164.9 ms respectively; single startup observations and shortened runs do not establish a latency SLA or stable tail percentiles.
+
+The [Node 22 results](https://github.com/montrellcruse/servicetitan-mcp/blob/v3.0.1/benchmarks/results/protocol-v3.0.1-node22.json) and [Node 24 results](https://github.com/montrellcruse/servicetitan-mcp/blob/v3.0.1/benchmarks/results/protocol-v3.0.1-node24.json) preserve raw samples and harness hashes. The measured v3.0.1 JavaScript build SHA-256 is `b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629`, computed over sorted JavaScript paths plus NUL-separated contents. Their source fingerprints reflect the measurement-time documentation, before the final acceptance text was added; executable source remained unchanged. Broader client-load, analytics-cache and retained-memory measurements below were not repeated for this description-only patch.
+
 Measured September 4, 2026 against v2.6.4 (`f6becd5`) on an Apple M4 with 10 logical CPUs, 16 GiB RAM, macOS arm64, and Node 22.23.2 / 24.20.0. Each comparison uses the same runtime and locked dependencies. See [benchmark instructions](../benchmarks/README.md) to reproduce the workloads.
 
 The full comparison below measured v3.0.0 at `786f15b`, before the PR review fixes. Its built JavaScript identity is `6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846`, calculated from the sorted paths and SHA-256 values of the eight runtime JavaScript files. Documentation edits do not alter that runtime identity.

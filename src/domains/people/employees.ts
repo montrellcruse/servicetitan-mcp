@@ -128,7 +128,7 @@ export function registerPeopleEmployeeTools(
     name: "people_employees_get",
     domain: "people",
     operation: "read",
-    description: "Get an employee by ID",
+    description: "Retrieve one employee by its required ID. Use people_employees_list to search when the ID is unknown.",
     schema: employeeIdSchema.shape,
     handler: async (params) => {
       const { id } = employeeIdSchema.parse(params);
@@ -146,7 +146,7 @@ export function registerPeopleEmployeeTools(
     name: "people_employees_list",
     domain: "people",
     operation: "read",
-    description: "List employees",
+    description: "List one requested page of employees, optionally filtered by IDs, user IDs, name, active state, or dates. Use the get tool for one known ID or the export feed for synchronization.",
     schema: employeeListSchema.shape,
     handler: async (params) => {
       const input = employeeListSchema.parse(params);
@@ -220,7 +220,7 @@ export function registerPeopleEmployeeTools(
     name: "people_employees_export",
     domain: "people",
     operation: "read",
-    description: "Export employees",
+    description: "Read the incremental employee export feed for People synchronization. This is the same feed as export_employees; use whichever name is available and do not fetch both. Continue immediately with continueFrom while hasMore is true; when false, retain it and wait before polling again. includeRecentChanges may repeat records.",
     schema: employeeExportSchema.shape,
     handler: async (params) => {
       const input = employeeExportSchema.parse(params);

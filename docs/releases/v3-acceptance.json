@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "supportPolicy": {
     "id": "readonly-v1",
     "stableOperations": [
@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "d90f58ac0a74b1ab5076e386edb498984141830648bacff7007cb97eba5037e5",
+  "sourceFingerprint": "24c2a3c8111000e9ffa91d611458e0a132b0cb6bff19ebcd67ad3d3aebef024f",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -39,8 +39,8 @@
         "24.20.0"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 581,
-      "testFiles": 42,
+      "testsPerRuntime": 584,
+      "testFiles": 43,
       "wireTestsPerRuntime": 15,
       "summary": "VALIDATION-v3.md",
       "packagingTestsPerRuntime": 2
@@ -48,12 +48,12 @@
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Fresh 154-file archive; isolated installation, both runtime profiles/stdio, experimental opt-in/labeling/confirmation and installed TypeScript declaration checks passed. The six added files are maintained public documentation; relative Markdown file links resolve in the archive, while raw evidence, scripts, and credential files remain excluded.",
-      "javascriptBuildSha256": "4d2447f7ac853d6c40fde562e57fc0dfacc3b4aa063aedb59e256bd579660c00"
+      "boundary": "Fresh 155-file v3.0.1 archive; isolated Node22/24 installs, five profiles, imports, stdio CLI, experimental opt-in/labeling/confirmation, output schemas and installed TypeScript consumption pass with zero upstream requests. The added evaluation guide ships; raw evaluation/benchmark evidence and scripts remain excluded.",
+      "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery, query-filter, and audit-isolation changes; those were validated with deterministic adapters, built MCP processes, and built-factory SDK checks.",
+      "boundary": "Historical v3.0.0 evidence, not rerun for v3.0.1. Complete description-only AST and SDK contract/profile comparisons preserve request logic, schemas, defaults, dependencies and safety behavior. Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery, query-filter, and audit-isolation changes; those were validated with deterministic adapters, built MCP processes, and built-factory SDK checks.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -68,12 +68,50 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. Focused client-load and analytics refresh passed on both runtimes at d4801c6, including explicit unknown-write nonretryability assertions. Those measurements were not repeated for the later audit-sink isolation fix, which is covered by direct/SDK and built-package callback-failure tests; custom audit-sink latency and delivery are not measured. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
+      "boundary": "Historical broad client-load, report-cache and retained-memory evidence, not rerun for v3.0.1. Description-only source/schema/profile/dependency comparison justifies reuse. A focused synthetic protocol refresh is recorded separately for v3.0.1. Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. Focused client-load and analytics refresh passed on both runtimes at d4801c6, including explicit unknown-write nonretryability assertions. Those measurements were not repeated for the later audit-sink isolation fix, which is covered by direct/SDK and built-package callback-failure tests; custom audit-sink latency and delivery are not measured. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
       "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
       "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
-      "focusedMatrixCommit": "d4801c6d49d53c8f518d1087685c321cbe6e92a3"
+      "focusedMatrixCommit": "d4801c6d49d53c8f518d1087685c321cbe6e92a3",
+      "focusedPatchProtocol": {
+        "status": "passed",
+        "nodeVersions": [
+          "22.23.2",
+          "24.20.0"
+        ],
+        "samples": 32,
+        "repeats": 1,
+        "soakSeconds": 3,
+        "scenariosPerRuntime": 24,
+        "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629",
+        "results": [
+          "benchmarks/results/protocol-v3.0.1-node22.json",
+          "benchmarks/results/protocol-v3.0.1-node24.json"
+        ],
+        "boundary": "Focused synthetic stdio/HTTP discovery and protocol refresh against the retained v2.6.4 baseline. All row/amount, overload recovery, session churn and controlled-upstream assertions pass. Short run; no percentile stability or production capacity claim."
+      }
+    },
+    "definitionReview": {
+      "status": "passed",
+      "reviewed": 264,
+      "mean": 4.411363636363636,
+      "minimum": 4,
+      "localDescriptionQuality": 4.2,
+      "localOverallProjection": 3.7,
+      "coherenceAssumption": 2.5,
+      "externalStatus": "pending_glama_evaluation",
+      "summary": "../evaluation/README.md"
+    },
+    "discoveryCompatibility": {
+      "status": "passed",
+      "configurations": 9,
+      "readonlyTools": 264,
+      "experimentalTools": 458,
+      "directReadMockDispatches": 251,
+      "equivalentPairs": 4,
+      "sourceFilesCompared": 133,
+      "definitionHash": "4c412bb98c371dc5331d7dea2b991391616066958bcb77a0f92491631aac620f"
     }
   },
   "releaseDisposition": "stable-readonly"

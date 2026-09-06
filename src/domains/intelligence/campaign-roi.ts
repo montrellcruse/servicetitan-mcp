@@ -162,7 +162,7 @@ export function registerIntelligenceCampaignPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Marketing campaign performance summary with calls, bookings, conversion rate, revenue, and revenue per call" +
+      "Compare marketing campaigns over the selected date range by combining all fetched call, booking, job, and invoice pages. Returns calls, bookings, booked-call conversion, attributed revenue, and revenue per call; campaignId narrows the analysis to one known campaign. The metrics reflect the wrapper's cross-source attribution logic, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "Which marketing campaigns are working?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "How many calls are we getting from Google Ads?" -> startDate="2026-01-01", endDate="2026-03-10", campaignId=<Google Ads ID>\n- "What\'s our call-to-booking rate?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: campaignPerformanceSchema.shape,
     handler: async (params) => {

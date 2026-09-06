@@ -116,7 +116,7 @@ export function registerReceiptTools(client: ServiceTitanClient, registry: ToolR
     name: "inventory_receipts_list",
     domain: "inventory",
     operation: "read",
-    description: "List receipts",
+    description: "List one requested page of inventory receipt transactions using IDs, number, vendor, purchase order, bill, business unit, inventory location, sync status, and received-date filters. Use inventory_purchase_orders_list for originating orders and inventory_returns_list for outbound vendor returns.",
     schema: receiptsListSchema.shape,
     handler: async (params) => {
       const input = receiptsListSchema.parse(params);

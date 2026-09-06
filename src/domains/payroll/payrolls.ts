@@ -67,7 +67,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
     name: "payroll_payrolls_list",
     domain: "payroll",
     operation: "read",
-    description: "List payroll periods",
+    description: "List one requested page of payroll periods across employees, with employee type, status, active-state, and date filters. Use the employee- or technician-specific payroll tools when that worker ID is known.",
     schema: payrollListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof payrollListSchema>;
@@ -122,7 +122,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
     name: "payroll_technicians_payrolls_list",
     domain: "payroll",
     operation: "read",
-    description: "List payroll periods for a technician",
+    description: "List one requested page of payroll periods for a required technician, with status, active-state, and date filters. Use payroll_payrolls_list for a tenant-wide search.",
     schema: technicianPayrollsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof technicianPayrollsListSchema>;
@@ -156,7 +156,7 @@ export function registerPayrollTools(client: ServiceTitanClient, registry: ToolR
     name: "payroll_employees_payrolls_list",
     domain: "payroll",
     operation: "read",
-    description: "List payroll periods for an employee",
+    description: "List one requested page of payroll periods for a required employee, with status, active-state, and date filters. Use payroll_payrolls_list for a tenant-wide search.",
     schema: employeePayrollsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof employeePayrollsListSchema>;

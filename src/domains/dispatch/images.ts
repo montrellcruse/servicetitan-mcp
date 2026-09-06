@@ -21,7 +21,7 @@ export function registerDispatchImageTools(
     name: "dispatch_images_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get image metadata by storage path",
+    description: "Request image response data for a ServiceTitan storage path. The upstream Pricebook image operation documents an HTTP 302 redirect; this wrapper returns the client-decoded response body through its standard JSON/text envelope, without exposing the redirect Location header. Supply the known path when targeting an image; use dispatch_jobs_list_attachments to discover job attachments.",
     schema: imageGetSchema.shape,
     handler: async (params) => {
       const input = imageGetSchema.parse(params);

@@ -16,7 +16,7 @@ export function registerSchedulingBusinessHourTools(
     name: "scheduling_business_hours_list",
     domain: "scheduling",
     operation: "read",
-    description: "Get business hour configuration",
+    description: "Retrieve the tenant business-hours configuration used for scheduling availability. This returns configured hours rather than appointment records or calculated open capacity.",
     schema: {},
     handler: async () => {
       try {

@@ -87,7 +87,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
     name: "settings_tag_types_list",
     domain: "settings",
     operation: "read",
-    description: "List tag types",
+    description: "List one requested page of tag types with active-state, date, and sort controls. Use the export feed for incremental synchronization; this endpoint is for paginated browsing.",
     schema: tagTypeListSchema.shape,
     handler: async (params) => {
       const input = tagTypeListSchema.parse(params);
@@ -172,7 +172,7 @@ export function registerTagTypeTools(client: ServiceTitanClient, registry: ToolR
     name: "settings_tag_types_export",
     domain: "settings",
     operation: "read",
-    description: "Export tag types",
+    description: "Read the incremental tag-type export feed for Settings workflows. This is the same feed as export_tag_types; use whichever name is available and do not fetch both. Continue immediately with continueFrom while hasMore is true; when false, retain it and wait before polling again. includeRecentChanges may repeat records.",
     schema: tagTypeExportSchema.shape,
     handler: async (params) => {
       const input = tagTypeExportSchema.parse(params);

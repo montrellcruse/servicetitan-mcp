@@ -156,7 +156,7 @@ export function registerIntelligenceCsrPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "CSR booking performance using Job Detail By CSR with booked jobs, revenue, average ticket, campaign mix, job type mix, and team averages" +
+      "Summarize CSR-attributed jobs from Report 162 for the selected date range. Returns booked-job counts, revenue, average ticket, campaign and job-type mixes, rankings, and team averages; an optional business-unit name narrows matching report rows. Report execution is cached briefly and may wait for per-report/client spacing; unavailable source data is identified in _warnings." +
       '\n\nExamples:\n- "How are our CSRs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show CSR booking revenue for last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "Which CSR is booking the most revenue for plumbing?" -> startDate="2026-01-01", endDate="2026-03-10", businessUnitName="Plumbing"',
     schema: csrPerformanceSchema.shape,
     handler: async (params) => {

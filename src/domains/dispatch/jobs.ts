@@ -343,7 +343,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_get_attachment",
     domain: "dispatch",
     operation: "read",
-    description: "Get a job attachment by ID",
+    description: "Retrieve one job-attachment resource from Forms v2 by attachment ID. Use dispatch_jobs_list_attachments to browse attachment metadata for a known job when the attachment ID is unknown.",
     schema: jobAttachmentIdSchema.shape,
     handler: async (params) => {
       const input = jobAttachmentIdSchema.parse(params);
@@ -361,7 +361,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_list_attachments",
     domain: "dispatch",
     operation: "read",
-    description: "List attachments for a job",
+    description: "List one page of attachments for a known job, optionally filtered by creation time and sorted. Returned records identify files attached to that job.",
     schema: jobAttachmentListSchema.shape,
     handler: async (params) => {
       const input = jobAttachmentListSchema.parse(params);
@@ -383,7 +383,7 @@ export function registerDispatchJobTools(
     name: "dispatch_call_reasons_list",
     domain: "dispatch",
     operation: "read",
-    description: "List call reasons",
+    description: "List one page of dispatch call-reason catalog entries, filtered by active state or created and modified ranges. Use these IDs when a workflow requires a call reason.",
     schema: reasonListSchema.shape,
     handler: async (params) => {
       const input = reasonListSchema.parse(params);
@@ -401,7 +401,7 @@ export function registerDispatchJobTools(
     name: "dispatch_job_cancel_reasons_list",
     domain: "dispatch",
     operation: "read",
-    description: "List job cancel reasons",
+    description: "Browse the paginated job-cancellation-reason catalog using active and date filters. Use dispatch_jobs_cancel_reasons_list instead only to look up a supplied set of known reason IDs.",
     schema: reasonListSchema.shape,
     handler: async (params) => {
       const input = reasonListSchema.parse(params);
@@ -419,7 +419,7 @@ export function registerDispatchJobTools(
     name: "dispatch_job_hold_reasons_list",
     domain: "dispatch",
     operation: "read",
-    description: "List job hold reasons",
+    description: "List one page of job-hold-reason catalog entries, filtered by active state or created and modified ranges. Returned records provide reason IDs and metadata used when placing a job on hold; they are distinct from cancellation reasons.",
     schema: reasonListSchema.shape,
     handler: async (params) => {
       const input = reasonListSchema.parse(params);
@@ -437,7 +437,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a job by ID",
+    description: "Retrieve one job record by ID, optionally scoped to an external-data application. Returns the current ServiceTitan job data; use dispatch_jobs_list to search by customer, location, status, dates, or other filters.",
     schema: jobGetSchema.shape,
     handler: async (params) => {
       const input = jobGetSchema.parse(params);
@@ -460,7 +460,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_list",
     domain: "dispatch",
     operation: "read",
-    description: "List jobs",
+    description: "Search jobs by IDs, number, customer, location, project, status, appointments, equipment, tags, dates, or other supported filters. Returns one page; use dispatch_jobs_get for a known job ID.",
     schema: jobsListSchema.shape,
     handler: async (params) => {
       const input = jobsListSchema.parse(params);
@@ -478,7 +478,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_equipment_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get installed equipment IDs attached to a job",
+    description: "Retrieve the installed-equipment ID collection attached to a known job as one unpaged response. Use dispatch_installed_equipment_get or list to fetch the equipment records themselves.",
     schema: jobIdSchema.shape,
     handler: async (params) => {
       const input = jobIdSchema.parse(params);
@@ -680,7 +680,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_notes_list",
     domain: "dispatch",
     operation: "read",
-    description: "List notes for a job",
+    description: "List one page of notes attached to a known job. Requires the job ID; this endpoint has pagination controls but no note-content filters.",
     schema: jobNotesListSchema.shape,
     handler: async (params) => {
       const input = jobNotesListSchema.parse(params);
@@ -725,7 +725,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_cancel_reasons_list",
     domain: "dispatch",
     operation: "read",
-    description: "List cancel reasons available for jobs",
+    description: "Look up job cancellation reasons for a supplied list of known IDs. This non-paginated Jobs endpoint is distinct from dispatch_job_cancel_reasons_list, which browses and filters the reason catalog.",
     schema: jobsCancelReasonsSchema.shape,
     handler: async (params) => {
       const input = jobsCancelReasonsSchema.parse(params);
@@ -746,7 +746,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_history_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get history for a job",
+    description: "Retrieve the history response for a known job ID as one unpaged audit resource. Use dispatch_jobs_get for the current job record rather than its historical changes.",
     schema: jobIdSchema.shape,
     handler: async (params) => {
       const input = jobIdSchema.parse(params);
@@ -784,7 +784,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_canceled_logs_list",
     domain: "dispatch",
     operation: "read",
-    description: "List canceled log entries for a job",
+    description: "List one page of cancellation log entries for a known job ID. Use this for cancellation audit details rather than the current job or cancellation-reason catalog.",
     schema: jobCanceledLogsListSchema.shape,
     handler: async (params) => {
       const input = jobCanceledLogsListSchema.parse(params);
@@ -809,7 +809,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_booked_log_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get booked log details for a job",
+    description: "Retrieve booking-log details for a known job ID as one unpaged audit resource. Use dispatch_jobs_get for the current job record rather than its booking audit data.",
     schema: jobIdSchema.shape,
     handler: async (params) => {
       const input = jobIdSchema.parse(params);
@@ -827,7 +827,7 @@ export function registerDispatchJobTools(
     name: "dispatch_jobs_custom_field_types_list",
     domain: "dispatch",
     operation: "read",
-    description: "List job custom field types",
+    description: "List one page of custom-field type definitions available to jobs, with created and modified date filters. This returns field metadata, not values for one job.",
     schema: jobCustomFieldTypesSchema.shape,
     handler: async (params) => {
       const input = jobCustomFieldTypesSchema.parse(params);
@@ -848,7 +848,7 @@ export function registerDispatchJobTools(
     name: "dispatch_job_splits_list",
     domain: "dispatch",
     operation: "read",
-    description: "List splits for a single job",
+    description: "List one page of split records for a single required job ID, with activity and date filters. Use dispatch_job_splits_by_jobs_list to query splits across multiple jobs.",
     schema: jobSplitsListSchema.shape,
     handler: async (params) => {
       const input = jobSplitsListSchema.parse(params);
@@ -867,7 +867,7 @@ export function registerDispatchJobTools(
     name: "dispatch_job_splits_by_jobs_list",
     domain: "dispatch",
     operation: "read",
-    description: "List splits filtered by one or more jobs",
+    description: "Search one page of job-split records across supplied job IDs, with activity and date filters. Use dispatch_job_splits_list when working with one job-scoped route.",
     schema: jobSplitsByJobsListSchema.shape,
     handler: async (params) => {
       const input = jobSplitsByJobsListSchema.parse(params);

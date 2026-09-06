@@ -66,7 +66,7 @@ export function registerPeopleTruckTools(
     name: "people_trucks_list",
     domain: "people",
     operation: "read",
-    description: "List trucks",
+    description: "List one requested page of inventory trucks, optionally filtered by IDs, active state, dates, or external-data mapping. externalDataKey and externalDataValues must be supplied together.",
     schema: trucksListSchema.shape,
     handler: async (params) => {
       const input = trucksListSchema.parse(params);

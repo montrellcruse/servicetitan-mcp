@@ -19,7 +19,7 @@ export function registerDynamicValueSetTools(
     name: "reporting_dynamic_value_sets_get",
     domain: "reporting",
     operation: "read",
-    description: "Get values from a dynamic value set",
+    description: "Resolve selectable values for a report dynamic-value-set identifier. Use values from the report definition to supply the required identifier and paging inputs when that report parameter offers dynamic choices.",
     schema: dynamicValueSetSchema.shape,
     handler: async (params) => {
       const { dynamicSetId, ...query } = params as {

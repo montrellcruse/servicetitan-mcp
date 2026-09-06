@@ -58,7 +58,7 @@ export function registerMembershipTypeTools(
     name: "memberships_types_get",
     domain: "memberships",
     operation: "read",
-    description: "Get a membership type by ID",
+    description: "Retrieve a membership type by its ServiceTitan ID. Returns the single upstream record without pagination; use memberships_types_list to search when the ID is unknown.",
     schema: membershipTypeIdSchema.shape,
     handler: async (params) => {
       const { id } = membershipTypeIdSchema.parse(params);
@@ -76,7 +76,7 @@ export function registerMembershipTypeTools(
     name: "memberships_types_list",
     domain: "memberships",
     operation: "read",
-    description: "List membership types",
+    description: "List one requested page of membership-type definitions using IDs, active state, billing frequency, duration, and created or modified timestamps; includeDurationBilling controls embedded billing details. Use memberships_types_get for one known plan and memberships_list for memberships sold to customers.",
     schema: membershipTypesListSchema.shape,
     handler: async (params) => {
       const parsed = membershipTypesListSchema.parse(params);
@@ -111,7 +111,7 @@ export function registerMembershipTypeTools(
     name: "memberships_types_recurring_service_items_list",
     domain: "memberships",
     operation: "read",
-    description: "List recurring service items for a membership type",
+    description: "Retrieve the recurring-service items configured under one required membership-type ID. Use memberships_types_get for the parent plan; use memberships_recurring_services_list for recurring services scheduled for customer locations.",
     schema: membershipTypeIdSchema.shape,
     handler: async (params) => {
       const { id } = membershipTypeIdSchema.parse(params);
@@ -131,7 +131,7 @@ export function registerMembershipTypeTools(
     name: "memberships_types_discounts_list",
     domain: "memberships",
     operation: "read",
-    description: "List discounts for a membership type",
+    description: "Retrieve discounts configured for one known membership type ID. These are type-level benefits, not the tenant pricebook discount-and-fee catalog.",
     schema: membershipTypeIdSchema.shape,
     handler: async (params) => {
       const { id } = membershipTypeIdSchema.parse(params);
@@ -149,7 +149,7 @@ export function registerMembershipTypeTools(
     name: "memberships_types_duration_billing_list",
     domain: "memberships",
     operation: "read",
-    description: "List duration billing items for a membership type",
+    description: "Retrieve duration and billing configurations under one required membership-type ID. Use this for plan-level term and billing choices; use memberships_types_get for the parent plan and memberships_list for customer memberships.",
     schema: membershipTypeDurationBillingSchema.shape,
     handler: async (params) => {
       const parsed = membershipTypeDurationBillingSchema.parse(params);

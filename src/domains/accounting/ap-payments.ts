@@ -53,7 +53,7 @@ export function registerApPaymentTools(
     name: "accounting_ap_payments_list",
     domain: "accounting",
     operation: "read",
-    description: "List AP payments",
+    description: "List one requested page of vendor AP payments, filterable by payment IDs and created or modified timestamps. Use this for accounts-payable disbursements; use accounting_ap_credits_list for vendor credits and accounting_payments_list for customer receipts.",
     schema: apPaymentsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof apPaymentsListSchema>;

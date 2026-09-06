@@ -178,7 +178,7 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
     name: "inventory_returns_list",
     domain: "inventory",
     operation: "read",
-    description: "List returns",
+    description: "List one requested page of inventory return transactions using IDs, number, vendor, job, inventory location, sync status, return dates, and external-data filters. Use inventory_return_types_list for the separate return-type catalog; use inventory_transfers_list for movement between inventory locations.",
     schema: returnsListSchema.shape,
     handler: async (params) => {
       const input = returnsListSchema.parse(params);
@@ -265,7 +265,7 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
     name: "inventory_return_types_list",
     domain: "inventory",
     operation: "read",
-    description: "List return types",
+    description: "List one requested page of inventory return-type definitions, with active-state and created or modified timestamp filters. Use this catalog to interpret return classifications; use inventory_returns_list for actual return transactions.",
     schema: returnTypesListSchema.shape,
     handler: async (params) => {
       const input = returnTypesListSchema.parse(params);

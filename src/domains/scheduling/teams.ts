@@ -52,7 +52,7 @@ export function registerSchedulingTeamTools(
     name: "scheduling_teams_list",
     domain: "scheduling",
     operation: "read",
-    description: "List teams",
+    description: "List one requested page of scheduling teams using includeInactive and created or modified timestamp filters. Use scheduling_teams_get for one known team ID; use scheduling appointment assignments for technician-to-appointment assignments rather than team definitions.",
     schema: teamListSchema.shape,
     handler: async (params) => {
       const typed = params as z.infer<typeof teamListSchema>;
@@ -91,7 +91,7 @@ export function registerSchedulingTeamTools(
     name: "scheduling_teams_get",
     domain: "scheduling",
     operation: "read",
-    description: "Get a team by ID",
+    description: "Retrieve a team by its ServiceTitan ID. Returns the single upstream record without pagination; use scheduling_teams_list to search when the ID is unknown.",
     schema: {
       id: z.number().int().describe("Team ID"),
     },

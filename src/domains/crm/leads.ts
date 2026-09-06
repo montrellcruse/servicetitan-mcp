@@ -119,7 +119,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     name: "crm_leads_get",
     domain: "crm",
     operation: "read",
-    description: "Get a lead by ID",
+    description: "Retrieve one CRM lead record by ID, including its customer and lead details. Use crm_leads_list to search by customer, status, prospect state, location fields, or date ranges.",
     schema: leadIdSchema.shape,
     handler: async (params) => {
       const input = leadIdSchema.parse(params);
@@ -218,7 +218,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     name: "crm_leads_notes_list",
     domain: "crm",
     operation: "read",
-    description: "List notes for a lead",
+    description: "List one page of notes attached to a known lead, optionally filtered by created or modified timestamps. Requires the lead ID.",
     schema: leadNotesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof leadNotesListSchema>;
@@ -248,7 +248,7 @@ export function registerLeadTools(client: ServiceTitanClient, registry: ToolRegi
     name: "crm_leads_list",
     domain: "crm",
     operation: "read",
-    description: "List leads",
+    description: "Search CRM leads by IDs, customer, status, prospect state, customer location, or created and modified ranges. Returns one page; use crm_leads_get for a known ID.",
     schema: leadListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof leadListSchema>;

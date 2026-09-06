@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [3.0.1] - 2026-09-06
+
+### Improved
+- Reviewed all 264 read-tool definitions against pinned API contracts and current handlers, adding selection boundaries, collection grain, paging/export continuation, and report behavior.
+- Added reciprocal guidance for four equivalent export pairs while preserving both names; clarified distinct versions, scopes, lookups, and get/list/export workflows.
+- Corrected unsupported filter, report timing, task-management, image, and audio-response claims. Binary media delivery remains a separate runtime follow-up.
+- Moved focused CRM, dispatch, and analytics configurations into onboarding and added the Glama maintainer manifest.
+
+### Validation
+- Added discovery/schema/profile and description-only source compatibility checks, a complete overlap inventory, independent definition reviews, and synthetic selection evidence.
+- Preserved all tool names, profiles, defaults, validation constraints, handlers, routes, annotations, and response behavior. Stable read-only support and experimental mutation safeguards are unchanged.
+- Local rubric projections are distinguished from Glama's external evaluation. See [validation](docs/releases/VALIDATION-v3.md) and [evaluation guide](docs/evaluation/README.md).
+
 ## [3.0.0] - 2026-09-05
 
 ### Changed

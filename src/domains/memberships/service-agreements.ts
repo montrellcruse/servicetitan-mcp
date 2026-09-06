@@ -54,7 +54,7 @@ export function registerServiceAgreementTools(
     name: "memberships_service_agreements_list",
     domain: "memberships",
     operation: "read",
-    description: "List service agreements",
+    description: "List one requested page of customer service agreements using agreement, customer, business-unit, status, and created or modified timestamp filters. Use memberships_service_agreements_get for a known agreement; use memberships_list for customer membership sales rather than agreement records.",
     schema: serviceAgreementListSchema.shape,
     handler: async (params) => {
       const parsed = serviceAgreementListSchema.parse(params);
@@ -89,7 +89,7 @@ export function registerServiceAgreementTools(
     name: "memberships_service_agreements_get",
     domain: "memberships",
     operation: "read",
-    description: "Get a service agreement by ID",
+    description: "Retrieve a service agreement by its ServiceTitan ID. Returns the single upstream record without pagination; use memberships_service_agreements_list to search when the ID is unknown.",
     schema: serviceAgreementIdSchema.shape,
     handler: async (params) => {
       const { id } = serviceAgreementIdSchema.parse(params);

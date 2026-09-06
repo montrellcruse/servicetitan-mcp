@@ -129,7 +129,7 @@ export function registerDispatchJobTypeTools(
     name: "dispatch_job_types_get",
     domain: "dispatch",
     operation: "read",
-    description: "Get a job type by ID",
+    description: "Retrieve one job-type definition by ID, optionally scoped to an external-data application. Returns the configured defaults and associations for that type; use dispatch_job_types_list to search the catalog.",
     schema: jobTypeGetSchema.shape,
     handler: async (params) => {
       const input = jobTypeGetSchema.parse(params);
@@ -152,7 +152,7 @@ export function registerDispatchJobTypeTools(
     name: "dispatch_job_types_list",
     domain: "dispatch",
     operation: "read",
-    description: "List job types",
+    description: "Search job-type definitions by IDs, name, priority, duration, active state, external-data application, or date ranges. Returns one page of configured job types; use dispatch_job_types_get for a known ID.",
     schema: jobTypesListSchema.shape,
     handler: async (params) => {
       const input = jobTypesListSchema.parse(params);

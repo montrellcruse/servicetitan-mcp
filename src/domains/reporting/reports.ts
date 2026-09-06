@@ -36,7 +36,7 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
     name: "reporting_reports_list",
     domain: "reporting",
     operation: "read",
-    description: "List reports in a report category",
+    description: "List report definitions within a known report category. Use reporting_report_categories_list to discover category IDs, then use reporting_reports_get for one report definition before executing it.",
     schema: reportListSchema.shape,
     handler: async (params) => {
       const { reportCategory, ...query } = params as {
@@ -62,7 +62,7 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
     name: "reporting_reports_get",
     domain: "reporting",
     operation: "read",
-    description: "Get a report definition in a category",
+    description: "Retrieve one report definition from a known category and report ID, including its parameter contract. Use reporting_reports_list to discover reports and reporting_reports_data_create to execute the selected definition.",
     schema: {
       reportCategory: z.string().describe("Report category ID"),
       reportId: z.number().int().describe("Report ID"),
@@ -88,8 +88,7 @@ export function registerReportTools(client: ServiceTitanClient, registry: ToolRe
     name: "reporting_reports_data_create",
     domain: "reporting",
     operation: "read",
-    description:
-      "Fetch report data rows. Use the report definition to discover required parameters. Date parameters use YYYY-MM-DD format.",
+    description: "Execute one requested page of a known report and return the upstream report-data response. First inspect reporting_reports_get for that report's required parameter names, value types, and accepted formats; pass those entries in parameters, and use page, pageSize, and includeTotal to control this request. This generic reporting call is not subject to the intelligence tools' report scheduler or 65-second spacing.",
     schema: reportDataSchema.shape,
     handler: async (params) => {
       const { reportCategory, reportId, parameters, ...query } = params as z.infer<

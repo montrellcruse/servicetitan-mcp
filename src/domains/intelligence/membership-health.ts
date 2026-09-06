@@ -20,7 +20,7 @@ import {
 const membershipHealthSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
-  includeServiceRevenue: z.boolean().optional().default(false).describe("Include totalServiceRevenue from invoice pagination (adds ~1-2s latency). Default: false."),
+  includeServiceRevenue: z.boolean().optional().default(false).describe("Include tenant-wide totalServiceRevenue by fetching every available invoice page for the period. Default: false."),
 });
 
 const MEMBERSHIP_SUMMARY_FIELD = {
@@ -154,8 +154,8 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Membership health summary with active counts, signups, cancellations, renewals, an active-to-cancellation ratio, and business-unit membership conversion metrics. Set includeServiceRevenue=true to also fetch tenant-wide totalServiceRevenue from invoices." +
-      '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Membership retention rate last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
+      "Summarize membership activity from Report 182 and business-unit membership opportunities and conversions from Report 178 for the selected date range. Returns active-at-end counts, sales, cancellations, expirations, renewals, other status movements, and conversion metrics; it does not calculate a cohort retention rate. includeServiceRevenue adds tenant-wide invoice service revenue for the period, which is not membership-attributed. Partial source failures are returned in _warnings." +
+      '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show membership status movements last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
       try {

@@ -22,7 +22,7 @@ const revenueSummarySchema = z.object({
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
   includeCollections: z.boolean().optional().default(false).describe("Include payments received during the selected period. Default: false."),
-  includeProductivityMetrics: z.boolean().optional().default(false).describe("Include BU-level productivity metrics (Report 177: rev/hr, billable efficiency, upsold, tasks/opp, recalls). Adds ~0.5-1s latency. Default: false."),
+  includeProductivityMetrics: z.boolean().optional().default(false).describe("Include business-unit productivity metrics from Report 177: revenue per hour, billable efficiency, upsold work, tasks per opportunity, and recalls. Default: false."),
 });
 
 type GenericRecord = Record<string, unknown>;
@@ -537,7 +537,7 @@ export function registerIntelligenceRevenueTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Revenue summary using ServiceTitan's native reporting engine (matches the ST dashboard). Returns total revenue, breakdown by business unit (completed, non-job, adjustment), opportunities, conversion rates, and sales metrics. Set includeProductivityMetrics=true for BU-level productivity metrics (adds ~0.5-1s). Set includeCollections=true for payment/collections data (adds ~20s)." +
+      "Summarize Report 175 revenue and Report 179 sales for the selected date range, optionally filtered to one business unit. Returns completed, non-job, adjustment, and total revenue plus opportunities, conversion, and sales metrics by business unit; the aggregate reflects returned report rows and is not certified as an all-company total or as matching every tenant dashboard configuration. includeProductivityMetrics adds Report 177 metrics, and includeCollections fetches all payment pages for the period. Report calls are cached briefly and serialized per report/client with at least 65 seconds between starts; a failed source is identified in _warnings and its affected metrics may be empty." +
       '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC"\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: revenueSummarySchema.shape,
     handler: async (params) => {

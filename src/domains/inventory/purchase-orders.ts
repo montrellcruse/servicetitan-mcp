@@ -144,7 +144,7 @@ export function registerPurchaseOrderTools(
     name: "inventory_purchase_orders_get",
     domain: "inventory",
     operation: "read",
-    description: "Get a purchase order by ID",
+    description: "Retrieve a purchase order by its ServiceTitan ID. Returns the single upstream record without pagination; use inventory_purchase_orders_list to search when the ID is unknown.",
     schema: purchaseOrderIdSchema.shape,
     handler: async (params) => {
       const { id } = purchaseOrderIdSchema.parse(params);
@@ -162,7 +162,7 @@ export function registerPurchaseOrderTools(
     name: "inventory_purchase_orders_list",
     domain: "inventory",
     operation: "read",
-    description: "List purchase orders",
+    description: "List one requested page of issued purchase orders using IDs, number, status, technician, job, project, and order or sent-date filters. Use inventory_purchase_orders_get for one known order and inventory_purchase_orders_requests_list for requests that precede issued orders.",
     schema: purchaseOrderListSchema.shape,
     handler: async (params) => {
       const parsed = purchaseOrderListSchema.parse(params);
@@ -204,7 +204,7 @@ export function registerPurchaseOrderTools(
     name: "inventory_purchase_orders_requests_list",
     domain: "inventory",
     operation: "read",
-    description: "List purchase order requests",
+    description: "Search purchase-order requests with the exposed identifiers, status, date, technician, job, and paging filters. These are requests that may precede a purchase order; use inventory_purchase_orders_list for issued purchase orders.",
     schema: purchaseOrderRequestsListSchema.shape,
     handler: async (params) => {
       const parsed = purchaseOrderRequestsListSchema.parse(params);

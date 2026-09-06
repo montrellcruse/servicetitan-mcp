@@ -59,7 +59,7 @@ export function registerPayrollAdjustmentTools(
     name: "payroll_payroll_adjustments_get",
     domain: "payroll",
     operation: "read",
-    description: "Get a payroll adjustment by ID",
+    description: "Retrieve one payroll adjustment by its required ID. Use payroll_payroll_adjustments_list to search when the ID is unknown.",
     schema: getPayrollAdjustmentSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof getPayrollAdjustmentSchema>;
@@ -79,7 +79,7 @@ export function registerPayrollAdjustmentTools(
     name: "payroll_payroll_adjustments_list",
     domain: "payroll",
     operation: "read",
-    description: "List payroll adjustments",
+    description: "List one requested page of payroll adjustments, optionally filtered by employee IDs and posted timestamp. Use payroll_payroll_adjustments_get for one known adjustment ID.",
     schema: listPayrollAdjustmentsSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof listPayrollAdjustmentsSchema>;

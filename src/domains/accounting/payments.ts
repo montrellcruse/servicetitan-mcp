@@ -162,7 +162,7 @@ export function registerPaymentTools(
     name: "accounting_payments_custom_field_types_list",
     domain: "accounting",
     operation: "read",
-    description: "List payment custom field types",
+    description: "List one requested page of payment custom-field definitions, with paging and total-count controls. Use this to resolve payment field metadata; use accounting_payments_list for customer payment transactions and their field values.",
     schema: customFieldTypesSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customFieldTypesSchema>;
@@ -192,7 +192,7 @@ export function registerPaymentTools(
     name: "accounting_payments_list",
     domain: "accounting",
     operation: "read",
-    description: "List payments",
+    description: "List one requested page of customer payment transactions using payment or applied-invoice identifiers, customer, business-unit, batch, status, date, and total-amount filters. Use accounting_payment_types_list for payment-method definitions; use accounting_ap_payments_list for vendor disbursements.",
     schema: paymentsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof paymentsListSchema>;
