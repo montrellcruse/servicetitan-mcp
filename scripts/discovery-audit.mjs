@@ -88,7 +88,7 @@ export async function captureDiscovery() {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
-  const { values } = parseArgs({ options: { capture: { type: 'string' }, output: { type: 'string' }, baseline: { type: 'string', default: 'docs/evaluation/baseline-v3.0.0.json' } } });
+  const { values } = parseArgs({ options: { capture: { type: 'string' }, output: { type: 'string' }, baseline: { type: 'string', default: 'tests/fixtures/discovery-v3.0.0.json' } } });
   const capture = await captureDiscovery();
   const summary = summarize(capture);
   compare(JSON.parse(await readFile(values.baseline, 'utf8')), summary);

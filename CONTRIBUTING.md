@@ -52,7 +52,7 @@ For equivalent endpoints, name the equivalent tool and explain that fetching bot
 
 Descriptions remain at their registration sites; regenerate `TOOLS.md` with `npm run docs:tools`. The export factory inventory in `scripts/check-contracts.mjs` requires literal arguments on one line. If registration syntax changes, update its parser and prove that factory operations remain covered.
 
-`npm run discovery:check` compares real SDK discovery with the captured v3.0.0 contracts across default, focused, filtered, and experimental configurations using a client that rejects every upstream request. The audit permits documentation changes while preserving schema constraints, field names, and annotations. Read the repository's `docs/evaluation/README.md` for reproducible quality and selection review. Model scores are review evidence; deterministic CI checks compatibility and evidence integrity.
+`npm run discovery:check` compares real SDK discovery with the v3.0.0 contract fixture at `tests/fixtures/discovery-v3.0.0.json` across default, focused, filtered, and experimental configurations. It uses a client that rejects every upstream request and permits description changes while checking tool names, profile membership, validation constraints, and annotations. Build first with `npm run build`. Update the fixture only when intentionally changing the public tool contract, with the corresponding compatibility review.
 
 Readonly mode omits mutation tools from MCP discovery. Mutations are experimental outside the stable `readonly-v1` support policy and require both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. Test mutation adapters with fake clients or in-memory MCP unless a separate, explicit live-write authorization and cleanup plan exists.
 

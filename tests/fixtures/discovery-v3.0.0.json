@@ -1,7 +1,6 @@
 {
   "sourceCommit": "bb8bdd1b31b1cdbcad1bf4935fd71cfda9c2d85b",
   "version": "3.0.0",
-  "definitionHash": "d69b3bfffc1ea25597fdb48d0d4dfd85d52c6e43503d9938891906621562da54",
   "profiles": {
     "default": {
       "env": {},
@@ -270,10 +269,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 264,
-      "discoveryBytes": 283857,
-      "descriptionBytes": 11244
+      ]
     },
     "full": {
       "env": {
@@ -544,10 +540,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 264,
-      "discoveryBytes": 283857,
-      "descriptionBytes": 11244
+      ]
     },
     "crm": {
       "env": {
@@ -587,10 +580,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 33,
-      "discoveryBytes": 35377,
-      "descriptionBytes": 1287
+      ]
     },
     "dispatch": {
       "env": {
@@ -672,10 +662,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 75,
-      "discoveryBytes": 83450,
-      "descriptionBytes": 2180
+      ]
     },
     "analytics": {
       "env": {
@@ -716,10 +703,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 34,
-      "discoveryBytes": 36706,
-      "descriptionBytes": 5615
+      ]
     },
     "exports": {
       "env": {
@@ -773,10 +757,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 47,
-      "discoveryBytes": 31348,
-      "descriptionBytes": 1389
+      ]
     },
     "explicit": {
       "env": {
@@ -788,10 +769,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 5,
-      "discoveryBytes": 3391,
-      "descriptionBytes": 533
+      ]
     },
     "filtered": {
       "env": {
@@ -805,10 +783,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 5,
-      "discoveryBytes": 3414,
-      "descriptionBytes": 534
+      ]
     },
     "experimental": {
       "env": {
@@ -1274,10 +1249,7 @@
         "st_health_check",
         "st_readiness_check",
         "st_result_read"
-      ],
-      "count": 458,
-      "discoveryBytes": 586035,
-      "descriptionBytes": 36971
+      ]
     }
   },
   "contracts": {

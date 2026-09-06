@@ -38,7 +38,7 @@ async function files(dir) {
   return out;
 }
 const sourceFiles = [
-  ...await files('src'), ...await files('tests'), ...await files('scripts'), ...await files('.github/workflows'), ...await files('docs/evaluation'),
+  ...await files('src'), ...await files('tests'), ...await files('scripts'), ...await files('.github/workflows'),
   'package.json', 'package-lock.json', 'tsconfig.json', 'vitest.config.ts', 'eslint.config.js',
   'README.md', 'SECURITY.md', 'CONTRIBUTING.md', 'ARCHITECTURE.md', '.gitignore', '.dockerignore',
   'CHANGELOG.md', 'TOOLS.md', 'LICENSE', '.env.example', 'Dockerfile', 'fly.toml', 'glama.json',

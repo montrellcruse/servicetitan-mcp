@@ -13,9 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 - Moved focused CRM, dispatch, and analytics configurations into onboarding and added the Glama maintainer manifest.
 
 ### Validation
-- Added discovery/schema/profile and description-only source compatibility checks, a complete overlap inventory, independent definition reviews, and synthetic selection evidence.
+- Added a reusable discovery regression check for tool names, schemas, annotations, and profile membership.
 - Preserved all tool names, profiles, defaults, validation constraints, handlers, routes, annotations, and response behavior. Stable read-only support and experimental mutation safeguards are unchanged.
-- Local rubric projections are distinguished from Glama's external evaluation. See [validation](docs/releases/VALIDATION-v3.md) and [evaluation guide](docs/evaluation/README.md).
+- See the [release validation](docs/releases/VALIDATION-v3.md) for test coverage and support boundaries.
 
 ## [3.0.0] - 2026-09-05
 

@@ -29,7 +29,6 @@ jobs:
       - run: npm test
       - run: npm run test:wire
       - run: npm run discovery:check
-      - run: npm run evaluation:check
       - run: npm run test:packaging
       - name: Publish using npm Trusted Publishing
         run: |
