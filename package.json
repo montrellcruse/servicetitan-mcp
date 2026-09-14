@@ -79,12 +79,12 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@typescript-eslint/eslint-plugin": "^8.0.0",
-    "@typescript-eslint/parser": "^8.0.0",
+    "@types/node": "^22.20.2",
+    "@typescript-eslint/eslint-plugin": "^8.70.0",
+    "@typescript-eslint/parser": "^8.70.0",
     "@vitest/coverage-v8": "^4.1.11",
-    "esbuild": "^0.28.1",
-    "eslint": "^10.8.0",
+    "esbuild": "^0.28.2",
+    "eslint": "^10.10.0",
     "typescript": "^5.8.3",
     "vitest": "^4.1.11"
   },

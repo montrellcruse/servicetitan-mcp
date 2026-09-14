@@ -1,5 +1,14 @@
 # V3 stable read-only validation
 
+## September 13 compatible development-tool maintenance
+
+A separate unpublished maintenance candidate advances `@types/node` 22.19.13 to 22.20.2, both TypeScript ESLint packages 8.65.0 to 8.70.0, ESLint 10.8.0 to 10.10.0, and esbuild 0.28.1 to 0.28.2. Package version 3.0.1, supported Node major versions, runtime source, and direct runtime dependency ranges remain unchanged. The Axios 1.18.1 to 1.20.0 lockfile candidate is intentionally outside this development-only batch and requires separate runtime-acceptance review; no major dependency migration is included.
+
+Clean local installs on Node 22.23.2 and 24.19.0 with npm 10.9.9 pass dependency-tree validation, zero-vulnerability audits, contract checks, typechecking, lint, 583 coverage tests in 43 files, 15 wire tests, nine discovery configurations, and both packaging tests. All 106 non-development lock records and all 141 generated runtime/declaration files are byte-identical to the preceding tested security artifact. This is local macOS arm64 evidence, not a Linux CI or publication result.
+
+Historical production, broad load, and focused synthetic protocol evidence below was not rerun. Reuse is limited to the unchanged runtime/declaration artifact, unchanged runtime dependency records and request/contracts/profile implementation, and the renewed deterministic matrix. The dependency inventory as a whole is not unchanged: development tooling was updated. Final archive identity, fresh consumer installs, zero-upstream import/profile/stdio smokes, and release-policy validation are checked separately for the local maintenance candidate. Existing source-lock evidence does not imply older consumer installations were updated, and fresh consumer ranges are audited separately.
+
+
 Version `3.0.1` retains stable read-only support under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
 
 ## Local security-maintenance candidate — September 13, 2026 (Arizona)
