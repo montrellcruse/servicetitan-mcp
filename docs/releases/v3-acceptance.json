@@ -12,11 +12,12 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "edcb8d6c89b4c8a8aa9d5d79c49fddc7b2fefeec10e0b8e3e7fa4fa7a59843c2",
+  "sourceFingerprint": "462b089b4dcb9b0c5ec106e5ad1aeda333c5d6ea51968005302d2ff28fbc660e",
   "gates": {
     "maintenance": {
       "status": "passed",
-      "summary": "VALIDATION-v3.md"
+      "summary": "VALIDATION-v3.md",
+      "boundary": "September13 local security candidate: Hono4.13.5 and aligned Vitest4.1.11; clean install, dependency tree and zero full/production audits on Node22.23.2/24.19.0. Unpublished; no remote Linux CI result is implied."
     },
     "contracts": {
       "status": "passed",
@@ -36,7 +37,7 @@
       "status": "passed",
       "runtimes": [
         "22.23.2",
-        "24.20.0"
+        "24.19.0"
       ],
       "platform": "darwin-arm64",
       "testsPerRuntime": 583,
@@ -48,12 +49,12 @@
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Repacked 154-file v3.0.1 archive after internal-artifact cleanup. Node22/24 installed imports, five profiles, experimental safeguards and stdio smoke checks pass with zero upstream requests. Runtime source and declarations are unchanged from the full patch matrix; packaging/link/exclusion checks pass on both runtimes.",
+      "boundary": "Local security candidate archive; installed Node22/24 imports, five profiles, experimental safeguards and stdio smokes pass with zero upstream calls. Final documentation-bearing archive is checked after evidence updates. Source lock and fresh consumer ranges are separately audited; old installations are not inferred repaired.",
       "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Historical v3.0.0 evidence, not rerun for v3.0.1. Reviewed source and SDK contract/profile comparisons preserve request logic, schemas, defaults, dependencies and safety behavior. Built 3.0.0 stdio readonly refresh at 786f15b before the review fixes: authentication, health, four representative modules and 18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor source-row reconciliation remains historical evidence. Scheduling Pro403 remains unverified; no dashboard parity or additional-company certification. Not repeated after the later error-delivery, query-filter, and audit-isolation changes; those were validated with deterministic adapters, built MCP processes, and built-factory SDK checks.",
+      "boundary": "Historical v3.0.0 evidence, not rerun for this local security candidate or v3.0.1. Current reuse is supported by byte-identical built JavaScript, unchanged ServiceTitan request code/contracts/profiles and client dependencies, review showing the Hono websocket helper actually imported via unchanged @hono/node-server is byte-identical4.13.0/4.13.5, and renewed deterministic interface/package/protocol checks. Hono and development Vitest inventory versions changed; no blanket unchanged-dependencies claim. Built3.0.0 stdio readonly refresh at786f15b: authentication, health, four representative modules and18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor reconciliation remains historical. Scheduling Pro403, dashboard parity and additional-company certification remain unverified. Later error-delivery/query/audit fixes were validated deterministically, not by repeating this live refresh.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -68,7 +69,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Historical broad client-load, report-cache and retained-memory evidence, not rerun for v3.0.1. Reviewed unchanged runtime source and schema/profile/dependency comparison justifies reuse. A focused synthetic protocol refresh is recorded separately for v3.0.1. Full synthetic Node 22/24 protocol, client-load, report-cache and retained-memory matrix passed at 786f15b. Focused client-load and analytics refresh passed on both runtimes at d4801c6, including explicit unknown-write nonretryability assertions. Those measurements were not repeated for the later audit-sink isolation fix, which is covered by direct/SDK and built-package callback-failure tests; custom audit-sink latency and delivery are not measured. No production capacity or latency SLA; the documented historical Node 22 benchmark-client listener warnings remain.",
+      "boundary": "Historical broad client-load, report-cache and retained-memory evidence remains not rerun. The security candidate preserves built JavaScript and client/cache implementation/dependencies; the only imported Hono websocket helper is byte-identical across its patch. This supports scoped historical reuse together with the new focused synthetic protocol matrix. No blanket unchanged dependency inventory claim. Prior full/focused identities remain below. Custom audit-sink latency/delivery, production capacity and a latency SLA remain unmeasured; Node22 benchmark-driver abort-listener warnings remain documented.",
       "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
@@ -78,14 +79,14 @@
         "status": "passed",
         "nodeVersions": [
           "22.23.2",
-          "24.20.0"
+          "24.19.0"
         ],
         "samples": 32,
         "repeats": 1,
         "soakSeconds": 3,
         "scenariosPerRuntime": 24,
         "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629",
-        "boundary": "Focused synthetic stdio/HTTP discovery and protocol refresh against the retained v2.6.4 baseline. All row/amount, overload recovery, session churn and controlled-upstream assertions pass. Short run; no percentile stability or production capacity claim.",
+        "boundary": "September13 local security candidate: independent pinned v2.6.4 baseline and variant-relative ESM Axios fixture binding. Both full reruns pass row/amount, overload recovery, session churn and controlled-upstream assertions. The original wrong-instance baseline warmup failure is retained as failed preparation, not a passing measurement. Node22 driver listener warnings remain; no percentile stability, fresh production or capacity claim.",
         "summary": "../BENCHMARKS.md"
       }
     },

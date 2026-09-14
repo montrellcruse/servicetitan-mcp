@@ -2,7 +2,53 @@
 
 Version `3.0.1` retains stable read-only support under the `readonly-v1` policy in [v3-acceptance.json](v3-acceptance.json). Stable support covers read-only use subject to each company's scopes, modules, separate runtime/configuration, and readiness/report validation. Live integration writes and independent-company acceptance are explicitly scoped out with reasons; neither is recorded as passed. Mutations remain experimental, and dashboard parity is not certified.
 
-## v3.0.1 description and discovery patch
+## Local security-maintenance candidate — September 13, 2026 (Arizona)
+
+This is an unpublished local candidate retaining package version 3.0.1, not a new
+npm release or a claim of remote Linux CI success. Hono is patched from 4.13.0 to
+4.13.5 within MCP SDK 1.30.0's existing range. The development-only Vitest and
+coverage-v8 family is aligned at 4.1.11. Every other source-lock dependency entry,
+ServiceTitan request handler, contract, profile, and runtime source file is
+unchanged. The generated JavaScript build remains byte-identical to the reviewed
+v3.0.1 build: SHA-256 `b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629`.
+
+Fresh local Node22.23.2 and Node24.19.0 runs pass clean install, dependency-tree
+validation, zero full and production audit findings, contracts, typecheck, lint,
+583 tests in 43 files with coverage, fifteen wire tests, nine discovery
+configurations, and two packaging tests. Fresh installed candidate archives pass
+imports, five profiles, experimental safeguards, and actual stdio smoke with zero
+upstream calls on both runtimes. Fresh consumers resolve dependency ranges
+independently of this repository lock; they are audited separately, not assumed
+to reproduce old installations. Final documentation-bearing archives are repacked
+and checked after evidence updates.
+
+The Hono patch is an inventory repair, not a finding of demonstrated exploitability
+in this application. Official 4.13.0/4.13.5 tarballs show the `hono/ws` helper
+imported by the unchanged `@hono/node-server`2.1.0 adapter is byte-identical and has
+no imports. The SDK's direct Hono application imports occur in examples, not our
+stdio or HTTP entrypoints. This narrow import-path review, unchanged built code,
+unchanged ServiceTitan client dependencies and renewed deterministic checks
+support reuse of the explicitly historical readonly production and broader
+client-load/cache/retained-memory evidence below. We do not claim that all
+installed dependency files are unchanged, or that the old live checks were rerun.
+
+A fresh focused synthetic stdio/HTTP protocol matrix also passes on both runtimes:
+32 samples, one repetition, three-second soak, 24 steady scenarios and all five
+correctness/overload/recovery/session-churn/controlled-upstream assertions. The
+historical baseline has its own pinned installation because the locks differ.
+The benchmark preload now resolves each variant's own ESM Axios instance; the
+first independent-baseline attempt exposed the old harness's wrong-instance
+fixture binding and was not counted as a passing measurement. Loopback proxy
+isolation blocked real upstream access. No product or acceptance assertion was
+weakened. Node22's benchmark driver retains the previously documented abort-listener
+warning; no listener threshold was changed. See [benchmark evidence](../BENCHMARKS.md).
+
+No tenant credentials, live API reads, live writes, report data execution, fresh
+production/latency certification, or independent-company validation occurred.
+Historical liveProduction remains explicitly not rerun, the readonly-v1 policy is
+unchanged, and integration/independent-company exclusions remain unchanged.
+
+## Historical v3.0.1 description and discovery patch
 
 All 264 read definitions were reviewed against pinned API contracts and their handlers. The patch preserves tool names, profile membership, defaults, validation constraints, annotations, request handlers, API routes, and response behavior. Dependencies and pinned contracts are unchanged. The retained `discovery:check` compares nine actual SDK configurations with the v3.0.0 contract fixture without upstream requests.
 

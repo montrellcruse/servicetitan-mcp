@@ -1,9 +1,16 @@
 // Loaded only by benchmark child processes. Every Axios request is fixture-only.
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { setTimeout as delay } from 'node:timers/promises';
-import axios from 'axios';
+import { pathToFileURL } from 'node:url';
+
+// Each launched variant may have its own pinned installation. Instrument its
+// ESM Axios instance, not the harness checkout's unrelated module instance.
+const axiosPackage = createRequire(resolve(process.cwd(), 'package.json')).resolve('axios/package.json');
+const { default: axios } = await import(pathToFileURL(resolve(dirname(axiosPackage), 'index.js')).href);
 
 assert.equal(process.env.ST_CLIENT_ID, 'benchmark-client');
 const target = process.env.BENCH_METRICS;

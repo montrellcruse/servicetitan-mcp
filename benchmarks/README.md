@@ -12,6 +12,14 @@ node benchmarks/prepare-baseline.mjs
 
 The baseline command prints a temporary v2.6.4 directory. Pass that exact path to the comparison and memory commands:
 
+That helper shares dependencies only when the historical and current lockfiles
+match. For a dependency patch, export revision `f6becd5` to a separate directory,
+run its own pinned `npm ci` and build there, and pass that independently installed
+directory instead. Do not bypass the lock-equality assertion or silently share
+the candidate dependency tree. The upstream preload resolves ESM Axios from each
+launched variant's working directory so both independent installations remain
+fixture-only; no ServiceTitan credentials are required.
+
 ```sh
 node benchmarks/protocol.mjs --baseline /path/printed/above --samples 180 --repeats 3 --soak-seconds 30 --output benchmarks/results/protocol-node24.json
 node benchmarks/client-load.mjs --output benchmarks/results/client-load-node24.json
