@@ -1,6 +1,35 @@
 # V3 latency and load measurements
 
-## v3.0.1 focused protocol refresh
+## Local security-maintenance focused refresh — September 13, 2026 (Arizona)
+
+The unpublished 3.0.1 security candidate passes a new focused protocol run on
+Node22.23.2 and Node24.19.0: 32 samples, one repeat, three-second soak, 24 steady
+scenarios per runtime, with successful row/amount comparisons, expected overload
+only, recovery, session churn, and controlled-upstream-only assertions all true.
+The v2.6.4 (`f6becd5`) baseline uses its own pinned npm installation; unlike the
+historical equal-lock comparison, candidate and baseline dependencies differ in
+the explicitly reviewed security patch. No shared dependency shortcut is used.
+
+The first independent-baseline attempt failed warmups because the old preload
+instrumented the harness checkout's Axios rather than the baseline's own instance.
+The preload now resolves the launched variant's ESM Axios from its working
+directory. Both complete reruns pass with unchanged correctness assertions and
+synthetic credentials. Real ServiceTitan access remains blocked; only loopback
+HTTP and fixture adapters are used. Node22 repeats the documented benchmark-driver
+abort-listener warnings; no listener limits were changed. These short runs do not
+measure production capacity, stable tail percentiles, or long-duration leak freedom.
+
+Built JavaScript SHA-256 remains
+`b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629`
+(sorted repository-relative JavaScript path, NUL, contents, NUL), byte-identical
+to the reviewed v3.0.1 runtime. The Hono websocket helper loaded through the
+unchanged Node adapter is also byte-identical between Hono4.13.0 and4.13.5.
+Broader client-load, analytics-cache and retained-memory results below remain
+historical, not rerun; reuse is based on their unchanged implementation and
+executed dependency paths plus this focused transport refresh. This is not a
+claim that the entire dependency inventory is unchanged.
+
+## Historical v3.0.1 focused protocol refresh
 
 On September 6, 2026 UTC, the unchanged protocol harness was rerun on Node 22.23.2 and 24.20.0 with v2.6.4 as its retained baseline and v3.0.1 as the candidate. Each run uses 32 samples, one repetition, and a three-second soak, covering 24 steady scenarios plus discovery, overload/recovery, arrival load, and session churn. All five correctness assertions pass, with synthetic upstream adapters only. Full stdio initialization/discovery totals are 176.3 ms and 164.9 ms respectively; single startup observations and shortened runs do not establish a latency SLA or stable tail percentiles.
 
