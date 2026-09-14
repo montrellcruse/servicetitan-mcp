@@ -12,12 +12,12 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "462b089b4dcb9b0c5ec106e5ad1aeda333c5d6ea51968005302d2ff28fbc660e",
+  "sourceFingerprint": "7f81fa8591e43ed036fbd4e4c725394edf01f9447573ab53efee85506c5ced8b",
   "gates": {
     "maintenance": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "September13 local security candidate: Hono4.13.5 and aligned Vitest4.1.11; clean install, dependency tree and zero full/production audits on Node22.23.2/24.19.0. Unpublished; no remote Linux CI result is implied."
+      "boundary": "September 13 unpublished development-only maintenance: Node types 22.20.2, TypeScript ESLint 8.70.0, ESLint 10.10.0 and esbuild 0.28.2. Clean installs, dependency trees and zero full audits passed on Node22.23.2/24.19.0 using npm10.9.9. Runtime version and all 106 non-development lock records unchanged; no Linux CI or publication result implied."
     },
     "contracts": {
       "status": "passed",
@@ -49,12 +49,12 @@
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Local security candidate archive; installed Node22/24 imports, five profiles, experimental safeguards and stdio smokes pass with zero upstream calls. Final documentation-bearing archive is checked after evidence updates. Source lock and fresh consumer ranges are separately audited; old installations are not inferred repaired.",
+      "boundary": "Development-only maintenance preserves all 141 runtime/declaration files and all 106 non-development lock records from the prior tested security artifact, so prior package runtime acceptance remains applicable. Final documentation-bearing archive identity, fresh Node22/24 consumer installs, imports, five-profile safeguards and stdio checks are verified separately with zero upstream calls. Fresh dependency ranges are separately audited; old installations are not inferred updated.",
       "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "Historical v3.0.0 evidence, not rerun for this local security candidate or v3.0.1. Current reuse is supported by byte-identical built JavaScript, unchanged ServiceTitan request code/contracts/profiles and client dependencies, review showing the Hono websocket helper actually imported via unchanged @hono/node-server is byte-identical4.13.0/4.13.5, and renewed deterministic interface/package/protocol checks. Hono and development Vitest inventory versions changed; no blanket unchanged-dependencies claim. Built3.0.0 stdio readonly refresh at786f15b: authentication, health, four representative modules and18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor reconciliation remains historical. Scheduling Pro403, dashboard parity and additional-company certification remain unverified. Later error-delivery/query/audit fixes were validated deterministically, not by repeating this live refresh.",
+      "boundary": "September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical v3.0.0 evidence, not rerun for this local security candidate or v3.0.1. Current reuse is supported by byte-identical built JavaScript, unchanged ServiceTitan request code/contracts/profiles and client dependencies, review showing the Hono websocket helper actually imported via unchanged @hono/node-server is byte-identical4.13.0/4.13.5, and renewed deterministic interface/package/protocol checks. Hono and development Vitest inventory versions changed; no blanket unchanged-dependencies claim. Built3.0.0 stdio readonly refresh at786f15b: authentication, health, four representative modules and18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor reconciliation remains historical. Scheduling Pro403, dashboard parity and additional-company certification remain unverified. Later error-delivery/query/audit fixes were validated deterministically, not by repeating this live refresh.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -69,7 +69,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "Historical broad client-load, report-cache and retained-memory evidence remains not rerun. The security candidate preserves built JavaScript and client/cache implementation/dependencies; the only imported Hono websocket helper is byte-identical across its patch. This supports scoped historical reuse together with the new focused synthetic protocol matrix. No blanket unchanged dependency inventory claim. Prior full/focused identities remain below. Custom audit-sink latency/delivery, production capacity and a latency SLA remain unmeasured; Node22 benchmark-driver abort-listener warnings remain documented.",
+      "boundary": "September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical broad client-load, report-cache and retained-memory evidence remains not rerun. The security candidate preserves built JavaScript and client/cache implementation/dependencies; the only imported Hono websocket helper is byte-identical across its patch. This supports scoped historical reuse together with the new focused synthetic protocol matrix. No blanket unchanged dependency inventory claim. Prior full/focused identities remain below. Custom audit-sink latency/delivery, production capacity and a latency SLA remain unmeasured; Node22 benchmark-driver abort-listener warnings remain documented.",
       "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
