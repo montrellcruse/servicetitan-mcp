@@ -1,5 +1,42 @@
 # V3 stable read-only validation
 
+## October 4, 2026 dependency-security maintenance
+
+This unpublished default-branch maintenance candidate keeps package version 3.0.1,
+the `readonly-v1` support policy, application source, supported Node majors, and
+direct dependency ranges unchanged. The lockfile refreshes five resolved packages
+within those ranges: Axios 1.18.1→1.20.0, brace-expansion 5.0.9→5.0.12,
+fast-uri 3.1.7→3.1.8, Hono 4.13.5→4.13.13, and ip-address 10.4.0→10.7.3.
+Axios, Hono, fast-uri, and ip-address are runtime dependency records; this is not
+a development-only or byte-identical-installed-dependencies update. The previous
+sections below describe earlier candidates and remain historical.
+
+On local Node 22.23.3/npm 10.9.9 and Node 24.21.0/npm 11.19.0, clean locked
+installs and full low-threshold npm audits reported zero vulnerabilities.
+Contracts, typecheck, lint, 583 coverage tests in 43 files, 15 built-wire tests,
+nine discovery configurations, two packaging tests, and npm pack dry runs passed
+on both runtimes. All 141 generated JavaScript/declaration files on Node 24
+were byte-identical to an independently built intermediate ip-address-only
+candidate using the same application source and build tooling. The comparison
+does not imply the externally loaded runtime packages are identical. The
+client-runtime tests exercise real Axios request boundaries with local adapters;
+wire/discovery/packaging checks used synthetic configuration and no ServiceTitan
+tenant calls. A separate Node 22.23.3 controlled-adapter client-load run passed
+five load scenarios and nine fault scenarios with 960 offered requests, 904
+successful requests and 56 accounted queue-cap rejections. It exercised auth
+single-flight, 401/429 recovery, cancellation, bounded retry delay, and no replay
+of ambiguous writes against synthetic fixtures; no upstream calls or production
+throughput claim resulted. Linux CI is reported only after it runs and is not
+inferred from these local checks.
+
+Historical readonly production and broad latency/load evidence below was not
+rerun. Carry-forward is limited to the unchanged application contracts, request
+code and generated package files, the compatible dependency ranges, and renewed
+deterministic request, interface, protocol, package and focused synthetic-load
+checks. This is a reviewed continuity
+argument, not proof of identical dependency behavior or fresh production/load
+certification. No live tenant read/write, npm publication, or deployment occurred.
+
 ## September 13 compatible development-tool maintenance
 
 A separate unpublished maintenance candidate advances `@types/node` 22.19.13 to 22.20.2, both TypeScript ESLint packages 8.65.0 to 8.70.0, ESLint 10.8.0 to 10.10.0, and esbuild 0.28.1 to 0.28.2. Package version 3.0.1, supported Node major versions, runtime source, and direct runtime dependency ranges remain unchanged. The Axios 1.18.1 to 1.20.0 lockfile candidate is intentionally outside this development-only batch and requires separate runtime-acceptance review; no major dependency migration is included.

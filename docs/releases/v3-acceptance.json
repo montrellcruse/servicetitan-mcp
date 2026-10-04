@@ -12,12 +12,12 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "7f81fa8591e43ed036fbd4e4c725394edf01f9447573ab53efee85506c5ced8b",
+  "sourceFingerprint": "fe91f113ad230ebefb952f0868cb06be5d7377c658e2d714aa4dbf6254aac1c2",
   "gates": {
     "maintenance": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "September 13 unpublished development-only maintenance: Node types 22.20.2, TypeScript ESLint 8.70.0, ESLint 10.10.0 and esbuild 0.28.2. Clean installs, dependency trees and zero full audits passed on Node22.23.2/24.19.0 using npm10.9.9. Runtime version and all 106 non-development lock records unchanged; no Linux CI or publication result implied."
+      "boundary": "October 4 2026 candidate: five lockfile records patched (Axios 1.20.0, brace-expansion 5.0.12, fast-uri 3.1.8, Hono 4.13.13, ip-address 10.7.3), direct ranges and source unchanged; local Node 22.23.3 and Node 24.21.0 clean installs and low-threshold audits report zero findings. Runtime dependencies changed; no npm publication or tenant call. Earlier September 13 development-only maintenance evidence below is historical. September 13 unpublished development-only maintenance: Node types 22.20.2, TypeScript ESLint 8.70.0, ESLint 10.10.0 and esbuild 0.28.2. Clean installs, dependency trees and zero full audits passed on Node22.23.2/24.19.0 using npm10.9.9. Runtime version and all 106 non-development lock records unchanged; no Linux CI or publication result implied."
     },
     "contracts": {
       "status": "passed",
@@ -36,25 +36,26 @@
     "runtimeMatrix": {
       "status": "passed",
       "runtimes": [
-        "22.23.2",
-        "24.19.0"
+        "22.23.3",
+        "24.21.0"
       ],
       "platform": "darwin-arm64",
       "testsPerRuntime": 583,
       "testFiles": 43,
       "wireTestsPerRuntime": 15,
       "summary": "VALIDATION-v3.md",
-      "packagingTestsPerRuntime": 2
+      "packagingTestsPerRuntime": 2,
+      "boundary": "October 4 candidate: clean installs, zero full audits, contracts, typecheck, lint, 583 coverage tests/43 files, 15 built-wire tests, nine discovery configurations, two packaging tests and npm pack dry runs passed locally on Node 22.23.3/npm 10.9.9 and Node 24.21.0/npm 11.19.0 (darwin-arm64). Linux CI is separate and not implied by these local runs."
     },
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Development-only maintenance preserves all 141 runtime/declaration files and all 106 non-development lock records from the prior tested security artifact, so prior package runtime acceptance remains applicable. Final documentation-bearing archive identity, fresh Node22/24 consumer installs, imports, five-profile safeguards and stdio checks are verified separately with zero upstream calls. Fresh dependency ranges are separately audited; old installations are not inferred updated.",
+      "boundary": "October 4 candidate: all 141 generated JavaScript/declaration files match the separately built ip-address-only intermediate candidate, but four additional runtime dependency records changed and installed dependency files are not claimed identical. Node 22/24 built-wire, discovery, packaging and npm pack dry runs passed; no live consumer install or release was performed. Earlier September 13 package evidence is historical. Development-only maintenance preserves all 141 runtime/declaration files and all 106 non-development lock records from the prior tested security artifact, so prior package runtime acceptance remains applicable. Final documentation-bearing archive identity, fresh Node22/24 consumer installs, imports, five-profile safeguards and stdio checks are verified separately with zero upstream calls. Fresh dependency ranges are separately audited; old installations are not inferred updated.",
       "javascriptBuildSha256": "b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical v3.0.0 evidence, not rerun for this local security candidate or v3.0.1. Current reuse is supported by byte-identical built JavaScript, unchanged ServiceTitan request code/contracts/profiles and client dependencies, review showing the Hono websocket helper actually imported via unchanged @hono/node-server is byte-identical4.13.0/4.13.5, and renewed deterministic interface/package/protocol checks. Hono and development Vitest inventory versions changed; no blanket unchanged-dependencies claim. Built3.0.0 stdio readonly refresh at786f15b: authentication, health, four representative modules and18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor reconciliation remains historical. Scheduling Pro403, dashboard parity and additional-company certification remain unverified. Later error-delivery/query/audit fixes were validated deterministically, not by repeating this live refresh.",
+      "boundary": "October 4 candidate: historical readonly production evidence was not rerun. Carry-forward review rests on unchanged application request/contracts/profile code and generated files, compatible dependency ranges, plus fresh local Node 22/24 real-Axios-adapter tests, 15 built-wire tests and nine discovery configurations per runtime with synthetic data, plus a passing focused Node 22 controlled-adapter client-load/fault run and zero tenant calls. Axios, Hono, fast-uri and ip-address runtime records changed, so installed dependency identity and fresh production certification are expressly not claimed. Earlier September 13 account below is historical. September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical v3.0.0 evidence, not rerun for this local security candidate or v3.0.1. Current reuse is supported by byte-identical built JavaScript, unchanged ServiceTitan request code/contracts/profiles and client dependencies, review showing the Hono websocket helper actually imported via unchanged @hono/node-server is byte-identical4.13.0/4.13.5, and renewed deterministic interface/package/protocol checks. Hono and development Vitest inventory versions changed; no blanket unchanged-dependencies claim. Built3.0.0 stdio readonly refresh at786f15b: authentication, health, four representative modules and18 report definitions passed; no business mutations, report data execution, or customer-record retention. Initial-candidate labor reconciliation remains historical. Scheduling Pro403, dashboard parity and additional-company certification remain unverified. Later error-delivery/query/audit fixes were validated deterministically, not by repeating this live refresh.",
       "summary": "VALIDATION-v3.md"
     },
     "liveIntegration": {
@@ -69,7 +70,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical broad client-load, report-cache and retained-memory evidence remains not rerun. The security candidate preserves built JavaScript and client/cache implementation/dependencies; the only imported Hono websocket helper is byte-identical across its patch. This supports scoped historical reuse together with the new focused synthetic protocol matrix. No blanket unchanged dependency inventory claim. Prior full/focused identities remain below. Custom audit-sink latency/delivery, production capacity and a latency SLA remain unmeasured; Node22 benchmark-driver abort-listener warnings remain documented.",
+      "boundary": "October 4 candidate: historical broad load/latency evidence was not rerun. Runtime dependency records changed even though application source and generated files are unchanged. Local Node 22/24 deterministic request, wire and package checks passed; a focused Node 22 controlled-adapter run passed five load and nine fault scenarios (960 offered, 904 successful, 56 accounted queue-cap rejections); fresh capacity, percentile and production-latency claims are not made. Earlier September 13 account below is historical. September 13 development-only maintenance: historical evidence is retained, not rerun. All 141 runtime/declaration files, all 106 non-development lock records, and runtime request/contracts/profile implementation match the prior tested security artifact byte-for-byte. Development tooling differs and is covered by renewed deterministic Node22/24 matrix and artifact checks. Historical broad client-load, report-cache and retained-memory evidence remains not rerun. The security candidate preserves built JavaScript and client/cache implementation/dependencies; the only imported Hono websocket helper is byte-identical across its patch. This supports scoped historical reuse together with the new focused synthetic protocol matrix. No blanket unchanged dependency inventory claim. Prior full/focused identities remain below. Custom audit-sink latency/delivery, production capacity and a latency SLA remain unmeasured; Node22 benchmark-driver abort-listener warnings remain documented.",
       "javascriptBuildSha256": "a3f20d142ac0dbbfdb17367e9679e03ca285a7f1a08291de9c822c540d218701",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
