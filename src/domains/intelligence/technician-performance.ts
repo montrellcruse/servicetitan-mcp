@@ -5,11 +5,9 @@ import type { ToolRegistry } from "../../registry.js";
 import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
-  countWeekdaysInclusive,
   fetchWithWarning,
   isRecord,
   round,
-  safeDivide,
   toDateRange,
   toNumber,
   toText,
@@ -123,21 +121,21 @@ const REPORT_165_ASSIGNED_TECHNICIAN_NAME_FIELDS = [
 interface RevenueByTech {
   id: number;
   name: string;
-  revenue: number;
-  averageTicket: number;
-  opportunities: number;
-  convertedJobs: number;
-  conversionRate: number;
-  customerSatisfaction: number;
+  revenue: number | null;
+  averageTicket: number | null;
+  opportunities: number | null;
+  convertedJobs: number | null;
+  conversionRate: number | null;
+  customerSatisfaction: number | null;
 }
 
 interface ProductivityByTech {
   id: number;
   name: string;
-  revenuePerHour: number;
-  billableEfficiency: number;
-  recallsCaused: number;
-  upsold: number;
+  revenuePerHour: number | null;
+  billableEfficiency: number | null;
+  recallsCaused: number | null;
+  upsold: number | null;
 }
 
 interface TechnicianIdentity {
@@ -146,23 +144,23 @@ interface TechnicianIdentity {
 }
 
 interface LeadGenerationMetrics {
-  replacementOpps: number;
-  leadsSet: number;
-  avgLeadSale: number;
-  conversionRate: number;
-  totalLeadSales: number;
+  replacementOpps: number | null;
+  leadsSet: number | null;
+  avgLeadSale: number | null;
+  conversionRate: number | null;
+  totalLeadSales: number | null;
 }
 
 interface MembershipMetrics {
-  opportunities: number;
-  sold: number;
-  conversionRate: number;
+  opportunities: number | null;
+  sold: number | null;
+  conversionRate: number | null;
 }
 
 interface LeadSalesMetrics {
-  totalSales: number;
-  avgSale: number;
-  closeRate: number;
+  totalSales: number | null;
+  avgSale: number | null;
+  closeRate: number | null;
 }
 
 interface LeadGenerationByTech extends TechnicianIdentity, LeadGenerationMetrics {}
@@ -174,18 +172,18 @@ interface LeadSalesByTech extends TechnicianIdentity, LeadSalesMetrics {}
 interface TechnicianScorecard {
   id: number;
   name: string;
-  jobsCompleted: number;
-  revenue: number;
-  averageTicket: number;
-  opportunities: number;
-  convertedJobs: number;
-  conversionRate: number;
-  customerSatisfaction: number;
-  revenuePerHour: number;
-  billableEfficiency: number;
-  recallsCaused: number;
-  upsold: number;
-  jobsPerDay: number;
+  jobsCompleted: number | null;
+  revenue: number | null;
+  averageTicket: number | null;
+  opportunities: number | null;
+  convertedJobs: number | null;
+  conversionRate: number | null;
+  customerSatisfaction: number | null;
+  revenuePerHour: number | null;
+  billableEfficiency: number | null;
+  recallsCaused: number | null;
+  upsold: number | null;
+  jobsPerDay: number | null;
   leadGeneration: LeadGenerationMetrics;
   memberships: MembershipMetrics;
   salesFromTechLeads: LeadSalesMetrics;
@@ -208,7 +206,18 @@ function extractReportRows(response: unknown): unknown[][] {
 }
 
 function parseTechnicianId(raw: unknown): number {
-  return Math.round(toNumber(raw));
+  const id = reportNumber(raw);
+  return id !== null && Number.isSafeInteger(id) && id > 0 ? id : 0;
+}
+
+function reportNumber(raw: unknown, scale = 1): number | null {
+  const value = typeof raw === "number"
+    ? raw
+    : typeof raw === "string" && /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(raw.trim())
+      ? Number(raw.trim())
+      : null;
+  if (value === null || !Number.isFinite(value * scale)) return null;
+  return value * scale;
 }
 
 function parseTechnicianName(raw: unknown, id: number): string {
@@ -219,27 +228,27 @@ function toLeadGenerationMetrics(
   metrics?: Partial<LeadGenerationMetrics>,
 ): LeadGenerationMetrics {
   return {
-    replacementOpps: metrics?.replacementOpps ?? 0,
-    leadsSet: metrics?.leadsSet ?? 0,
-    avgLeadSale: metrics?.avgLeadSale ?? 0,
-    conversionRate: metrics?.conversionRate ?? 0,
-    totalLeadSales: metrics?.totalLeadSales ?? 0,
+    replacementOpps: metrics?.replacementOpps ?? null,
+    leadsSet: metrics?.leadsSet ?? null,
+    avgLeadSale: metrics?.avgLeadSale ?? null,
+    conversionRate: metrics?.conversionRate ?? null,
+    totalLeadSales: metrics?.totalLeadSales ?? null,
   };
 }
 
 function toMembershipMetrics(metrics?: Partial<MembershipMetrics>): MembershipMetrics {
   return {
-    opportunities: metrics?.opportunities ?? 0,
-    sold: metrics?.sold ?? 0,
-    conversionRate: metrics?.conversionRate ?? 0,
+    opportunities: metrics?.opportunities ?? null,
+    sold: metrics?.sold ?? null,
+    conversionRate: metrics?.conversionRate ?? null,
   };
 }
 
 function toLeadSalesMetrics(metrics?: Partial<LeadSalesMetrics>): LeadSalesMetrics {
   return {
-    totalSales: metrics?.totalSales ?? 0,
-    avgSale: metrics?.avgSale ?? 0,
-    closeRate: metrics?.closeRate ?? 0,
+    totalSales: metrics?.totalSales ?? null,
+    avgSale: metrics?.avgSale ?? null,
+    closeRate: metrics?.closeRate ?? null,
   };
 }
 
@@ -256,12 +265,12 @@ function parseRevenueReport(response: unknown): RevenueByTech[] {
     result.push({
       id,
       name: parseTechnicianName(row[REVENUE_FIELD.Name], id),
-      revenue: round(toNumber(row[REVENUE_FIELD.CompletedRevenue]), 2),
-      averageTicket: round(toNumber(row[REVENUE_FIELD.OpportunityJobAverage]), 2),
-      opportunities: Math.round(toNumber(row[REVENUE_FIELD.Opportunity])),
-      convertedJobs: Math.round(toNumber(row[REVENUE_FIELD.ConvertedJobs])),
-      conversionRate: round(toNumber(row[REVENUE_FIELD.OpportunityConversionRate]) * 100, 1),
-      customerSatisfaction: round(toNumber(row[REVENUE_FIELD.CustomerSatisfaction]), 2),
+      revenue: reportNumber(row[REVENUE_FIELD.CompletedRevenue]),
+      averageTicket: reportNumber(row[REVENUE_FIELD.OpportunityJobAverage]),
+      opportunities: reportNumber(row[REVENUE_FIELD.Opportunity]),
+      convertedJobs: reportNumber(row[REVENUE_FIELD.ConvertedJobs]),
+      conversionRate: reportNumber(row[REVENUE_FIELD.OpportunityConversionRate], 100),
+      customerSatisfaction: reportNumber(row[REVENUE_FIELD.CustomerSatisfaction]),
     });
   }
 
@@ -281,10 +290,10 @@ function parseProductivityReport(response: unknown): ProductivityByTech[] {
     result.push({
       id,
       name: parseTechnicianName(row[PRODUCTIVITY_FIELD.Name], id),
-      revenuePerHour: round(toNumber(row[PRODUCTIVITY_FIELD.RevenuePerHour]), 2),
-      billableEfficiency: round(toNumber(row[PRODUCTIVITY_FIELD.BillableEfficiency]), 3),
-      recallsCaused: Math.round(toNumber(row[PRODUCTIVITY_FIELD.RecallsCaused])),
-      upsold: round(toNumber(row[PRODUCTIVITY_FIELD.Upsold]), 2),
+      revenuePerHour: reportNumber(row[PRODUCTIVITY_FIELD.RevenuePerHour]),
+      billableEfficiency: reportNumber(row[PRODUCTIVITY_FIELD.BillableEfficiency]),
+      recallsCaused: reportNumber(row[PRODUCTIVITY_FIELD.RecallsCaused]),
+      upsold: reportNumber(row[PRODUCTIVITY_FIELD.Upsold]),
     });
   }
 
@@ -292,29 +301,15 @@ function parseProductivityReport(response: unknown): ProductivityByTech[] {
 }
 
 function hasAnyLeadGenerationMetrics(metrics: LeadGenerationMetrics): boolean {
-  return (
-    metrics.replacementOpps !== 0 ||
-    metrics.leadsSet !== 0 ||
-    metrics.avgLeadSale !== 0 ||
-    metrics.conversionRate !== 0 ||
-    metrics.totalLeadSales !== 0
-  );
+  return Object.values(metrics).some((value) => value !== null && value !== 0);
 }
 
 function hasAnyMembershipMetrics(metrics: MembershipMetrics): boolean {
-  return (
-    metrics.opportunities !== 0 ||
-    metrics.sold !== 0 ||
-    metrics.conversionRate !== 0
-  );
+  return Object.values(metrics).some((value) => value !== null && value !== 0);
 }
 
 function hasAnyLeadSalesMetrics(metrics: LeadSalesMetrics): boolean {
-  return (
-    metrics.totalSales !== 0 ||
-    metrics.avgSale !== 0 ||
-    metrics.closeRate !== 0
-  );
+  return Object.values(metrics).some((value) => value !== null && value !== 0);
 }
 
 function parseLeadGenerationReport(response: unknown): LeadGenerationByTech[] {
@@ -330,19 +325,14 @@ function parseLeadGenerationReport(response: unknown): LeadGenerationByTech[] {
     const tech: LeadGenerationByTech = {
       id,
       name: parseTechnicianName(row[LEAD_GENERATION_FIELD.Name], id),
-      replacementOpps: Math.round(toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity])),
-      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
-      avgLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
-      conversionRate: round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]) * 100,
-        1,
-      ),
-      totalLeadSales: round(toNumber(row[LEAD_GENERATION_FIELD.TotalLeadSales]), 2),
+      replacementOpps: reportNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity]),
+      leadsSet: reportNumber(row[LEAD_GENERATION_FIELD.LeadsSet]),
+      avgLeadSale: reportNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]),
+      conversionRate: reportNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate], 100),
+      totalLeadSales: reportNumber(row[LEAD_GENERATION_FIELD.TotalLeadSales]),
     };
 
-    if (hasAnyLeadGenerationMetrics(tech)) {
-      result.push(tech);
-    }
+    result.push(tech);
   }
 
   return result;
@@ -361,14 +351,12 @@ function parseMembershipsReport(response: unknown): MembershipsByTech[] {
     const tech: MembershipsByTech = {
       id,
       name: parseTechnicianName(row[MEMBERSHIPS_FIELD.Name], id),
-      opportunities: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipOpportunities])),
-      sold: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipsSold])),
-      conversionRate: round(toNumber(row[MEMBERSHIPS_FIELD.MembershipConversionRate]) * 100, 1),
+      opportunities: reportNumber(row[MEMBERSHIPS_FIELD.MembershipOpportunities]),
+      sold: reportNumber(row[MEMBERSHIPS_FIELD.MembershipsSold]),
+      conversionRate: reportNumber(row[MEMBERSHIPS_FIELD.MembershipConversionRate], 100),
     };
 
-    if (hasAnyMembershipMetrics(tech)) {
-      result.push(tech);
-    }
+    result.push(tech);
   }
 
   return result;
@@ -387,14 +375,12 @@ function parseSalesFromTechLeadsReport(response: unknown): LeadSalesByTech[] {
     const tech: LeadSalesByTech = {
       id,
       name: parseTechnicianName(row[SALES_FROM_TECH_LEADS_FIELD.Name], id),
-      totalSales: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.TotalSalesFromTgl]), 2),
-      avgSale: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.ClosedAverageSaleFromTgl]), 2),
-      closeRate: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.CloseRateFromTgl]) * 100, 1),
+      totalSales: reportNumber(row[SALES_FROM_TECH_LEADS_FIELD.TotalSalesFromTgl]),
+      avgSale: reportNumber(row[SALES_FROM_TECH_LEADS_FIELD.ClosedAverageSaleFromTgl]),
+      closeRate: reportNumber(row[SALES_FROM_TECH_LEADS_FIELD.CloseRateFromTgl], 100),
     };
 
-    if (hasAnyLeadSalesMetrics(tech)) {
-      result.push(tech);
-    }
+    result.push(tech);
   }
 
   return result;
@@ -413,23 +399,12 @@ function parseSalesFromMarketingLeadsReport(response: unknown): LeadSalesByTech[
     const tech: LeadSalesByTech = {
       id,
       name: parseTechnicianName(row[SALES_FROM_MARKETING_LEADS_FIELD.Name], id),
-      totalSales: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.TotalSalesFromMarketingLeads]),
-        2,
-      ),
-      avgSale: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.ClosedAverageSaleFromMarketingLeads]),
-        2,
-      ),
-      closeRate: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.CloseRateFromMarketingLeads]) * 100,
-        1,
-      ),
+      totalSales: reportNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.TotalSalesFromMarketingLeads]),
+      avgSale: reportNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.ClosedAverageSaleFromMarketingLeads]),
+      closeRate: reportNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.CloseRateFromMarketingLeads], 100),
     };
 
-    if (hasAnyLeadSalesMetrics(tech)) {
-      result.push(tech);
-    }
+    result.push(tech);
   }
 
   return result;
@@ -616,14 +591,9 @@ function countCompletedJobsByTech(
 
 function hasAnyActivity(tech: TechnicianScorecard): boolean {
   return (
-    tech.jobsCompleted > 0 ||
-    tech.revenue > 0 ||
-    tech.opportunities > 0 ||
-    tech.customerSatisfaction > 0 ||
-    tech.revenuePerHour > 0 ||
-    tech.billableEfficiency > 0 ||
-    tech.recallsCaused > 0 ||
-    tech.upsold > 0 ||
+    [tech.revenue, tech.averageTicket, tech.convertedJobs, tech.opportunities,
+      tech.customerSatisfaction, tech.revenuePerHour, tech.billableEfficiency,
+      tech.recallsCaused, tech.upsold].some((value) => value !== null && value !== 0) ||
     hasAnyLeadGenerationMetrics(tech.leadGeneration) ||
     hasAnyMembershipMetrics(tech.memberships) ||
     hasAnyLeadSalesMetrics(tech.salesFromTechLeads) ||
@@ -633,11 +603,37 @@ function hasAnyActivity(tech: TechnicianScorecard): boolean {
 
 function averageBy(
   scorecards: TechnicianScorecard[],
-  mapper: (tech: TechnicianScorecard) => number,
+  mapper: (tech: TechnicianScorecard) => number | null,
   decimals = 2,
-): number {
-  const total = scorecards.reduce((sum, tech) => sum + mapper(tech), 0);
-  return round(safeDivide(total, scorecards.length), decimals);
+): number | null {
+  if (scorecards.length === 0) return null;
+  const values = scorecards.map(mapper);
+  if (values.some((value) => value === null)) return null;
+  const total = values.reduce<number>((sum, value) => sum + (value as number), 0);
+  return Number.isFinite(total) ? round(total / values.length, decimals) : null;
+}
+
+function uniqueTechnicianRows<T extends TechnicianIdentity>(
+  rows: T[], label: string, warnings: string[], metricAvailability: Record<string, { available: boolean; reason: string }>,
+): Map<number, T> {
+  const result = new Map<number, T>();
+  const duplicates = new Set<number>();
+  for (const row of rows) {
+    const previous = result.get(row.id);
+    if (!previous) result.set(row.id, row);
+    else {
+      duplicates.add(row.id);
+      result.set(row.id, Object.fromEntries(Object.entries(previous).map(([key, value]) => [
+        key, key === "id" ? value : key === "name" ? `Technician ${row.id}` : null,
+      ])) as unknown as T);
+    }
+  }
+  if (duplicates.size) {
+    const reason = `Duplicate technician rows in ${label}; metrics for ${duplicates.size} technician(s) are unavailable because the source grain is ambiguous.`;
+    warnings.push(reason);
+    metricAvailability[label] = { available: false, reason };
+  }
+  return result;
 }
 
 export function registerIntelligenceTechnicianPerformanceTool(
@@ -649,14 +645,13 @@ export function registerIntelligenceTechnicianPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Build a technician scorecard for the selected date range from ServiceTitan technician reports. Returns revenue, converted jobs, opportunities, conversion, productivity, recalls, upsells, and lead-generation metrics; includeExtendedMetrics adds membership and tech/marketing-lead sales reports. Filter by technician or business unit when comparing a subset, and use limit to bound ranked results. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
+      "Build a technician scorecard from provider revenue, converted-job, opportunity, productivity, recall, upsell, and lead-generation report values. includeExtendedMetrics requests membership and tech/marketing-lead sales reports. Missing, failed, ambiguous and unrequested metrics are null with source status; completed-job counts and jobsPerDay require an independent completed-job source and remain unavailable. Team averages are unweighted means of included technicians before limit, with null when any included value is unavailable; provider rates are retained without reconstructing hours or pooled team rates. Filter by technician or business unit and use limit to bound returned rows. Report calls may wait for per-report/client spacing; source failures and duplicate technician grain are returned in _warnings." +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
       try {
         const input = technicianScorecardSchema.parse(params);
-        const { start, end } = toDateRange(input.startDate, input.endDate, registry.timezone);
-        const workingDays = countWeekdaysInclusive(start, end, registry.timezone);
+        toDateRange(input.startDate, input.endDate, registry.timezone);
         const warnings: string[] = [];
         const maxTechnicians = input.limit ?? 25;
 
@@ -727,8 +722,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
           });
         }
 
-        // Parallelize all 6 report fetches — independent API calls
-        // Note: jobsCompleted is derived from ConvertedJobs in Report 168 (eliminates Report 165 fetch)
+        // The six report sources are independent; disabled optional sources are not measured.
         const [
           revenueReport,
           productivityReport,
@@ -787,6 +781,23 @@ export function registerIntelligenceTechnicianPerformanceTool(
             : Promise.resolve(null),
         ]);
 
+        const sourceStatus = (response: unknown, requested = true) => response !== null
+          ? { status: "complete" as const }
+          : { status: requested ? "failed" as const : "not_requested" as const,
+              reason: requested ? "Report unavailable; see _warnings." : "includeExtendedMetrics is false." };
+        const sourceAvailability = {
+          revenue: sourceStatus(revenueReport),
+          productivity: sourceStatus(productivityReport),
+          leadGeneration: sourceStatus(leadGenerationReport),
+          memberships: sourceStatus(membershipsReport, input.includeExtendedMetrics),
+          salesFromTechLeads: sourceStatus(salesFromTechLeadsReport, input.includeExtendedMetrics),
+          salesFromMarketingLeads: sourceStatus(salesFromMarketingLeadsReport, input.includeExtendedMetrics),
+        };
+        const metricAvailability: Record<string, { available: boolean; reason: string }> = {
+          jobsCompleted: { available: false, reason: "Independent completed-job counts are unavailable from these report sources; ConvertedJobs retains its provider meaning." },
+          jobsPerDay: { available: false, reason: "Unavailable because an independent completed-job numerator is not provided." },
+        };
+
         let revenueRows = parseRevenueReport(revenueReport);
         let productivityRows = parseProductivityReport(productivityReport);
         let leadGenerationRows = parseLeadGenerationReport(leadGenerationReport);
@@ -809,14 +820,12 @@ export function registerIntelligenceTechnicianPerformanceTool(
           );
         }
 
-        const revenueById = new Map(revenueRows.map((tech) => [tech.id, tech]));
-        const productivityById = new Map(productivityRows.map((tech) => [tech.id, tech]));
-        const leadGenerationById = new Map(leadGenerationRows.map((tech) => [tech.id, tech]));
-        const membershipsById = new Map(membershipsRows.map((tech) => [tech.id, tech]));
-        const salesFromTechLeadById = new Map(salesFromTechLeadRows.map((tech) => [tech.id, tech]));
-        const salesFromMarketingLeadById = new Map(
-          salesFromMarketingLeadRows.map((tech) => [tech.id, tech]),
-        );
+        const revenueById = uniqueTechnicianRows(revenueRows, "revenue", warnings, metricAvailability);
+        const productivityById = uniqueTechnicianRows(productivityRows, "productivity", warnings, metricAvailability);
+        const leadGenerationById = uniqueTechnicianRows(leadGenerationRows, "leadGeneration", warnings, metricAvailability);
+        const membershipsById = uniqueTechnicianRows(membershipsRows, "memberships", warnings, metricAvailability);
+        const salesFromTechLeadById = uniqueTechnicianRows(salesFromTechLeadRows, "salesFromTechLeads", warnings, metricAvailability);
+        const salesFromMarketingLeadById = uniqueTechnicianRows(salesFromMarketingLeadRows, "salesFromMarketingLeads", warnings, metricAvailability);
 
         const scorecards: TechnicianScorecard[] = [];
         const technicianIds = new Set<number>([
@@ -843,9 +852,9 @@ export function registerIntelligenceTechnicianPerformanceTool(
           const memberships = membershipsById.get(id);
           const salesFromTechLeads = salesFromTechLeadById.get(id);
           const salesFromMarketingLeads = salesFromMarketingLeadById.get(id);
-          // Use ConvertedJobs from Report 168 as proxy for jobsCompleted (eliminates Report 165 fetch)
-          const jobsCompleted = revenue?.convertedJobs ?? 0;
-          const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
+          // ConvertedJobs is not an independent count of completed jobs.
+          const jobsCompleted = null;
+          const jobsPerDay = null;
 
           const scorecard: TechnicianScorecard = {
             id,
@@ -858,16 +867,16 @@ export function registerIntelligenceTechnicianPerformanceTool(
               salesFromMarketingLeads?.name ??
               `Technician ${id}`,
             jobsCompleted,
-            revenue: revenue?.revenue ?? 0,
-            averageTicket: revenue?.averageTicket ?? 0,
-            opportunities: revenue?.opportunities ?? 0,
-            convertedJobs: revenue?.convertedJobs ?? 0,
-            conversionRate: revenue?.conversionRate ?? 0,
-            customerSatisfaction: revenue?.customerSatisfaction ?? 0,
-            revenuePerHour: productivity?.revenuePerHour ?? 0,
-            billableEfficiency: productivity?.billableEfficiency ?? 0,
-            recallsCaused: productivity?.recallsCaused ?? 0,
-            upsold: productivity?.upsold ?? 0,
+            revenue: revenue?.revenue ?? null,
+            averageTicket: revenue?.averageTicket ?? null,
+            opportunities: revenue?.opportunities ?? null,
+            convertedJobs: revenue?.convertedJobs ?? null,
+            conversionRate: revenue?.conversionRate ?? null,
+            customerSatisfaction: revenue?.customerSatisfaction ?? null,
+            revenuePerHour: productivity?.revenuePerHour ?? null,
+            billableEfficiency: productivity?.billableEfficiency ?? null,
+            recallsCaused: productivity?.recallsCaused ?? null,
+            upsold: productivity?.upsold ?? null,
             jobsPerDay,
             leadGeneration: toLeadGenerationMetrics(leadGeneration),
             memberships: toMembershipMetrics(memberships),
@@ -875,7 +884,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
             salesFromMarketingLeads: toLeadSalesMetrics(salesFromMarketingLeads),
           };
 
-          if (hasAnyActivity(scorecard)) {
+          const hasReportedUnknown = [revenue, productivity, leadGeneration, memberships,
+            salesFromTechLeads, salesFromMarketingLeads]
+            .some((source) => source && Object.values(source).some((value) => value === null));
+          if (hasAnyActivity(scorecard) || hasReportedUnknown) {
             scorecards.push(scorecard);
           }
         }
@@ -940,6 +952,9 @@ export function registerIntelligenceTechnicianPerformanceTool(
           },
           technicians: limitedScorecards,
           teamAverages,
+          teamAverageBasis: "Unweighted arithmetic means across included technicians before limit; any unavailable member value makes that field null. With no included technicians, every team mean remains null because its denominator is zero. Reported rates are averaged as provider values without pooled denominators.",
+          _sourceAvailability: sourceAvailability,
+          _metricAvailability: metricAvailability,
         };
 
         if (warnings.length > 0) {

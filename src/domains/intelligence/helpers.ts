@@ -5,7 +5,9 @@ import { getRequestContext, throwIfAborted } from "../../request-context.js";
 import { buildParams } from "../../utils.js";
 
 const DEFAULT_PAGE_SIZE = 500;
-const DEFAULT_MAX_PAGES = Number(process.env.ST_INTEL_MAX_PAGES) || 20;
+const DEFAULT_MAX_PAGES = process.env.ST_INTEL_MAX_PAGES?.trim()
+  ? Number(process.env.ST_INTEL_MAX_PAGES)
+  : 20;
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_INTELLIGENCE_TIMEZONE = process.env.ST_TIMEZONE || "UTC";
@@ -97,12 +99,18 @@ export async function withIntelCache<T>(
   return promise;
 }
 
+function isIncompletePayload(payload: Record<string, unknown>): boolean {
+  if (Array.isArray(payload._warnings) || payload.complete === false || payload.retrievalTool === "st_result_read") return true;
+  return isRecord(payload._sourceAvailability)
+    && Object.values(payload._sourceAvailability).some((source) => isRecord(source) && source.status === "failed");
+}
+
 function isCompleteSuccessfulResult(result: unknown): boolean {
   if (!isRecord(result)) return true;
   if (result.isError === true) return false;
   if (isRecord(result.structuredContent)) {
     const structured = result.structuredContent;
-    if (Array.isArray(structured._warnings) || structured.complete === false || structured.retrievalTool === "st_result_read") return false;
+    if (isIncompletePayload(structured)) return false;
   }
   const content = result.content;
   if (!Array.isArray(content)) return true;
@@ -110,7 +118,7 @@ function isCompleteSuccessfulResult(result: unknown): boolean {
     if (!isRecord(block) || typeof block.text !== "string") continue;
     try {
       const payload: unknown = JSON.parse(block.text);
-      if (isRecord(payload) && (Array.isArray(payload._warnings) || payload.complete === false || payload.retrievalTool === "st_result_read")) {
+      if (isRecord(payload) && isIncompletePayload(payload)) {
         return false;
       }
     } catch {
@@ -201,6 +209,9 @@ export async function fetchAllPagesWithTotal<T>(
   params: Record<string, unknown>,
   maxPages: number = DEFAULT_MAX_PAGES,
 ): Promise<PagedResult<T>> {
+  if (!Number.isSafeInteger(maxPages) || maxPages <= 0) {
+    throw new Error("Analytics maxPages must be a positive safe integer");
+  }
   const allData: T[] = [];
   let page = 1;
   let totalCount: number | undefined;
@@ -223,9 +234,19 @@ export async function fetchAllPagesWithTotal<T>(
       throw new Error(`Malformed paginated response from ${path}; expected an array or an object with a data array`);
     }
 
-    // Capture totalCount from the first page response
-    if (page === 1 && isRecord(response) && typeof response.totalCount === "number") {
-      totalCount = response.totalCount as number;
+    if (isRecord(response)) {
+      if (typeof response.hasMore !== "boolean") {
+        throw new Error(`Pagination omitted boolean hasMore for ${path}; refusing to return incomplete analytics`);
+      }
+      if (response.totalCount !== undefined && response.totalCount !== null) {
+        if (!Number.isSafeInteger(response.totalCount) || (response.totalCount as number) < 0) {
+          throw new Error(`Pagination returned invalid totalCount for ${path}`);
+        }
+        if (totalCount !== undefined && response.totalCount !== totalCount) {
+          throw new Error(`Pagination totalCount changed for ${path}; refusing to return inconsistent analytics`);
+        }
+        totalCount = response.totalCount as number;
+      }
     }
 
     const items = extractItems<T>(response);
@@ -246,6 +267,9 @@ export async function fetchAllPagesWithTotal<T>(
     page += 1;
   }
 
+  if (totalCount !== undefined && allData.length !== totalCount) {
+    throw new Error(`Pagination returned ${allData.length} items but totalCount was ${totalCount} for ${path}`);
+  }
   return { data: allData, totalCount, _truncated: truncated || undefined };
 }
 

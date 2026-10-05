@@ -12,9 +12,6 @@ import {
   isRecord,
   normalizeStatus,
   round,
-  safeDivide,
-  sumBy,
-  toNumber,
   toText,
   toSingleDayRange,
 } from "./helpers.js";
@@ -46,16 +43,31 @@ interface UpcomingJob {
   assignedTechnicians: string;
 }
 
-function revenueFromInvoice(invoice: GenericRecord): number {
-  return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
+function numericValue(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && value.trim().length === 0) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
-function amountFromPayment(payment: GenericRecord): number {
-  return toNumber(firstValue(payment, ["amount", "total", "paymentAmount"]));
+function revenueFromInvoice(invoice: GenericRecord): number | null {
+  return numericValue(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
 }
 
-function amountFromEstimate(estimate: GenericRecord): number {
-  return toNumber(firstValue(estimate, ["total", "amount", "subtotal"]));
+function amountFromPayment(payment: GenericRecord): number | null {
+  return numericValue(firstValue(payment, ["amount", "total", "paymentAmount"]));
+}
+
+function amountFromEstimate(estimate: GenericRecord): number | null {
+  return numericValue(firstValue(estimate, ["total", "amount", "subtotal"]));
+}
+
+function knownTotal(rows: GenericRecord[] | null, selector: (row: GenericRecord) => number | null): number | null {
+  if (rows === null) return null;
+  const values = rows.map(selector);
+  if (values.some(value => value === null)) return null;
+  const total = values.reduce<number>((sum, value) => sum + (value as number), 0);
+  return Number.isFinite(total) ? total : null;
 }
 
 function statusIn(status: string, values: string[]): boolean {
@@ -156,7 +168,7 @@ export function registerIntelligenceDailySnapshotTool(
       };
     },
     description:
-      "Build a one-day operational snapshot in the configured tenant timezone from all fetched appointment, job, invoice, payment, estimate, and call pages plus Report 163 for the next day. Returns appointment progress, daily invoiced revenue and collections, sold-estimate value, call outcomes, highlights, and at most 20 upcoming jobs; truncation and partial source failures appear in _warnings. Results are cached for 60 seconds." +
+      "Build a one-day operational snapshot in the configured tenant timezone from all fetched appointment, job, invoice, payment, estimate, and call pages plus Report 163 for the next day. Returns appointment progress, daily invoiced revenue and collections, sold-estimate value, call outcomes, highlights, and at most 20 upcoming jobs. Unavailable metrics are null with source and metric availability reasons; partial source failures appear in _warnings. Results are cached for 60 seconds." +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
     schema: dailySnapshotSchema.shape,
     handler: async (params) => {
@@ -169,53 +181,62 @@ export function registerIntelligenceDailySnapshotTool(
         );
         const tomorrowDate = nextDate;
         const warnings: string[] = [];
+        const sourceAvailability: Record<string, { status: "complete" | "failed" | "not_requested"; reason?: string }> = {};
+        const metricAvailability: Record<string, { available: boolean; reason?: string }> = {};
+        const fetchSource = async <T>(key: string, label: string, fetcher: () => Promise<T>): Promise<T | null> => {
+          const result = await fetchWithWarning<T | null>(warnings, label, fetcher, null);
+          sourceAvailability[key] = result === null
+            ? { status: "failed", reason: warnings.find(warning => warning.startsWith(`${label} unavailable:`)) ?? `${label} returned no usable response.` }
+            : { status: "complete" };
+          return result;
+        };
+        const metric = <T>(key: string, value: T | null, reason: string): T | null => {
+          metricAvailability[key] = value === null ? { available: false, reason } : { available: true };
+          return value;
+        };
 
-        const appointments = await fetchWithWarning(
-          warnings,
+        const appointments = await fetchSource(
+          "appointments",
           "Appointment data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/appointments", {
               startsOnOrAfter: startIso,
               startsBefore: nextDayStartIso,
             }),
-          [],
         );
 
-        const jobs = await fetchWithWarning(
-          warnings,
+        const jobs = await fetchSource(
+          "jobs",
           "Job data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/jobs", {
               appointmentStartsOnOrAfter: startIso,
               appointmentStartsBefore: nextDayStartIso,
             }),
-          [],
         );
 
-        const invoices = await fetchWithWarning(
-          warnings,
+        const invoices = await fetchSource(
+          "invoices",
           "Invoice data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
               invoicedOnOrAfter: startIso,
               invoicedOnBefore: endIso,
             }),
-          [],
         );
 
-        const payments = await fetchWithWarning(
-          warnings,
+        const payments = await fetchSource(
+          "payments",
           "Payment data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/payments", {
               paidOnAfter: startIso,
               paidOnBefore: endIso,
             }),
-          [],
         );
 
-        const soldEstimates = await fetchWithWarning(
-          warnings,
+        const soldEstimates = await fetchSource(
+          "soldEstimates",
           "Estimate data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/estimates", {
@@ -223,11 +244,10 @@ export function registerIntelligenceDailySnapshotTool(
               soldBefore: endIso,
               status: "Sold",
             }),
-          [],
         );
 
-        const calls = await fetchWithWarning(
-          warnings,
+        const calls = await fetchSource(
+          "calls",
           "Call data",
           () =>
             fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
@@ -235,11 +255,10 @@ export function registerIntelligenceDailySnapshotTool(
               createdBefore: endIso,
               active: "Any",
             }),
-          [],
         );
 
-        const upcomingJobsReport = await fetchWithWarning(
-          warnings,
+        const upcomingJobsReport = await fetchSource(
+          "upcomingJobs",
           "Upcoming jobs report (Report 163)",
           () =>
             executeReport(client, "163", [
@@ -247,32 +266,36 @@ export function registerIntelligenceDailySnapshotTool(
                 { name: "From", value: tomorrowDate },
                 { name: "To", value: tomorrowDate },
               ], registry.reportBindings),
-          null,
         );
 
         let appointmentsCompleted = 0;
         let appointmentsInProgress = 0;
+        let appointmentsCanceled = 0;
+        let appointmentsPending = 0;
+        let appointmentUnknownStatuses = 0;
 
-        for (const appointment of appointments) {
+        for (const appointment of appointments ?? []) {
           const status = normalizeStatus(appointment, ["statusValue"]);
-          if (statusIn(status, ["done", "completed"])) {
+          if (["done", "completed"].includes(status)) {
             appointmentsCompleted += 1;
-          } else if (statusIn(status, ["working", "inprogress", "dispatched", "hold"])) {
+          } else if (["working", "inprogress", "dispatched", "hold"].includes(status)) {
             appointmentsInProgress += 1;
+          } else if (["canceled", "cancelled"].includes(status)) {
+            appointmentsCanceled += 1;
+          } else if (status === "scheduled") {
+            appointmentsPending += 1;
+          } else {
+            appointmentUnknownStatuses += 1;
           }
         }
 
-        const appointmentTotal = appointments.length;
-        const appointmentPending = Math.max(
-          appointmentTotal - appointmentsCompleted - appointmentsInProgress,
-          0,
-        );
+        const appointmentTotal = appointments?.length ?? null;
 
         let jobsCompleted = 0;
         let jobsInProgress = 0;
         let jobsCanceled = 0;
 
-        for (const job of jobs) {
+        for (const job of jobs ?? []) {
           const status = normalizeStatus(job, ["statusValue"]);
           if (statusIn(status, ["completed", "done"])) {
             jobsCompleted += 1;
@@ -283,18 +306,19 @@ export function registerIntelligenceDailySnapshotTool(
           }
         }
 
-        const invoicedRevenue = round(sumBy(invoices, revenueFromInvoice), 2);
-        const collectedRevenue = round(sumBy(payments, amountFromPayment), 2);
-        const estimatesSoldValue = round(sumBy(soldEstimates, amountFromEstimate), 2);
+        const invoicedRevenue = metric("revenue.invoiced", knownTotal(invoices, revenueFromInvoice), invoices === null ? "Invoice source unavailable." : "One or more invoice amounts are missing or invalid.");
+        const collectedRevenue = metric("revenue.collected", knownTotal(payments, amountFromPayment), payments === null ? "Payment source unavailable." : "One or more payment amounts are missing or invalid.");
+        const estimatesSoldValue = metric("revenue.estimatesSold", knownTotal(soldEstimates, amountFromEstimate), soldEstimates === null ? "Estimate source unavailable." : "One or more estimate amounts are missing or invalid.");
 
-        const callsTotal = calls.length;
-        const callsBooked = calls.filter(isBookedCall).length;
-        const callsMissed = calls.filter(isMissedCall).length;
+        const callsTotal = metric("calls.total", calls?.length ?? null, "Call source unavailable.");
+        const callsBooked = metric("calls.booked", calls === null ? null : calls.filter(isBookedCall).length, "Call source unavailable.");
+        const callsMissed = metric("calls.missed", calls === null ? null : calls.filter(isMissedCall).length, "Call source unavailable.");
         const allUpcomingJobs = upcomingJobsReport ? parseUpcomingJobsReport(upcomingJobsReport) : [];
         const upcomingJobs = allUpcomingJobs.slice(0, MAX_UPCOMING_JOBS);
         const upcomingJobsByType = summarizeUpcomingJobsByType(allUpcomingJobs);
 
-        const completionRate = Math.round(safeDivide(appointmentsCompleted, appointmentTotal) * 100);
+        const completionRate = metric("appointments.completionRate", appointmentTotal !== null && appointmentTotal > 0 && appointmentUnknownStatuses === 0 ? Math.round(appointmentsCompleted / appointmentTotal * 100) : null,
+          appointments === null ? "Appointment source unavailable." : appointmentUnknownStatuses > 0 ? "One or more appointment statuses are unknown." : "No appointments provide a completion-rate denominator.");
 
         if (allUpcomingJobs.length > MAX_UPCOMING_JOBS) {
           warnings.push(
@@ -303,27 +327,32 @@ export function registerIntelligenceDailySnapshotTool(
         }
 
         const highlights = [
-          `${appointmentsCompleted} of ${appointmentTotal} appointments completed (${completionRate}%)`,
-          callsMissed > 0
+          appointments === null ? "Appointment progress unavailable."
+            : completionRate === null ? `${appointmentsCompleted} confirmed completed appointments; completion rate unavailable.`
+            : `${appointmentsCompleted} of ${appointmentTotal} appointments completed (${completionRate}%)`,
+          callsMissed === null ? "Missed-call data unavailable."
+            : callsMissed > 0
             ? `${callsMissed} missed calls today may need follow-up`
             : "No missed calls recorded today",
-          `${allUpcomingJobs.length} ${allUpcomingJobs.length === 1 ? "job" : "jobs"} scheduled for tomorrow`,
-          `$${formatCurrency(estimatesSoldValue)} in estimates sold`,
+          upcomingJobsReport === null ? "Upcoming-job data unavailable." : `${allUpcomingJobs.length} ${allUpcomingJobs.length === 1 ? "job" : "jobs"} scheduled for tomorrow`,
+          estimatesSoldValue === null ? "Sold-estimate value unavailable." : `$${formatCurrency(estimatesSoldValue)} in estimates sold`,
         ];
 
         const result: Record<string, unknown> = {
           date,
           appointments: {
-            total: appointmentTotal,
-            completed: appointmentsCompleted,
-            inProgress: appointmentsInProgress,
-            pending: appointmentPending,
+            total: metric("appointments.total", appointmentTotal, "Appointment source unavailable."),
+            completed: metric("appointments.completed", appointments === null ? null : appointmentsCompleted, "Appointment source unavailable."),
+            inProgress: metric("appointments.inProgress", appointments === null ? null : appointmentsInProgress, "Appointment source unavailable."),
+            pending: metric("appointments.pending", appointments === null ? null : appointmentsPending, "Appointment source unavailable."),
+            canceled: metric("appointments.canceled", appointments === null ? null : appointmentsCanceled, "Appointment source unavailable."),
+            unknownStatus: appointments === null ? null : appointmentUnknownStatuses,
           },
           jobs: {
-            total: jobs.length,
-            completed: jobsCompleted,
-            inProgress: jobsInProgress,
-            canceled: jobsCanceled,
+            total: metric("jobs.total", jobs?.length ?? null, "Job source unavailable."),
+            completed: metric("jobs.completed", jobs === null ? null : jobsCompleted, "Job source unavailable."),
+            inProgress: metric("jobs.inProgress", jobs === null ? null : jobsInProgress, "Job source unavailable."),
+            canceled: metric("jobs.canceled", jobs === null ? null : jobsCanceled, "Job source unavailable."),
           },
           revenue: {
             invoiced: invoicedRevenue,
@@ -336,11 +365,13 @@ export function registerIntelligenceDailySnapshotTool(
             missed: callsMissed,
           },
           upcomingJobs: {
-            total: allUpcomingJobs.length,
-            breakdownByJobType: upcomingJobsByType,
-            jobs: upcomingJobs,
+            total: metric("upcomingJobs.total", upcomingJobsReport === null ? null : allUpcomingJobs.length, "Upcoming-jobs report unavailable."),
+            breakdownByJobType: upcomingJobsReport === null ? null : upcomingJobsByType,
+            jobs: upcomingJobsReport === null ? null : upcomingJobs,
           },
           highlights,
+          _sourceAvailability: sourceAvailability,
+          _metricAvailability: metricAvailability,
         };
 
         if (warnings.length > 0) {

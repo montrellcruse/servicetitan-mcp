@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Fixed
+- Preserve provider precision and valid zero-revenue or negative activity; stop presenting unverified averages of subgroup ratios as company metrics.
+- Distinguish unavailable analytics inputs from measured zero, retain successful sibling values and source warnings, and reject silently incomplete pagination or ambiguous report rows.
+- Encode direct query arrays with repeated plain keys while preserving CSV, dictionary and report JSON contracts.
+
+### Compatibility
+- Analytics numeric fields can now be null when their source or required aggregate operands are unavailable. See [migration guidance](docs/MIGRATION-v3.md#accuracy-corrections-under-review). No unfinished company-hours reconstruction, publication or deployment is included.
+
 ## [3.0.1] - 2026-09-06
 
 ### Improved

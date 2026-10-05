@@ -9,10 +9,7 @@ import {
   formatCurrency,
   isRecord,
   round,
-  safeDivide,
-  sumBy,
   toDateRange,
-  toNumber,
   toText,
 } from "./helpers.js";
 import { resolveBusinessUnitId } from "./resolvers.js";
@@ -59,7 +56,7 @@ const NOT_SENT_FIELD = {
 
 interface InvoiceSummary {
   invoiceNumber: string;
-  amount: number;
+  amount: number | null;
   businessUnit: string;
   technician: string;
 }
@@ -67,7 +64,20 @@ interface InvoiceSummary {
 interface BreakdownSummary {
   name: string;
   count: number;
-  amount: number;
+  amount: number | null;
+}
+
+function numericAmount(value: unknown): number | null {
+  if (typeof value !== "number" && typeof value !== "string") return null;
+  if (typeof value === "string" && value.trim().length === 0) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function totalAmount(invoices: InvoiceSummary[]): number | null {
+  if (invoices.some(invoice => invoice.amount === null)) return null;
+  const total = invoices.reduce((sum, invoice) => sum + (invoice.amount as number), 0);
+  return Number.isFinite(total) ? total : null;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -90,7 +100,7 @@ function parseSentInvoices(response: unknown): InvoiceSummary[] {
   for (const row of rows) {
     const invoice: InvoiceSummary = {
       invoiceNumber: toText(row[SENT_FIELD.InvoiceNumber]) ?? "",
-      amount: round(toNumber(row[SENT_FIELD.Amount]), 2),
+      amount: numericAmount(row[SENT_FIELD.Amount]),
       businessUnit: toText(row[SENT_FIELD.BusinessUnit]) ?? "Unknown",
       technician: toText(row[SENT_FIELD.Technician]) ?? "Unassigned",
     };
@@ -117,7 +127,7 @@ function parseNotSentInvoices(response: unknown): InvoiceSummary[] {
   for (const row of rows) {
     const invoice: InvoiceSummary = {
       invoiceNumber: toText(row[NOT_SENT_FIELD.InvoiceNumber]) ?? "",
-      amount: round(toNumber(row[NOT_SENT_FIELD.Amount]), 2),
+      amount: numericAmount(row[NOT_SENT_FIELD.Amount]),
       businessUnit: toText(row[NOT_SENT_FIELD.BusinessUnit]) ?? "Unknown",
       technician: toText(row[NOT_SENT_FIELD.Technician]) ?? "Unassigned",
     };
@@ -154,7 +164,7 @@ function buildBreakdown(
       };
 
     breakdown.count += 1;
-    breakdown.amount += invoice.amount;
+    breakdown.amount = breakdown.amount === null || invoice.amount === null ? null : breakdown.amount + invoice.amount;
     breakdownMap.set(key, breakdown);
   }
 
@@ -162,9 +172,9 @@ function buildBreakdown(
     .map((breakdown) => ({
       name: breakdown.name,
       count: breakdown.count,
-      amount: round(breakdown.amount, 2),
+      amount: breakdown.amount === null || !Number.isFinite(breakdown.amount) ? null : breakdown.amount,
     }))
-    .sort((a, b) => b.count - a.count || b.amount - a.amount);
+    .sort((a, b) => b.count - a.count || (b.amount ?? 0) - (a.amount ?? 0));
 }
 
 export function registerIntelligenceInvoiceTrackingTool(
@@ -176,7 +186,7 @@ export function registerIntelligenceInvoiceTrackingTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Track invoice email delivery for the selected date range by combining and deduplicating Reports 2281 and 2282. Returns sent and not-sent counts, send rate, invoice amount and balance impact, and unsent breakdowns by business unit and technician; an optional business-unit filter applies to both reports. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
+      "Track invoice email delivery for the selected date range by combining and deduplicating Reports 2281 and 2282. Returns sent and not-sent counts, send rate, invoice amounts, and unsent breakdowns by business unit and technician; an optional business-unit filter applies to both reports. Unavailable or incomplete deduplicated metrics are null with availability reasons; successful report observations and _warnings are preserved. Report calls may wait for per-report/client spacing." +
       '\n\nExamples:\n- "What percent of invoices were sent this week?" -> startDate="2026-03-02", endDate="2026-03-09"\n- "Which techs are not sending invoices?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show invoice send rate for plumbing last month" -> startDate="2026-02-01", endDate="2026-03-01", businessUnitName="Plumbing"',
     schema: invoiceTrackingSchema.shape,
     handler: async (params) => {
@@ -239,12 +249,25 @@ export function registerIntelligenceInvoiceTrackingTool(
           const key = invoice.invoiceNumber.trim().toLowerCase();
           return key.length === 0 || !sentInvoiceNumbers.has(key);
         });
-        const sentCount = sentInvoices.length;
-        const notSentCount = notSentInvoices.length;
-        const totalInvoices = sentCount + notSentCount;
-        const totalAmountSent = round(sumBy(sentInvoices, (invoice) => invoice.amount), 2);
-        const totalAmountNotSent = round(sumBy(notSentInvoices, (invoice) => invoice.amount), 2);
-        const sendRate = round(safeDivide(sentCount, totalInvoices) * 100, 1);
+        const sentAvailable = sentReport !== null;
+        const notSentAvailable = notSentReportRaw !== null;
+        const notSentDeduplicationComplete = sentAvailable && notSentAvailable;
+        const sourceAvailability = {
+          invoicesSent: sentAvailable ? { status: "complete" } : { status: "failed", reason: "Invoices sent report unavailable." },
+          invoicesNotSent: notSentAvailable ? { status: "complete" } : { status: "failed", reason: "Invoices not sent report unavailable." },
+        };
+        const metricAvailability: Record<string, { available: boolean; reason?: string }> = {};
+        const metric = <T>(key: string, value: T | null, reason: string): T | null => {
+          metricAvailability[key] = value === null ? { available: false, reason } : { available: true };
+          return value;
+        };
+        const sentCount = metric("sentCount", sentAvailable ? sentInvoices.length : null, "Invoices sent report unavailable.");
+        const notSentCount = metric("notSentCount", notSentDeduplicationComplete ? notSentInvoices.length : null, "Both invoice reports are required to deduplicate not-sent invoices.");
+        const totalInvoices = metric("totalInvoices", sentCount !== null && notSentCount !== null ? sentCount + notSentCount : null, "Both invoice reports are required for the combined invoice count.");
+        const totalAmountSent = metric("totalAmountSent", sentAvailable ? totalAmount(sentInvoices) : null, sentAvailable ? "One or more sent invoice amounts are missing or invalid." : "Invoices sent report unavailable.");
+        const totalAmountNotSent = metric("totalAmountNotSent", notSentDeduplicationComplete ? totalAmount(notSentInvoices) : null, notSentDeduplicationComplete ? "One or more not-sent invoice amounts are missing or invalid." : "Both invoice reports are required to deduplicate not-sent invoice amounts.");
+        const sendRate = metric("sendRate", totalInvoices !== null && totalInvoices > 0 && sentCount !== null ? round(sentCount / totalInvoices * 100, 1) : null,
+          totalInvoices === null ? "Both invoice reports are required for a send-rate denominator." : "No invoices provide a send-rate denominator.");
 
         const byBusinessUnit = buildBreakdown(
           notSentInvoices,
@@ -255,16 +278,19 @@ export function registerIntelligenceInvoiceTrackingTool(
         const topBusinessUnit = byBusinessUnit[0];
         const topTechnician = byTechnician[0];
 
-        const highlights =
-          notSentCount === 0
+        const highlights = !notSentDeduplicationComplete
+          ? [sentAvailable ? `${sentCount} sent invoices observed; not-sent coverage unavailable.` : notSentAvailable ? `${notSentRaw.length} invoice observations returned by the not-sent report; sent-source deduplication unavailable.` : "Invoice delivery data unavailable."]
+          : totalInvoices === 0
+            ? ["No invoices returned by either report for the period."]
+            : notSentCount === 0
             ? [`All ${sentCount} invoices in the period were sent.`]
             : [
                 `${sentCount} of ${totalInvoices} invoices were sent (${sendRate}%).`,
                 topBusinessUnit
-                  ? `${topBusinessUnit.name} has ${topBusinessUnit.count} unsent invoices totaling $${formatCurrency(topBusinessUnit.amount)}.`
+                  ? `${topBusinessUnit.name} has ${topBusinessUnit.count} unsent invoices${topBusinessUnit.amount === null ? "; amount unavailable" : ` totaling $${formatCurrency(topBusinessUnit.amount)}`}.`
                   : "No business unit breakdown available for unsent invoices.",
                 topTechnician
-                  ? `${topTechnician.name} owns ${topTechnician.count} unsent invoices totaling $${formatCurrency(topTechnician.amount)}.`
+                  ? `${topTechnician.name} owns ${topTechnician.count} unsent invoices${topTechnician.amount === null ? "; amount unavailable" : ` totaling $${formatCurrency(topTechnician.amount)}`}.`
                   : "No technician breakdown available for unsent invoices.",
               ];
 
@@ -275,14 +301,24 @@ export function registerIntelligenceInvoiceTrackingTool(
           },
           sentCount,
           notSentCount,
+          totalInvoices,
           sendRate,
           totalAmountSent,
           totalAmountNotSent,
-          notSentBreakdown: {
+          notSentBreakdown: metric("notSentBreakdown", notSentDeduplicationComplete ? {
             byBusinessUnit,
             byTechnician,
-          },
+          } : null, "Both invoice reports are required to deduplicate not-sent breakdowns."),
+          reportedNotSentCount: metric("reportedNotSentCount", notSentAvailable ? notSentRaw.length : null, "Invoices not sent report unavailable."),
+          reportedNotSentAmount: metric("reportedNotSentAmount", notSentAvailable ? totalAmount(notSentRaw) : null, notSentAvailable ? "One or more not-sent report amounts are missing or invalid." : "Invoices not sent report unavailable."),
+          reportedNotSentBreakdown: metric("reportedNotSentBreakdown", notSentAvailable ? {
+            byBusinessUnit: buildBreakdown(notSentRaw, invoice => invoice.businessUnit),
+            byTechnician: buildBreakdown(notSentRaw, invoice => invoice.technician),
+          } : null, "Invoices not sent report unavailable."),
+          notSentDeduplicationComplete,
           highlights,
+          _sourceAvailability: sourceAvailability,
+          _metricAvailability: metricAvailability,
         };
 
         if (warnings.length > 0) {

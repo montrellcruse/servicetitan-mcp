@@ -160,6 +160,9 @@ export class ServiceTitanClient {
     this.gate = new RequestGate(positiveInteger(options.maxConcurrentRequests ?? 8, "maxConcurrentRequests"), positiveInteger(options.maxQueuedRequests ?? 128, "maxQueuedRequests"));
     this.http = axios.create({
       baseURL: environment.apiUrl,
+      // Official query arrays use form/explode=true: ids=1&ids=2, not ids[]=1.
+      // Keep Axios's encoding for scalar CSV values and nested dictionary keys.
+      paramsSerializer: { indexes: null },
       timeout: positiveInteger(options.requestTimeoutMs ?? 60_000, "requestTimeoutMs"),
       httpsAgent,
       ...(options.adapter ? { adapter: options.adapter } : {}),

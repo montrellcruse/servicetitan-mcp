@@ -150,7 +150,7 @@ describe("intelligence revenue validation", () => {
 
     expect(result.isError).not.toBe(true);
     const payload = JSON.parse(result.content[0]?.text ?? "{}");
-    expect(payload.totalRevenue).toBe(0);
+    expect(payload.totalRevenue).toBeNull();
     expect(payload._warnings).toContain(
       "Revenue report (Report 175) unavailable: Report 175 is missing required fields: TotalRevenue",
     );

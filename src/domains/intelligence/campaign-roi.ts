@@ -6,15 +6,11 @@ import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPages,
   fetchAllPagesBlind,
-  fetchAllPagesWithTotal,
   fetchWithWarning,
   firstValue,
   isRecord,
   round,
-  safeDivide,
-  sumBy,
   toDateRange,
-  toNumber,
   toText,
 } from "./helpers.js";
 import { sumReport175TotalRevenue } from "./revenue.js";
@@ -52,24 +48,35 @@ const LEAD_GENERATION_FIELD = {
 
 interface LeadGenerationByBusinessUnit {
   name: string;
-  leadGenerationOpportunity: number;
-  leadsSet: number;
-  leadConversionRate: number;
-  averageLeadSale: number;
-  replacementOpportunity: number;
-  replacementLeadsSet: number;
-  replacementLeadConversionRate: number;
-  membershipSales: number;
-  adjustmentRevenue: number;
-  totalRevenue: number;
-  nonJobRevenue: number;
+  leadGenerationOpportunity: number | null;
+  leadsSet: number | null;
+  leadConversionRate: number | null;
+  averageLeadSale: number | null;
+  replacementOpportunity: number | null;
+  replacementLeadsSet: number | null;
+  replacementLeadConversionRate: number | null;
+  membershipSales: number | null;
+  adjustmentRevenue: number | null;
+  totalRevenue: number | null;
+  nonJobRevenue: number | null;
+}
+
+function numeric(value: unknown): number | null {
+  if (typeof value !== "number" && (typeof value !== "string" || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function bookingRatio(bookings: number | null, calls: number | null): number | null {
+  return bookings === null || calls === null || calls === 0 ? null : round(bookings / calls, 3);
 }
 
 const PER_CAMPAIGN_REVENUE_WARNING =
   "Per-campaign revenue unavailable (ServiceTitan invoices API does not support campaign-level filtering). Total period revenue shown in totals only.";
 
 function campaignId(campaign: GenericRecord): number {
-  return toNumber(firstValue(campaign, ["id", "campaignId"]));
+  const id = numeric(firstValue(campaign, ["id", "campaignId"]));
+  return id !== null && Number.isSafeInteger(id) && id > 0 ? id : 0;
 }
 
 function campaignName(campaign: GenericRecord, id: number): string {
@@ -79,7 +86,8 @@ function campaignName(campaign: GenericRecord, id: number): string {
 // Revenue now comes from Report 175, not invoice pagination
 
 function recordCampaignId(source: GenericRecord): number {
-  return Math.round(toNumber(firstValue(source, ["campaignId", "campaign.id", "leadCall.campaign.id"])));
+  const id = numeric(firstValue(source, ["campaignId", "campaign.id", "leadCall.campaign.id"]));
+  return id !== null && Number.isSafeInteger(id) && id > 0 ? id : 0;
 }
 
 function countByCampaign(records: GenericRecord[]): Map<number, number> {
@@ -107,12 +115,7 @@ function extractReportRows(response: unknown): unknown[][] {
 
 function hasAnyLeadActivity(bu: LeadGenerationByBusinessUnit): boolean {
   return (
-    bu.leadGenerationOpportunity !== 0 ||
-    bu.leadsSet !== 0 ||
-    bu.replacementOpportunity !== 0 ||
-    bu.replacementLeadsSet !== 0 ||
-    bu.membershipSales !== 0 ||
-    bu.totalRevenue !== 0
+    Object.entries(bu).some(([key, value]) => key !== "name" && value !== 0)
   );
 }
 
@@ -123,26 +126,17 @@ function parseLeadGenerationReport(response: unknown): LeadGenerationByBusinessU
   for (const row of rows) {
     const bu: LeadGenerationByBusinessUnit = {
       name: toText(row[LEAD_GENERATION_FIELD.Name]) ?? "Unknown",
-      leadGenerationOpportunity: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.LeadGenerationOpportunity]),
-      ),
-      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
-      leadConversionRate: round(toNumber(row[LEAD_GENERATION_FIELD.LeadConversionRate]), 3),
-      averageLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
-      replacementOpportunity: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity]),
-      ),
-      replacementLeadsSet: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadsSet]),
-      ),
-      replacementLeadConversionRate: round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]),
-        3,
-      ),
-      membershipSales: round(toNumber(row[LEAD_GENERATION_FIELD.MembershipSales]), 2),
-      adjustmentRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.AdjustmentRevenue]), 2),
-      totalRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.TotalRevenue]), 2),
-      nonJobRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.NonJobRevenue]), 2),
+      leadGenerationOpportunity: numeric(row[LEAD_GENERATION_FIELD.LeadGenerationOpportunity]),
+      leadsSet: numeric(row[LEAD_GENERATION_FIELD.LeadsSet]),
+      leadConversionRate: numeric(row[LEAD_GENERATION_FIELD.LeadConversionRate]),
+      averageLeadSale: numeric(row[LEAD_GENERATION_FIELD.AverageLeadSale]),
+      replacementOpportunity: numeric(row[LEAD_GENERATION_FIELD.ReplacementOpportunity]),
+      replacementLeadsSet: numeric(row[LEAD_GENERATION_FIELD.ReplacementLeadsSet]),
+      replacementLeadConversionRate: numeric(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]),
+      membershipSales: numeric(row[LEAD_GENERATION_FIELD.MembershipSales]),
+      adjustmentRevenue: numeric(row[LEAD_GENERATION_FIELD.AdjustmentRevenue]),
+      totalRevenue: numeric(row[LEAD_GENERATION_FIELD.TotalRevenue]),
+      nonJobRevenue: numeric(row[LEAD_GENERATION_FIELD.NonJobRevenue]),
     };
 
     if (hasAnyLeadActivity(bu)) {
@@ -162,8 +156,8 @@ export function registerIntelligenceCampaignPerformanceTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Compare marketing campaigns over the selected date range by combining all fetched call, booking, job, and invoice pages. Returns calls, bookings, booked-call conversion, attributed revenue, and revenue per call; campaignId narrows the analysis to one known campaign. The metrics reflect the wrapper's cross-source attribution logic, and partial source failures are returned in _warnings." +
-      '\n\nExamples:\n- "Which marketing campaigns are working?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "How many calls are we getting from Google Ads?" -> startDate="2026-01-01", endDate="2026-03-10", campaignId=<Google Ads ID>\n- "What\'s our call-to-booking rate?" -> startDate="2026-01-01", endDate="2026-03-10"',
+      "Compare campaign-attributed call and booking counts over the selected date range using fetched campaign, call, and booking pages. Bookings per call is an independent-feed ratio, not a matched call-to-booking funnel. Report 175 adds tenant-wide unallocated revenue; per-campaign revenue, revenue per call, and ROI are unavailable. Report 176 adds business-unit lead metrics. campaignId narrows the campaign catalogue; missing feeds and cells return null with availability details." +
+      '\n\nExamples:\n- "Which campaigns have call and booking activity?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "How many calls are we getting from Google Ads?" -> startDate="2026-01-01", endDate="2026-03-10", campaignId=<Google Ads ID>\n- "How many independent bookings per campaign call?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: campaignPerformanceSchema.shape,
     handler: async (params) => {
       try {
@@ -185,7 +179,7 @@ export function registerIntelligenceCampaignPerformanceTool(
                   ids: input.campaignId === undefined ? undefined : String(input.campaignId),
                   active: input.campaignId === undefined ? "Any" : undefined,
                 }),
-              [],
+              null,
             ),
             fetchWithWarning(
               warnings,
@@ -196,7 +190,7 @@ export function registerIntelligenceCampaignPerformanceTool(
                   createdBefore: endIso,
                   active: "Any",
                 }),
-              [],
+              null,
             ),
             fetchWithWarning(
               warnings,
@@ -206,7 +200,7 @@ export function registerIntelligenceCampaignPerformanceTool(
                   createdOnOrAfter: startIso,
                   createdBefore: endIso,
                 }),
-              [],
+              null,
             ),
             fetchWithWarning(
               warnings,
@@ -228,30 +222,24 @@ export function registerIntelligenceCampaignPerformanceTool(
             ),
           ]);
 
-        let campaigns =
-          fetchedCampaigns.length > 0
-            ? fetchedCampaigns
-            : input.campaignId === undefined
-              ? []
-              : [{ id: input.campaignId, name: `Campaign ${input.campaignId}` }];
-
-        const callsByCampaignId = countByCampaign(calls);
-        const bookingsByCampaignId = countByCampaign(bookings);
+        const campaigns = fetchedCampaigns;
+        const callsByCampaignId = countByCampaign(calls ?? []);
+        const bookingsByCampaignId = countByCampaign(bookings ?? []);
         const leadGeneration = leadGenerationReport
           ? parseLeadGenerationReport(leadGenerationReport)
-          : [];
+          : null;
 
         const campaignRows: Array<{
           id: number;
           name: string;
-          calls: number;
-          bookings: number;
-          bookingsPerCallRatio: number;
+          calls: number | null;
+          bookings: number | null;
+          bookingsPerCallRatio: number | null;
           revenue: null;
           revenuePerCall: null;
         }> = [];
 
-        for (const campaign of campaigns) {
+        for (const campaign of campaigns ?? []) {
           const id = campaignId(campaign);
           if (id <= 0) {
             continue;
@@ -259,21 +247,21 @@ export function registerIntelligenceCampaignPerformanceTool(
 
           const name = campaignName(campaign, id);
 
-          const callCount = callsByCampaignId.get(id) ?? 0;
-          const bookingCount = bookingsByCampaignId.get(id) ?? 0;
+          const callCount = calls === null ? null : callsByCampaignId.get(id) ?? 0;
+          const bookingCount = bookings === null ? null : bookingsByCampaignId.get(id) ?? 0;
 
           campaignRows.push({
             id,
             name,
             calls: callCount,
             bookings: bookingCount,
-            bookingsPerCallRatio: round(safeDivide(bookingCount, callCount), 3),
+            bookingsPerCallRatio: bookingRatio(bookingCount, callCount),
             revenue: null,
             revenuePerCall: null,
           });
         }
 
-        campaignRows.sort((a, b) => b.calls + b.bookings - (a.calls + a.bookings));
+        campaignRows.sort((a, b) => (b.calls ?? 0) + (b.bookings ?? 0) - ((a.calls ?? 0) + (a.bookings ?? 0)));
 
         const totalAvailable = campaignRows.length;
         const limitedCampaignRows =
@@ -286,24 +274,24 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         warnings.push(PER_CAMPAIGN_REVENUE_WARNING);
 
-        const totalsCalls = campaignRows.reduce((total, row) => total + row.calls, 0);
-        const totalsBookings = campaignRows.reduce((total, row) => total + row.bookings, 0);
-        const unattributedCalls = calls.length - totalsCalls;
-        const unattributedBookings = bookings.length - totalsBookings;
+        const totalsCalls = calls === null || campaigns === null ? null : campaignRows.reduce((total, row) => total + row.calls!, 0);
+        const totalsBookings = bookings === null || campaigns === null ? null : campaignRows.reduce((total, row) => total + row.bookings!, 0);
+        const unattributedCalls = calls === null || totalsCalls === null ? null : calls.length - totalsCalls;
+        const unattributedBookings = bookings === null || totalsBookings === null ? null : bookings.length - totalsBookings;
 
         // Extract total revenue from Report 175 instead of paginating all invoices
-        const totalsRevenue = revenueReport === null ? 0 : sumReport175TotalRevenue(revenueReport);
+        const totalsRevenue = revenueReport === null ? null : sumReport175TotalRevenue(revenueReport);
 
         const result: Record<string, unknown> = {
           period: {
             start: input.startDate,
             end: input.endDate,
           },
-          campaigns: limitedCampaignRows,
+          campaigns: campaigns === null ? null : limitedCampaignRows,
           totals: {
             calls: totalsCalls,
             bookings: totalsBookings,
-            bookingsPerCallRatio: round(safeDivide(totalsBookings, totalsCalls), 3),
+            bookingsPerCallRatio: bookingRatio(totalsBookings, totalsCalls),
             unattributedCalls,
             unattributedBookings,
             tenantRevenueForPeriod: totalsRevenue,
@@ -313,6 +301,19 @@ export function registerIntelligenceCampaignPerformanceTool(
             tenantRevenueForPeriod: "Total tenant revenue for the period from Report 175; it is not attributed to the listed campaigns.",
           },
           leadGeneration,
+          _sourceAvailability: {
+            campaigns: { status: campaigns === null ? "failed" : "complete" },
+            calls: { status: calls === null ? "failed" : "complete" },
+            bookings: { status: bookings === null ? "failed" : "complete" },
+            revenue: { status: revenueReport === null ? "failed" : "complete" },
+            leadGeneration: { status: leadGenerationReport === null ? "failed" : "complete" },
+          },
+          _metricAvailability: {
+            revenue: { available: false, reason: "No campaign-level revenue attribution is consumed; tenant revenue is unallocated." },
+            revenuePerCall: { available: false, reason: "No campaign-level revenue attribution is consumed." },
+            ...(totalsRevenue === null ? { "totals.tenantRevenueForPeriod": { available: false, reason: "Revenue source or TotalRevenue cells unavailable." } } : {}),
+            ...(bookingRatio(totalsBookings, totalsCalls) === null ? { "totals.bookingsPerCallRatio": { available: false, reason: "Call/booking/catalogue coverage or a nonzero call denominator is unavailable." } } : {}),
+          },
         };
 
         if (campaignRows.length > maxCampaigns) {

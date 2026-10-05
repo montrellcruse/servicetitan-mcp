@@ -7,20 +7,16 @@ import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPagesBlind,
   fetchWithWarning,
-  firstValue,
   isRecord,
   round,
-  safeDivide,
-  sumBy,
   toDateRange,
-  toNumber,
   toText,
 } from "./helpers.js";
 
 const membershipHealthSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
-  includeServiceRevenue: z.boolean().optional().default(false).describe("Include tenant-wide totalServiceRevenue by fetching every available invoice page for the period. Default: false."),
+  includeServiceRevenue: z.boolean().optional().default(false).describe("Include tenant-wide invoice totals as totalServiceRevenue by fetching invoice pages for the period; not membership-attributed or service-item-only. Default: false."),
 });
 
 const MEMBERSHIP_SUMMARY_FIELD = {
@@ -46,21 +42,21 @@ type GenericRecord = Record<string, unknown>;
 
 interface MembershipTypeSummary {
   name: string;
-  activeAtEnd: number;
-  newSales: number;
-  canceled: number;
-  expired: number;
-  renewed: number;
-  suspended: number;
-  reactivated: number;
-  deleted: number;
+  activeAtEnd: number | null;
+  newSales: number | null;
+  canceled: number | null;
+  expired: number | null;
+  renewed: number | null;
+  suspended: number | null;
+  reactivated: number | null;
+  deleted: number | null;
 }
 
 interface BusinessUnitMembershipConversion {
   name: string;
-  opportunities: number;
-  converted: number;
-  conversionRate: number;
+  opportunities: number | null;
+  converted: number | null;
+  conversionRate: number | null;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -71,8 +67,20 @@ function extractReportRows(response: unknown): unknown[][] {
   return response.data.filter(Array.isArray);
 }
 
-function parseCount(value: unknown): number {
-  return Math.round(toNumber(value));
+function numeric(value: unknown): number | null {
+  if (typeof value !== "number" && (typeof value !== "string" || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function parseCount(value: unknown): number | null {
+  return numeric(value);
+}
+
+function sumKnown(values: Array<number | null>): number | null {
+  if (values.some((value) => value === null)) return null;
+  const sum = values.reduce<number>((total, value) => total + value!, 0);
+  return Number.isFinite(sum) ? sum : null;
 }
 
 function hasAnyReportActivity(type: MembershipTypeSummary): boolean {
@@ -123,7 +131,8 @@ function parseMembershipConversionReport(response: unknown): BusinessUnitMembers
     const opportunities = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Opportunities]);
     const converted = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Converted]);
 
-    if (opportunities === 0 && converted === 0) {
+    const rate = numeric(row[MEMBERSHIP_CONVERSION_FIELD.ConversionRate]);
+    if (opportunities === 0 && converted === 0 && rate === 0) {
       continue;
     }
 
@@ -131,18 +140,18 @@ function parseMembershipConversionReport(response: unknown): BusinessUnitMembers
       name: toText(row[MEMBERSHIP_CONVERSION_FIELD.Name]) ?? "Unknown",
       opportunities,
       converted,
-      conversionRate: round(toNumber(row[MEMBERSHIP_CONVERSION_FIELD.ConversionRate]) * 100, 1),
+      conversionRate: rate === null ? null : rate * 100,
     });
   }
 
   return conversions.sort(
     (left, right) =>
-      right.opportunities - left.opportunities || right.converted - left.converted,
+      (right.opportunities ?? 0) - (left.opportunities ?? 0) || (right.converted ?? 0) - (left.converted ?? 0),
   );
 }
 
-function invoiceTotal(invoice: GenericRecord): number {
-  return toNumber(firstValue(invoice, ["total", "amount", "invoiceTotal"]));
+function invoiceTotal(invoice: GenericRecord): number | null {
+  return numeric(invoice.total);
 }
 
 export function registerIntelligenceMembershipHealthTool(
@@ -154,7 +163,7 @@ export function registerIntelligenceMembershipHealthTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Summarize membership activity from Report 182 and business-unit membership opportunities and conversions from Report 178 for the selected date range. Returns active-at-end counts, sales, cancellations, expirations, renewals, other status movements, and conversion metrics; it does not calculate a cohort retention rate. includeServiceRevenue adds tenant-wide invoice service revenue for the period, which is not membership-attributed. Partial source failures are returned in _warnings." +
+      "Summarize membership activity from Report 182 and business-unit membership opportunities and conversions from Report 178 for the selected date range. Returns active-at-end counts, sales, cancellations, expirations, renewals, other status movements, and conversion metrics; it does not calculate cohort retention. includeServiceRevenue adds tenant-wide invoice totals, not membership-attributed or service-item-only revenue. Missing sources and cells return null with availability details; complete empty-source additive counts are zero." +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show membership status movements last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: membershipHealthSchema.shape,
     handler: async (params) => {
@@ -173,7 +182,7 @@ export function registerIntelligenceMembershipHealthTool(
         const fetches: [
           Promise<unknown>,
           Promise<unknown>,
-          Promise<GenericRecord[]>,
+          Promise<GenericRecord[] | null>,
         ] = [
           fetchWithWarning(
             warnings,
@@ -200,9 +209,9 @@ export function registerIntelligenceMembershipHealthTool(
                     invoicedOnOrAfter: startIso,
                     invoicedOnBefore: endIso,
                   }),
-                [],
+                null,
               )
-            : Promise.resolve([]),
+            : Promise.resolve(null),
         ];
 
         const [membershipSummaryReport, membershipConversionReport, invoices] =
@@ -210,30 +219,27 @@ export function registerIntelligenceMembershipHealthTool(
 
         const membershipTypeStats = membershipSummaryReport
           ? parseMembershipSummaryReport(membershipSummaryReport)
-          : [];
+          : null;
         const conversionByBusinessUnit = membershipConversionReport
           ? parseMembershipConversionReport(membershipConversionReport)
-          : [];
-        const totalServiceRevenue = input.includeServiceRevenue
-          ? round(sumBy(invoices, invoiceTotal), 2)
           : null;
+        const totalServiceRevenue = invoices === null ? null : sumKnown(invoices.map(invoiceTotal));
 
-        const activeMemberships = Math.round(sumBy(membershipTypeStats, (type) => type.activeAtEnd));
-        const newSignups = Math.round(sumBy(membershipTypeStats, (type) => type.newSales));
-        const cancellations = Math.round(sumBy(membershipTypeStats, (type) => type.canceled));
-        const expirations = Math.round(sumBy(membershipTypeStats, (type) => type.expired));
-        const renewals = Math.round(sumBy(membershipTypeStats, (type) => type.renewed));
-        const suspended = Math.round(sumBy(membershipTypeStats, (type) => type.suspended));
-        const reactivated = Math.round(sumBy(membershipTypeStats, (type) => type.reactivated));
-        const deleted = Math.round(sumBy(membershipTypeStats, (type) => type.deleted));
-        const conversionOpportunities = Math.round(
-          sumBy(conversionByBusinessUnit, (businessUnit) => businessUnit.opportunities),
-        );
-        const convertedMemberships = Math.round(
-          sumBy(conversionByBusinessUnit, (businessUnit) => businessUnit.converted),
-        );
+        const summaryTotal = (key: Exclude<keyof MembershipTypeSummary, "name">) => membershipTypeStats === null ? null : sumKnown(membershipTypeStats.map((type) => type[key]));
+        const activeMemberships = summaryTotal("activeAtEnd");
+        const newSignups = summaryTotal("newSales");
+        const cancellations = summaryTotal("canceled");
+        const expirations = summaryTotal("expired");
+        const renewals = summaryTotal("renewed");
+        const suspended = summaryTotal("suspended");
+        const reactivated = summaryTotal("reactivated");
+        const deleted = summaryTotal("deleted");
+        const conversionOpportunities = conversionByBusinessUnit === null ? null : sumKnown(conversionByBusinessUnit.map((bu) => bu.opportunities));
+        const convertedMemberships = conversionByBusinessUnit === null ? null : sumKnown(conversionByBusinessUnit.map((bu) => bu.converted));
+        const activeToCancellationRatio = activeMemberships === null || cancellations === null || activeMemberships + cancellations === 0 ? null : round(activeMemberships / (activeMemberships + cancellations), 3);
+        const conversionRate = convertedMemberships === null || conversionOpportunities === null || conversionOpportunities === 0 ? null : round(convertedMemberships / conversionOpportunities * 100, 1);
 
-        const membershipTypes = membershipTypeStats
+        const membershipTypes = membershipTypeStats === null ? null : membershipTypeStats
           .map((type) => ({
             name: type.name,
             activeAtEnd: type.activeAtEnd,
@@ -243,8 +249,9 @@ export function registerIntelligenceMembershipHealthTool(
             renewed: type.renewed,
             suspended: type.suspended,
             reactivated: type.reactivated,
+            deleted: type.deleted,
           }))
-          .sort((a, b) => b.activeAtEnd - a.activeAtEnd);
+          .sort((a, b) => (b.activeAtEnd ?? 0) - (a.activeAtEnd ?? 0));
 
         const result: Record<string, unknown> = {
           period: {
@@ -259,24 +266,29 @@ export function registerIntelligenceMembershipHealthTool(
           suspended,
           reactivated,
           deleted,
-          activeToCancellationRatio: round(
-            safeDivide(activeMemberships, activeMemberships + cancellations),
-            3,
-          ),
+          activeToCancellationRatio,
           metricDefinitions: {
             activeToCancellationRatio: "Active memberships at period end divided by active-at-end plus cancellations during the period; this is not cohort retention.",
+            totalServiceRevenue: "Tenant-wide invoice total values for the period; includes the invoice total's components and is not membership-attributed or restricted to service items.",
           },
           totalServiceRevenue,
           conversionTotals: {
             opportunities: conversionOpportunities,
             converted: convertedMemberships,
-            conversionRate: round(
-              safeDivide(convertedMemberships, conversionOpportunities) * 100,
-              1,
-            ),
+            conversionRate,
           },
           conversionByBusinessUnit,
           membershipTypes,
+          _sourceAvailability: {
+            membershipSummary: { status: membershipSummaryReport === null ? "failed" : "complete" },
+            membershipConversion: { status: membershipConversionReport === null ? "failed" : "complete" },
+            serviceRevenue: { status: !input.includeServiceRevenue ? "not_requested" : invoices === null ? "failed" : "complete" },
+          },
+          _metricAvailability: {
+            ...(activeToCancellationRatio === null ? { activeToCancellationRatio: { available: false, reason: "Summary source/cells or a nonzero active-plus-cancellation denominator unavailable." } } : {}),
+            ...(conversionRate === null ? { "conversionTotals.conversionRate": { available: false, reason: "Conversion source/cells or a nonzero opportunity denominator unavailable." } } : {}),
+            ...(totalServiceRevenue === null ? { totalServiceRevenue: { available: false, reason: input.includeServiceRevenue ? "Invoice source or invoice total cells unavailable." : "Optional invoice source not requested." } } : {}),
+          },
         };
 
         if (warnings.length > 0) {

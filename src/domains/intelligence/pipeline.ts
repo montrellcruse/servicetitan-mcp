@@ -6,7 +6,6 @@ import { executeReport } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   dayDiff,
-  fetchAllPages,
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
@@ -16,7 +15,6 @@ import {
   safeDivide,
   toBoundaryIso,
   toDate,
-  toNumber,
   toText,
 } from "./helpers.js";
 
@@ -28,7 +26,7 @@ const estimatePipelineSchema = z.object({
 
 type GenericRecord = Record<string, unknown>;
 
-type PipelineGroup = "open" | "sold" | "dismissed";
+type PipelineGroup = "open" | "sold" | "dismissed" | "unknown";
 
 const SALES_FIELD = {
   Name: 0,
@@ -43,13 +41,25 @@ const SALES_FIELD = {
 } as const;
 
 interface SalesByTechnician {
-  id: number;
+  id: number | null;
   name: string;
-  totalSales: number;
-  closedAverageSale: number;
-  closeRate: number;
-  salesOpportunity: number;
-  optionsPerOpportunity: number;
+  totalSales: number | null;
+  closedAverageSale: number | null;
+  closeRate: number | null;
+  salesOpportunity: number | null;
+  optionsPerOpportunity: number | null;
+}
+
+function numeric(value: unknown): number | null {
+  if (typeof value !== "number" && (typeof value !== "string" || !/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i.test(value.trim()))) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function sumKnown(values: Array<number | null>): number | null {
+  if (values.some((value) => value === null)) return null;
+  const sum = values.reduce<number>((total, value) => total + value!, 0);
+  return Number.isFinite(sum) ? sum : null;
 }
 
 function extractReportRows(response: unknown): unknown[][] {
@@ -62,9 +72,7 @@ function extractReportRows(response: unknown): unknown[][] {
 
 function hasAnySalesActivity(tech: SalesByTechnician): boolean {
   return (
-    tech.totalSales !== 0 ||
-    tech.salesOpportunity !== 0 ||
-    tech.closeRate !== 0
+    [tech.totalSales, tech.salesOpportunity, tech.closeRate, tech.closedAverageSale, tech.optionsPerOpportunity].some((value) => value !== 0)
   );
 }
 
@@ -73,19 +81,18 @@ function parseSalesReport(response: unknown): SalesByTechnician[] {
   const result: SalesByTechnician[] = [];
 
   for (const row of rows) {
-    const id = Math.round(toNumber(row[SALES_FIELD.TechnicianId]));
-    if (id <= 0) {
-      continue;
-    }
+    const rawId = numeric(row[SALES_FIELD.TechnicianId]);
+    const id = rawId !== null && Number.isSafeInteger(rawId) && rawId > 0 ? rawId : null;
+    const closeRate = numeric(row[SALES_FIELD.CloseRate]);
 
     const tech: SalesByTechnician = {
       id,
-      name: toText(row[SALES_FIELD.Name]) ?? `Technician ${id}`,
-      totalSales: round(toNumber(row[SALES_FIELD.TotalSales]), 2),
-      closedAverageSale: round(toNumber(row[SALES_FIELD.ClosedAverageSale]), 2),
-      closeRate: round(toNumber(row[SALES_FIELD.CloseRate]) * 100, 1),
-      salesOpportunity: Math.round(toNumber(row[SALES_FIELD.SalesOpportunity])),
-      optionsPerOpportunity: round(toNumber(row[SALES_FIELD.OptionsPerOpportunity]), 2),
+      name: toText(row[SALES_FIELD.Name]) ?? (id === null ? "Unknown technician" : `Technician ${id}`),
+      totalSales: numeric(row[SALES_FIELD.TotalSales]),
+      closedAverageSale: numeric(row[SALES_FIELD.ClosedAverageSale]),
+      closeRate: closeRate === null ? null : closeRate * 100,
+      salesOpportunity: numeric(row[SALES_FIELD.SalesOpportunity]),
+      optionsPerOpportunity: numeric(row[SALES_FIELD.OptionsPerOpportunity]),
     };
 
     if (hasAnySalesActivity(tech)) {
@@ -96,26 +103,18 @@ function parseSalesReport(response: unknown): SalesByTechnician[] {
   return result;
 }
 
-function estimateValue(estimate: GenericRecord): number {
-  return toNumber(firstValue(estimate, ["total", "amount", "subtotal"]));
+function estimateValue(estimate: GenericRecord): number | null {
+  // EstimateResponse declares subtotal, not an invoice total or amount.
+  return numeric(estimate.subtotal);
 }
 
 function estimateGroup(estimate: GenericRecord): PipelineGroup {
   const status = normalizeStatus(estimate, ["statusValue"]);
 
-  if (
-    status.includes("sold") ||
-    status.includes("accepted") ||
-    firstValue(estimate, ["soldOn", "soldDate"]) !== undefined
-  ) {
-    return "sold";
-  }
-
-  if (status.includes("dismiss") || status.includes("reject") || status.includes("cancel")) {
-    return "dismissed";
-  }
-
-  return "open";
+  if (status === "sold") return "sold";
+  if (status === "dismissed") return "dismissed";
+  if (status === "open") return "open";
+  return "unknown";
 }
 
 function estimateCreatedOn(estimate: GenericRecord): Date | null {
@@ -126,14 +125,14 @@ function estimateSoldOn(estimate: GenericRecord): Date | null {
   return toDate(firstValue(estimate, ["soldOn", "soldDate"]));
 }
 
-function estimateCustomerName(estimate: GenericRecord): string {
-  const direct = toText(firstValue(estimate, ["customerName", "name", "locationName"]));
+function estimateCustomerName(estimate: GenericRecord): string | null {
+  const direct = toText(estimate.customerName);
   if (direct) {
     return direct;
   }
 
   const nested = toText(firstValue(estimate, ["customer.name", "customer.displayName"]));
-  return nested ?? "Unknown";
+  return nested;
 }
 
 export function registerIntelligenceEstimatePipelineTool(
@@ -145,7 +144,7 @@ export function registerIntelligenceEstimatePipelineTool(
     domain: "intelligence",
     operation: "read",
     description:
-      "Analyze all fetched estimate pages as an open, sold, and dismissed pipeline, with value, conversion, close speed, age buckets, and open estimates older than 30 days. startDate and endDate bound estimate creation timestamps; when both are supplied, Report 172 adds technician sales metrics. soldById filters both sources. Partial source failures are returned in _warnings." +
+      "Summarize fetched estimates by provider Open, Sold, Dismissed, or unknown status. Values are estimate subtotals, excluding tax; age and close timing require valid source dates. startDate and endDate bound estimate creation timestamps; both dates add Report 172 technician sales money, opportunities, and provider rates. Pooled technician close rate and average closed sale remain unavailable without a verified same-cohort closed count. soldById filters both sources. Source failures and missing cells return null with availability details." +
       '\n\nExamples:\n- "What\'s our close rate on estimates?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show me stale estimates over 30 days" -> returns staleEstimates automatically\n- "How is Andrew doing on sales?" -> soldById=<Andrew\'s ID>',
     schema: estimatePipelineSchema.shape,
     handler: async (params) => {
@@ -170,7 +169,7 @@ export function registerIntelligenceEstimatePipelineTool(
                 createdBefore,
                 soldById: input.soldById,
               }),
-            [],
+            null,
           ),
           input.startDate !== undefined && input.endDate !== undefined
             ? fetchWithWarning(
@@ -197,37 +196,40 @@ export function registerIntelligenceEstimatePipelineTool(
             : new Date(toBoundaryIso(input.endDate, true, tz));
 
         const pipeline = {
-          open: { count: 0, value: 0 },
-          sold: { count: 0, value: 0 },
-          dismissed: { count: 0, value: 0 },
+          open: { count: 0, value: 0 as number | null },
+          sold: { count: 0, value: 0 as number | null },
+          dismissed: { count: 0, value: 0 as number | null },
+          unknown: { count: 0, value: 0 as number | null },
         };
 
-        const openBuckets: Record<string, { bucket: string; count: number; value: number }> = {
+        const openBuckets: Record<string, { bucket: string; count: number; value: number | null }> = {
           "0-7": { bucket: "0-7 days", count: 0, value: 0 },
           "8-14": { bucket: "8-14 days", count: 0, value: 0 },
           "15-30": { bucket: "15-30 days", count: 0, value: 0 },
           "30+": { bucket: "30+ days", count: 0, value: 0 },
+          unknown: { bucket: "Unknown age", count: 0, value: 0 },
         };
 
         const staleEstimates: Array<{
-          id: number;
-          customer: string;
-          value: number;
+          id: number | null;
+          customer: string | null;
+          estimateName?: string;
+          value: number | null;
           daysOld: number;
         }> = [];
 
         const daysToClose: number[] = [];
 
-        for (const estimate of estimates) {
+        for (const estimate of estimates ?? []) {
           const group = estimateGroup(estimate);
           const value = estimateValue(estimate);
           pipeline[group].count += 1;
-          pipeline[group].value += value;
+          pipeline[group].value = sumKnown([pipeline[group].value, value]);
 
           if (group === "sold") {
             const created = estimateCreatedOn(estimate);
             const sold = estimateSoldOn(estimate);
-            if (created && sold) {
+            if (created && sold && sold.getTime() >= created.getTime()) {
               daysToClose.push(dayDiff(created, sold, tz));
             }
             continue;
@@ -238,34 +240,39 @@ export function registerIntelligenceEstimatePipelineTool(
           }
 
           const created = estimateCreatedOn(estimate);
-          const daysOld = created ? dayDiff(created, referenceDate, tz) : 0;
+          const daysOld = created ? dayDiff(created, referenceDate, tz) : null;
 
-          let bucketKey: "0-7" | "8-14" | "15-30" | "30+" = "30+";
-          if (daysOld <= 7) {
+          let bucketKey: "0-7" | "8-14" | "15-30" | "30+" | "unknown" = "unknown";
+          if (daysOld !== null && daysOld <= 7) {
             bucketKey = "0-7";
-          } else if (daysOld <= 14) {
+          } else if (daysOld !== null && daysOld <= 14) {
             bucketKey = "8-14";
-          } else if (daysOld <= 30) {
+          } else if (daysOld !== null && daysOld <= 30) {
             bucketKey = "15-30";
+          } else if (daysOld !== null) {
+            bucketKey = "30+";
           }
 
           const bucket = openBuckets[bucketKey];
           bucket.count += 1;
-          bucket.value += value;
+          bucket.value = sumKnown([bucket.value, value]);
 
-          if (daysOld > 30) {
+          if (daysOld !== null && daysOld > 30) {
+            const id = numeric(estimate.id);
+            const name = toText(estimate.name);
             staleEstimates.push({
-              id: toNumber(firstValue(estimate, ["id", "estimateId"])),
+              id: id !== null && Number.isSafeInteger(id) && id > 0 ? id : null,
               customer: estimateCustomerName(estimate),
-              value: round(value, 2),
+              ...(name ? { estimateName: name } : {}),
+              value,
               daysOld,
             });
           }
         }
 
         const averageDaysToClose =
-          daysToClose.length === 0
-            ? 0
+          daysToClose.length === 0 || daysToClose.length !== pipeline.sold.count
+            ? null
             : round(
                 safeDivide(
                   daysToClose.reduce((total, dayCount) => total + dayCount, 0),
@@ -274,85 +281,68 @@ export function registerIntelligenceEstimatePipelineTool(
                 1,
               );
 
-        const totalSales = round(
-          salesByTechnician.reduce((total, tech) => total + tech.totalSales, 0),
-          2,
-        );
-        const totalOpportunities = salesByTechnician.reduce(
-          (total, tech) => total + tech.salesOpportunity,
-          0,
-        );
-        const totalRevenue = round(
-          salesByTechnician.reduce(
-            (total, tech) => total + (tech.totalSales * tech.closedAverageSale),
-            0,
-          ),
-          2,
-        );
-        const averageCloseRate = round(
-          safeDivide(totalSales, totalOpportunities) * 100,
-          1,
-        );
-        const averageClosedSale = round(
-          safeDivide(totalRevenue, totalSales),
-          2,
-        );
+        const totalSales = salesReport === null ? null : sumKnown(salesByTechnician.map((tech) => tech.totalSales));
+        const totalOpportunities = salesReport === null ? null : sumKnown(salesByTechnician.map((tech) => tech.salesOpportunity));
+        const salesRequested = input.startDate !== undefined && input.endDate !== undefined;
+        const metricAvailability: Record<string, { available: false; reason: string }> = {
+          "salesFunnel.averageCloseRate": { available: false, reason: "No verified same-cohort closed count; TotalSales is money, not a conversion numerator." },
+          "salesFunnel.averageClosedSale": { available: false, reason: "No verified same-cohort closed count for pooling provider closed-average sale values." },
+        };
+        if (totalSales === null) metricAvailability["salesFunnel.totalSales"] = { available: false, reason: "Technician sales source or source cells unavailable." };
+        if (totalOpportunities === null) metricAvailability["salesFunnel.totalOpportunities"] = { available: false, reason: "Technician sales source or opportunity cells unavailable." };
+        if (averageDaysToClose === null) metricAvailability.averageDaysToClose = { available: false, reason: "Requires at least one sold estimate and valid creation/sold dates for every sold estimate." };
+        const conversionRate = estimates === null || estimates.length === 0 || pipeline.unknown.count > 0 ? null : round(pipeline.sold.count / estimates.length, 3);
+        if (conversionRate === null) metricAvailability.conversionRate = { available: false, reason: "Estimate source, status coverage, or a nonzero estimate denominator is unavailable." };
 
         const result: Record<string, unknown> = {
-          totalEstimates: estimates.length,
-          pipeline: {
-            open: {
-              count: pipeline.open.count,
-              value: round(pipeline.open.value, 2),
-            },
-            sold: {
-              count: pipeline.sold.count,
-              value: round(pipeline.sold.value, 2),
-            },
-            dismissed: {
-              count: pipeline.dismissed.count,
-              value: round(pipeline.dismissed.value, 2),
-            },
-          },
-          conversionRate: round(safeDivide(pipeline.sold.count, estimates.length), 3),
+          totalEstimates: estimates?.length ?? null,
+          pipeline: Object.fromEntries(Object.entries(pipeline).map(([key, value]) => [key, estimates === null ? { count: null, value: null } : value])),
+          conversionRate,
           averageDaysToClose,
           salesFunnel: {
             totalSales,
-            averageCloseRate,
+            averageCloseRate: null,
             totalOpportunities,
-            averageClosedSale,
-            byTechnician: salesByTechnician,
+            averageClosedSale: null,
+            byTechnician: salesReport === null ? null : salesByTechnician,
           },
-          openByAge: [
+          openByAge: estimates === null ? null : [
             {
               bucket: openBuckets["0-7"].bucket,
               count: openBuckets["0-7"].count,
-              value: round(openBuckets["0-7"].value, 2),
+              value: openBuckets["0-7"].value,
             },
             {
               bucket: openBuckets["8-14"].bucket,
               count: openBuckets["8-14"].count,
-              value: round(openBuckets["8-14"].value, 2),
+              value: openBuckets["8-14"].value,
             },
             {
               bucket: openBuckets["15-30"].bucket,
               count: openBuckets["15-30"].count,
-              value: round(openBuckets["15-30"].value, 2),
+              value: openBuckets["15-30"].value,
             },
             {
               bucket: openBuckets["30+"].bucket,
               count: openBuckets["30+"].count,
-              value: round(openBuckets["30+"].value, 2),
+              value: openBuckets["30+"].value,
             },
+            ...(openBuckets.unknown.count > 0 ? [openBuckets.unknown] : []),
           ],
-          staleEstimates: staleEstimates
+          staleEstimates: estimates === null ? null : staleEstimates
             .sort((a, b) => {
               if (b.daysOld !== a.daysOld) {
                 return b.daysOld - a.daysOld;
               }
-              return b.value - a.value;
+              return (b.value ?? 0) - (a.value ?? 0);
             })
             .slice(0, 25),
+          metricDefinitions: { value: "Provider estimate subtotal, excluding tax and vendor tax cost.", conversionRate: "Sold estimate count divided by all fetched estimates; unavailable with unknown statuses. This creation-date cohort is distinct from Report 172 sales." },
+          _sourceAvailability: {
+            estimates: { status: estimates === null ? "failed" : "complete" },
+            technicianSales: { status: !salesRequested ? "not_requested" : salesReport === null ? "failed" : "complete" },
+          },
+          _metricAvailability: metricAvailability,
         };
 
         if (warnings.length > 0) {

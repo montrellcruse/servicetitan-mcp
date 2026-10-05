@@ -145,6 +145,11 @@ export async function executeReport(
   const pageSize = options.pageSize ?? 1_000;
   const maxPages = options.maxPages ?? 20;
   const maxRows = options.maxRows ?? 100_000;
+  for (const [name, value] of Object.entries({ pageSize, maxPages, maxRows })) {
+    if (!Number.isSafeInteger(value) || value <= 0) {
+      throw new Error(`Report ${key} ${name} must be a positive safe integer`);
+    }
+  }
   const now = options.now ?? Date.now;
   const signal = options.signal ?? getRequestContext().signal;
   const sleep = options.sleep ?? ((ms:number) => sleepWithSignal(ms, signal));
@@ -193,8 +198,14 @@ export async function executeReport(
       if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`Report ${key} returned an invalid page`);
       if (typeof response.hasMore !== "boolean") throw new Error(`Report ${key} page ${page} omitted boolean hasMore`);
       if (response.page !== undefined && response.page !== page) throw new Error(`Report ${key} returned page ${String(response.page)} while page ${page} was requested`);
-      if (response.totalCount !== undefined && (!Number.isSafeInteger(response.totalCount) || (response.totalCount as number) < 0)) {
+      if (response.totalCount !== undefined && response.totalCount !== null && (!Number.isSafeInteger(response.totalCount) || (response.totalCount as number) < 0)) {
         throw new Error(`Report ${key} returned an invalid totalCount`);
+      }
+      if (typeof response.totalCount === "number") {
+        if (totalCount !== undefined && response.totalCount !== totalCount) {
+          throw new Error(`Report ${key} totalCount changed between pages`);
+        }
+        totalCount = response.totalCount;
       }
       const names = fieldNames(response.fields);
       if (new Set(names).size !== names.length) throw new Error(`Report ${key} page ${page} has duplicate field names`);
@@ -204,12 +215,14 @@ export async function executeReport(
         responseFieldNames = names;
         const outputNames = [...contract.fields, ...(contract.optionalFields ?? []).filter((name) => names.includes(name))];
         fields = outputNames.map((name) => ({ name }));
-        if (typeof response.totalCount === "number") totalCount = response.totalCount;
       } else if (names.join("\0") !== responseFieldNames.join("\0")) {
         throw new Error(`Report ${key} fields changed between pages`);
       }
       const indexes = fields.map((field) => names.indexOf(field.name));
-      const rows = (response.data.filter(Array.isArray) as unknown[][])
+      if (response.data.some((row: unknown) => !Array.isArray(row))) {
+        throw new Error(`Report ${key} page ${page} returned a non-array row`);
+      }
+      const rows = (response.data as unknown[][])
         .map((row) => {
           if (row.length !== names.length) throw new Error(`Report ${key} page ${page} returned a row with ${row.length} cells for ${names.length} fields`);
           return indexes.map((index) => row[index]);

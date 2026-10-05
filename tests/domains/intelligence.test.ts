@@ -173,22 +173,22 @@ const REPORT_179_FIELDS = reportFields(
   "TotalRevenue",
   "NonJobRevenue",
 );
-const ZERO_TECHNICIAN_LEAD_GENERATION = {
-  replacementOpps: 0,
-  leadsSet: 0,
-  avgLeadSale: 0,
-  conversionRate: 0,
-  totalLeadSales: 0,
+const UNAVAILABLE_TECHNICIAN_LEAD_GENERATION = {
+  replacementOpps: null,
+  leadsSet: null,
+  avgLeadSale: null,
+  conversionRate: null,
+  totalLeadSales: null,
 };
-const ZERO_TECHNICIAN_MEMBERSHIPS = {
-  opportunities: 0,
-  sold: 0,
-  conversionRate: 0,
+const UNAVAILABLE_TECHNICIAN_MEMBERSHIPS = {
+  opportunities: null,
+  sold: null,
+  conversionRate: null,
 };
-const ZERO_TECHNICIAN_LEAD_SALES = {
-  totalSales: 0,
-  avgSale: 0,
-  closeRate: 0,
+const UNAVAILABLE_TECHNICIAN_LEAD_SALES = {
+  totalSales: null,
+  avgSale: null,
+  closeRate: null,
 };
 
 describe("intelligence domain", () => {
@@ -441,24 +441,24 @@ describe("intelligence domain", () => {
     expect(payload.avgTicket).toBe(50);
     expect(payload.totalConvertedJobs).toBe(10);
     expect(payload.totalOpportunities).toBe(15);
-    expect(payload.overallConversionRate).toBe(66.7);
+    expect(payload.overallConversionRate).toBe(10 / 15 * 100);
     expect(payload.productivity).toEqual({
-      averageRevenuePerHour: 90,
-      averageBillableEfficiency: 0.75,
+      averageRevenuePerHour: null,
+      averageBillableEfficiency: null,
       totalUpsold: 400,
-      averageTasksPerOpportunity: 1.75,
-      averageOptionsPerOpportunity: 1.25,
+      averageTasksPerOpportunity: null,
+      averageOptionsPerOpportunity: null,
       totalRecallsCaused: 1,
     });
     expect(payload.sales).toEqual({
       totalSales: 1300,
-      averageClosedAvgSale: 400,
-      averageCloseRate: 75,
+      averageClosedAvgSale: null,
+      averageCloseRate: null,
       totalSalesOpportunity: 5,
-      averageOptionsPerOpportunity: 1.1,
+      averageOptionsPerOpportunity: null,
     });
 
-    // Verify BU breakdown (zero-revenue "Admin" should be filtered out)
+    // Preserve every provider BU row, including measured zero activity.
     expect(payload.byBusinessUnit).toEqual([
       expect.objectContaining({
         name: "HVAC - Install",
@@ -496,6 +496,7 @@ describe("intelligence domain", () => {
           optionsPerOpportunity: 1,
         },
       }),
+      expect.objectContaining({ name: "Admin", totalRevenue: 0, opportunities: 0, convertedJobs: 0 }),
     ]);
 
     // Verify Report 175 was called with correct parameters
@@ -505,7 +506,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-31" },
-          { name: "BusinessUnitIds", value: "7" },
+          { name: "BusinessUnitIds", value: [7] },
         ],
       },
     );
@@ -515,7 +516,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-31" },
-          { name: "BusinessUnitIds", value: "7" },
+          { name: "BusinessUnitIds", value: [7] },
         ],
       },
     );
@@ -525,7 +526,7 @@ describe("intelligence domain", () => {
         parameters: [
           { name: "From", value: "2026-01-01" },
           { name: "To", value: "2026-01-31" },
-          { name: "BusinessUnitIds", value: "7" },
+          { name: "BusinessUnitIds", value: [7] },
         ],
       },
     );
@@ -572,22 +573,22 @@ describe("intelligence domain", () => {
     });
     const payload = payloadFrom(result);
 
-    expect(payload.totalRevenue).toBe(0);
+    expect(payload.totalRevenue).toBeNull();
     expect(payload.paymentsReceivedInPeriod).toBe(125);
     expect(payload.productivity).toEqual({
-      averageRevenuePerHour: 0,
-      averageBillableEfficiency: 0,
+      averageRevenuePerHour: null,
+      averageBillableEfficiency: null,
       totalUpsold: 0,
-      averageTasksPerOpportunity: 0,
-      averageOptionsPerOpportunity: 0,
+      averageTasksPerOpportunity: null,
+      averageOptionsPerOpportunity: null,
       totalRecallsCaused: 0,
     });
     expect(payload.sales).toEqual({
       totalSales: 0,
-      averageClosedAvgSale: 0,
-      averageCloseRate: 0,
+      averageClosedAvgSale: null,
+      averageCloseRate: null,
       totalSalesOpportunity: 0,
-      averageOptionsPerOpportunity: 0,
+      averageOptionsPerOpportunity: null,
     });
     expect(payload._warnings).toEqual([
       "Revenue report (Report 175) unavailable: Report 175 page 1 failed: report outage",
@@ -606,8 +607,8 @@ describe("intelligence domain", () => {
 
     expect(payload.totalRevenue).toBe(0);
     expect(payload.paymentsReceivedInPeriod).toBe(0);
-    expect(payload.avgTicket).toBe(0);
-    expect(payload.overallConversionRate).toBe(0);
+    expect(payload.avgTicket).toBeNull();
+    expect(payload.overallConversionRate).toBeNull();
     expect(payload.byBusinessUnit).toEqual([]);
     expectAllNumbersFinite(payload);
   });
@@ -720,7 +721,7 @@ describe("intelligence domain", () => {
       {
         id: 10,
         name: "Mike Johnson",
-        jobsCompleted: 2,
+        jobsCompleted: null,
         revenue: 1000,
         averageTicket: 250,
         opportunities: 4,
@@ -731,7 +732,7 @@ describe("intelligence domain", () => {
         billableEfficiency: 0.85,
         recallsCaused: 1,
         upsold: 300,
-        jobsPerDay: 0.29,
+        jobsPerDay: null,
         leadGeneration: {
           replacementOpps: 3,
           leadsSet: 2,
@@ -759,7 +760,7 @@ describe("intelligence domain", () => {
 
     // teamAverages now computed over 1 technician (Mike Johnson only)
     expect(payload.teamAverages).toEqual({
-      jobsCompleted: 2,
+      jobsCompleted: null,
       revenue: 1000,
       averageTicket: 250,
       opportunities: 4,
@@ -770,7 +771,7 @@ describe("intelligence domain", () => {
       billableEfficiency: 0.85,
       recallsCaused: 1,
       upsold: 300,
-      jobsPerDay: 0.29,
+      jobsPerDay: null,
       leadGeneration: {
         replacementOpps: 3,
         leadsSet: 2,
@@ -863,7 +864,7 @@ describe("intelligence domain", () => {
       },
     );
 
-    // Report 165 is no longer called (jobsCompleted now uses ConvertedJobs from Report 168)
+    // ConvertedJobs is retained separately; it cannot establish completed jobs.
   });
 
   it("intel_technician_scorecard keeps partial data when one endpoint fails", async () => {
@@ -929,22 +930,22 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeExtendedMetrics: true });
     const payload = payloadFrom(result);
 
-    // jobsCompleted now uses convertedJobs from Report 168 (which failed), so it's 0
+    // Failed source metrics remain unknown while valid productivity siblings survive.
     expect(payload.technicians[0]).toEqual({
       id: 10,
       name: "Mike Johnson",
-      jobsCompleted: 0,
-      revenue: 0,
-      averageTicket: 0,
-      opportunities: 0,
-      convertedJobs: 0,
-      conversionRate: 0,
-      customerSatisfaction: 0,
+      jobsCompleted: null,
+      revenue: null,
+      averageTicket: null,
+      opportunities: null,
+      convertedJobs: null,
+      conversionRate: null,
+      customerSatisfaction: null,
       revenuePerHour: 150,
       billableEfficiency: 0.6,
       recallsCaused: 2,
       upsold: 80,
-      jobsPerDay: 0,
+      jobsPerDay: null,
       leadGeneration: {
         replacementOpps: 2,
         leadsSet: 1,
@@ -955,7 +956,7 @@ describe("intelligence domain", () => {
       memberships: {
         opportunities: 3,
         sold: 1,
-        conversionRate: 33.3,
+        conversionRate: 0.333 * 100,
       },
       salesFromTechLeads: {
         totalSales: 400,
@@ -973,7 +974,7 @@ describe("intelligence domain", () => {
     ]);
   });
 
-  it("intel_technician_scorecard returns zeros for empty technician data", async () => {
+  it("intel_technician_scorecard keeps empty technician means unavailable", async () => {
     const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
 
@@ -984,22 +985,22 @@ describe("intelligence domain", () => {
 
     expect(payload.technicians).toEqual([]);
     expect(payload.teamAverages).toEqual({
-      jobsCompleted: 0,
-      revenue: 0,
-      averageTicket: 0,
-      opportunities: 0,
-      convertedJobs: 0,
-      conversionRate: 0,
-      customerSatisfaction: 0,
-      revenuePerHour: 0,
-      billableEfficiency: 0,
-      recallsCaused: 0,
-      upsold: 0,
-      jobsPerDay: 0,
-      leadGeneration: ZERO_TECHNICIAN_LEAD_GENERATION,
-      memberships: ZERO_TECHNICIAN_MEMBERSHIPS,
-      salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
-      salesFromMarketingLeads: ZERO_TECHNICIAN_LEAD_SALES,
+      jobsCompleted: null,
+      revenue: null,
+      averageTicket: null,
+      opportunities: null,
+      convertedJobs: null,
+      conversionRate: null,
+      customerSatisfaction: null,
+      revenuePerHour: null,
+      billableEfficiency: null,
+      recallsCaused: null,
+      upsold: null,
+      jobsPerDay: null,
+      leadGeneration: UNAVAILABLE_TECHNICIAN_LEAD_GENERATION,
+      memberships: UNAVAILABLE_TECHNICIAN_MEMBERSHIPS,
+      salesFromTechLeads: UNAVAILABLE_TECHNICIAN_LEAD_SALES,
+      salesFromMarketingLeads: UNAVAILABLE_TECHNICIAN_LEAD_SALES,
     });
     expectAllNumbersFinite(payload);
   });
@@ -1092,6 +1093,7 @@ describe("intelligence domain", () => {
     expect(payload.membershipTypes).toEqual([
       {
         name: "Gold Plan",
+        deleted: 0,
         activeAtEnd: 20,
         newSales: 3,
         canceled: 1,
@@ -1102,6 +1104,7 @@ describe("intelligence domain", () => {
       },
       {
         name: "Silver Plan",
+        deleted: 1,
         activeAtEnd: 5,
         newSales: 1,
         canceled: 2,
@@ -1181,14 +1184,14 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeServiceRevenue: true });
     const payload = payloadFrom(result);
 
-    expect(payload.activeMemberships).toBe(0);
-    expect(payload.newSignups).toBe(0);
-    expect(payload.cancellations).toBe(0);
-    expect(payload.expirations).toBe(0);
-    expect(payload.renewals).toBe(0);
-    expect(payload.suspended).toBe(0);
-    expect(payload.reactivated).toBe(0);
-    expect(payload.deleted).toBe(0);
+    expect(payload.activeMemberships).toBeNull();
+    expect(payload.newSignups).toBeNull();
+    expect(payload.cancellations).toBeNull();
+    expect(payload.expirations).toBeNull();
+    expect(payload.renewals).toBeNull();
+    expect(payload.suspended).toBeNull();
+    expect(payload.reactivated).toBeNull();
+    expect(payload.deleted).toBeNull();
     expect(payload.totalServiceRevenue).toBe(125);
     expect(payload.conversionTotals).toEqual({
       opportunities: 4,
@@ -1198,7 +1201,7 @@ describe("intelligence domain", () => {
     expect(payload.conversionByBusinessUnit).toEqual([
       { name: "HVAC", opportunities: 4, converted: 2, conversionRate: 50 },
     ]);
-    expect(payload.membershipTypes).toEqual([]);
+    expect(payload.membershipTypes).toBeNull();
     expect(payload._warnings).toEqual([
       "Membership summary report (Report 182) unavailable: Report 182 page 1 failed: report outage",
     ]);
@@ -1222,12 +1225,12 @@ describe("intelligence domain", () => {
     expect(payload.suspended).toBe(0);
     expect(payload.reactivated).toBe(0);
     expect(payload.deleted).toBe(0);
-    expect(payload.activeToCancellationRatio).toBe(0);
+    expect(payload.activeToCancellationRatio).toBeNull();
     expect(payload.totalServiceRevenue).toBe(0);
     expect(payload.conversionTotals).toEqual({
       opportunities: 0,
       converted: 0,
-      conversionRate: 0,
+      conversionRate: null,
     });
     expect(payload.membershipTypes).toEqual([]);
     expectAllNumbersFinite(payload);
@@ -1249,16 +1252,16 @@ describe("intelligence domain", () => {
 
       return {
         data: [
-          { id: 1, status: "Open", createdOn: "2026-01-30T08:00:00.000Z", total: 1000, customerName: "A" },
-          { id: 2, status: "Open", createdOn: "2026-01-20T08:00:00.000Z", total: 2000, customerName: "B" },
-          { id: 3, status: "Open", createdOn: "2026-01-01T08:00:00.000Z", total: 3000, customerName: "C" },
-          { id: 4, status: "Open", createdOn: "2025-12-15T08:00:00.000Z", total: 4000, customerName: "D" },
+          { id: 1, status: "Open", createdOn: "2026-01-30T08:00:00.000Z", subtotal: 1000, customerName: "A" },
+          { id: 2, status: "Open", createdOn: "2026-01-20T08:00:00.000Z", subtotal: 2000, customerName: "B" },
+          { id: 3, status: "Open", createdOn: "2026-01-01T08:00:00.000Z", subtotal: 3000, customerName: "C" },
+          { id: 4, status: "Open", createdOn: "2025-12-15T08:00:00.000Z", subtotal: 4000, customerName: "D" },
           {
             id: 5,
             status: "Sold",
             createdOn: "2026-01-10T08:00:00.000Z",
             soldOn: "2026-01-15T08:00:00.000Z",
-            total: 5000,
+            subtotal: 5000,
             customerName: "E",
           },
           {
@@ -1266,10 +1269,10 @@ describe("intelligence domain", () => {
             status: "Sold",
             createdOn: "2026-01-05T08:00:00.000Z",
             soldOn: "2026-01-06T08:00:00.000Z",
-            total: 1000,
+            subtotal: 1000,
             customerName: "F",
           },
-          { id: 7, status: "Dismissed", createdOn: "2026-01-07T08:00:00.000Z", total: 800, customerName: "G" },
+          { id: 7, status: "Dismissed", createdOn: "2026-01-07T08:00:00.000Z", subtotal: 800, customerName: "G" },
         ],
         hasMore: false,
         page: 1,
@@ -1299,6 +1302,7 @@ describe("intelligence domain", () => {
       open: { count: 4, value: 10000 },
       sold: { count: 2, value: 6000 },
       dismissed: { count: 1, value: 800 },
+      unknown: { count: 0, value: 0 },
     });
     expect(payload.conversionRate).toBe(0.286);
     expect(payload.averageDaysToClose).toBe(3);
@@ -1314,9 +1318,9 @@ describe("intelligence domain", () => {
     // Zero-activity "Admin Ghost" should be filtered out; soldById=77 filters to Jamie only
     expect(payload.salesFunnel).toEqual({
       totalSales: 2,
-      averageCloseRate: 33.3,
+      averageCloseRate: null,
       totalOpportunities: 6,
-      averageClosedSale: 7500,
+      averageClosedSale: null,
       byTechnician: [
         {
           id: 77,
@@ -1350,7 +1354,7 @@ describe("intelligence domain", () => {
     );
   });
 
-  it("intel_estimate_pipeline returns warning and zeroed funnel on failure", async () => {
+  it("intel_estimate_pipeline preserves unknown estimates and successful sales on failure", async () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_estimate_pipeline");
 
@@ -1364,17 +1368,18 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31" });
     const payload = payloadFrom(result);
 
-    expect(payload.totalEstimates).toBe(0);
+    expect(payload.totalEstimates).toBeNull();
     expect(payload.pipeline).toEqual({
-      open: { count: 0, value: 0 },
-      sold: { count: 0, value: 0 },
-      dismissed: { count: 0, value: 0 },
+      open: { count: null, value: null },
+      sold: { count: null, value: null },
+      dismissed: { count: null, value: null },
+      unknown: { count: null, value: null },
     });
     expect(payload.salesFunnel).toEqual({
       totalSales: 1,
-      averageCloseRate: 50,
+      averageCloseRate: null,
       totalOpportunities: 2,
-      averageClosedSale: 1200,
+      averageClosedSale: null,
       byTechnician: [
         {
           id: 10,
@@ -1401,15 +1406,15 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(result);
 
     expect(payload.totalEstimates).toBe(0);
-    expect(payload.conversionRate).toBe(0);
-    expect(payload.averageDaysToClose).toBe(0);
+    expect(payload.conversionRate).toBeNull();
+    expect(payload.averageDaysToClose).toBeNull();
     expect(payload.staleEstimates).toEqual([]);
     expect(payload.salesFunnel).toEqual({
-      totalSales: 0,
-      averageCloseRate: 0,
-      totalOpportunities: 0,
-      averageClosedSale: 0,
-      byTechnician: [],
+      totalSales: null,
+      averageCloseRate: null,
+      totalOpportunities: null,
+      averageClosedSale: null,
+      byTechnician: null,
     });
     expectAllNumbersFinite(payload);
   });
@@ -1433,9 +1438,9 @@ describe("intelligence domain", () => {
 
     expect(payload.salesFunnel).toEqual({
       totalSales: 3,
-      averageCloseRate: 20,
+      averageCloseRate: null,
       totalOpportunities: 15,
-      averageClosedSale: 666.67,
+      averageClosedSale: null,
       byTechnician: [
         {
           id: 20,
@@ -1474,7 +1479,7 @@ describe("intelligence domain", () => {
             id: 1,
             status: "Open",
             createdOn: "2026-01-10T08:00:00.000Z",
-            total: 1000,
+            subtotal: 1000,
             customerName: "Alpha",
           },
           {
@@ -1482,7 +1487,7 @@ describe("intelligence domain", () => {
             status: "Sold",
             createdOn: "2026-01-05T08:00:00.000Z",
             soldOn: "2026-01-06T08:00:00.000Z",
-            total: 2000,
+            subtotal: 2000,
             customerName: "Beta",
           },
         ],
@@ -1500,14 +1505,15 @@ describe("intelligence domain", () => {
       open: { count: 1, value: 1000 },
       sold: { count: 1, value: 2000 },
       dismissed: { count: 0, value: 0 },
+      unknown: { count: 0, value: 0 },
     });
     expect(payload.conversionRate).toBe(0.5);
     expect(payload.salesFunnel).toEqual({
-      totalSales: 0,
-      averageCloseRate: 0,
-      totalOpportunities: 0,
-      averageClosedSale: 0,
-      byTechnician: [],
+      totalSales: null,
+      averageCloseRate: null,
+      totalOpportunities: null,
+      averageClosedSale: null,
+      byTechnician: null,
     });
     expect(payload._warnings).toEqual([
       "Technician sales report (Report 172) unavailable: Report 172 page 1 failed: report outage",
@@ -1757,9 +1763,9 @@ describe("intelligence domain", () => {
     expect(payload.campaigns[0]).toEqual(
       expect.objectContaining({
         calls: 2,
-        bookings: 0,
+        bookings: null,
         revenue: null,
-        bookingsPerCallRatio: 0,
+        bookingsPerCallRatio: null,
       }),
     );
     // Revenue now comes from Report 175 (empty mock = 0), not invoice pagination
@@ -1812,7 +1818,7 @@ describe("intelligence domain", () => {
     });
     const payload = payloadFrom(result);
 
-    expect(payload.leadGeneration).toEqual([]);
+    expect(payload.leadGeneration).toBeNull();
     // Both Report 175 (revenue) and 176 (lead gen) fail since postMock rejects all POSTs
     expect(payload._warnings).toEqual([
       "Revenue report (Report 175) unavailable: Report 175 page 1 failed: lead report unavailable",
@@ -1853,7 +1859,7 @@ describe("intelligence domain", () => {
     expect(payload.totals).toEqual({
       calls: 0,
       bookings: 0,
-      bookingsPerCallRatio: 0,
+      bookingsPerCallRatio: null,
       unattributedCalls: 0,
       unattributedBookings: 0,
       tenantRevenueForPeriod: 0,
@@ -1983,7 +1989,9 @@ describe("intelligence domain", () => {
       total: 4,
       completed: 1,
       inProgress: 1,
-      pending: 2,
+      pending: 1,
+      canceled: 1,
+      unknownStatus: 0,
     });
     expect(payload.jobs).toEqual({
       total: 3,
@@ -2073,7 +2081,7 @@ describe("intelligence domain", () => {
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
 
-    expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
+    expect(payload.calls).toEqual({ total: null, booked: null, missed: null });
     expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload._warnings).toEqual([
       "Call data unavailable: calls down",
@@ -2090,13 +2098,13 @@ describe("intelligence domain", () => {
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
 
-    expect(payload.appointments).toEqual({ total: 0, completed: 0, inProgress: 0, pending: 0 });
+    expect(payload.appointments).toEqual({ total: 0, completed: 0, inProgress: 0, pending: 0, canceled: 0, unknownStatus: 0 });
     expect(payload.jobs).toEqual({ total: 0, completed: 0, inProgress: 0, canceled: 0 });
     expect(payload.revenue).toEqual({ invoiced: 0, collected: 0, estimatesSold: 0 });
     expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
     expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload.highlights).toEqual([
-      "0 of 0 appointments completed (0%)",
+      "0 confirmed completed appointments; completion rate unavailable.",
       "No missed calls recorded today",
       "0 jobs scheduled for tomorrow",
       "$0 in estimates sold",
@@ -2117,16 +2125,16 @@ describe("intelligence domain", () => {
 
     expect(payload.csrs).toEqual([]);
     expect(payload.teamAverages).toEqual({
-      jobsBooked: 0,
-      totalRevenue: 0,
-      avgTicket: 0,
-      completedJobs: 0,
-      invoicedJobs: 0,
-      canceledJobs: 0,
-      openJobs: 0,
-      completionRate: 0,
-      invoiceRate: 0,
-      cancellationRate: 0,
+      jobsBooked: null,
+      totalRevenue: null,
+      avgTicket: null,
+      completedJobs: null,
+      invoicedJobs: null,
+      canceledJobs: null,
+      openJobs: null,
+      completionRate: null,
+      invoiceRate: null,
+      cancellationRate: null,
     });
     expectAllNumbersFinite(payload);
   });
@@ -2185,7 +2193,7 @@ describe("intelligence domain", () => {
 
     expect(payload.sentCount).toBe(0);
     expect(payload.notSentCount).toBe(0);
-    expect(payload.sendRate).toBe(0);
+    expect(payload.sendRate).toBeNull();
     expect(payload.totalAmountSent).toBe(0);
     expect(payload.totalAmountNotSent).toBe(0);
     expect(payload.notSentBreakdown).toEqual({
@@ -2193,7 +2201,7 @@ describe("intelligence domain", () => {
       byTechnician: [],
     });
     expect(payload.highlights).toEqual([
-      "All 0 invoices in the period were sent.",
+      "No invoices returned by either report for the period.",
     ]);
     expectAllNumbersFinite(payload);
   });
