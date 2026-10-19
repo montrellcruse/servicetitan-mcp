@@ -1,5 +1,33 @@
 # V3 stable read-only validation
 
+## October 18, 2026 dependency-security maintenance
+
+This candidate updates three lockfile resolutions: MCP TypeScript SDK 1.30.0 to
+1.32.1, proxy-addr 2.0.7 to 2.0.8, and source-map-js 1.2.1 to 1.2.2. Package
+version 3.0.1, direct dependency ranges, application source and the readonly-v1
+support policy are unchanged. The SDK and proxy-addr records are runtime
+dependencies. The server uses native HTTP and shared-key authentication; the
+advisories' OAuth-client and Express trusted-proxy paths were not found in the
+application. Updating the dependencies also protects future callers.
+
+Clean installs on local Node 22.23.3 and 24.21.0 passed contracts, typecheck, lint,
+583 coverage tests in 43 files, 15 built-wire tests, nine discovery configurations,
+two packaging tests and package dry runs. Both full npm audits report zero
+vulnerabilities. Local constructor-only source-map and mapped-address trust tests
+reproduce the vulnerable behavior in the original dependency versions and verify
+that the patched versions reject it. Valid mappings and intended trusted subnet
+behavior remain covered. These local checks use synthetic configuration and make
+no ServiceTitan calls.
+
+The generated JavaScript digest remains
+`b9029359130a290ad67fbf3d6a7481f1cb3d644cfb089357a06b994c9605e629`, matching the
+previous acceptance record. Runtime dependency implementation has changed.
+Historical production and broad load/latency evidence is carried forward within
+its existing scope, supported by unchanged application code and renewed local
+protocol, authorization, request and package checks. Those historical live and
+load exercises were not repeated. Linux CI is recorded separately when it runs.
+No npm publication, live tenant call or production-runtime update was performed.
+
 ## October 4, 2026 dependency-security maintenance
 
 This unpublished default-branch maintenance candidate keeps package version 3.0.1,
