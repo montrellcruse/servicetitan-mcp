@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";

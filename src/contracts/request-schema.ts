@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../schema.js";
 import { OFFICIAL_OPERATIONS } from "./official-operations.generated.js";
 import type { JsonSchema, OfficialOperationContract } from "./types.js";
 

@@ -3,7 +3,7 @@
  * and membership types. Use this to discover IDs before calling other intel tools,
  * or to search by name.
  */
-import { z } from "zod";
+import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import { referenceCache } from "../../cache.js";

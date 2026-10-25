@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../src/schema.js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ServiceTitanConfig } from "../../src/config.js";

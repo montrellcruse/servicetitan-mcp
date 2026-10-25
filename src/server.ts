@@ -1,6 +1,6 @@
 import { createRequire } from "node:module";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { z } from "zod";
+import { z } from "./schema.js";
 import { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
 import { assertWritePolicy } from "./config.js";

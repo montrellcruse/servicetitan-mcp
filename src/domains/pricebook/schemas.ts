@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../../schema.js";
 
 export const externalDataEntrySchema = z.object({
   key: z.string().describe("External data key"),

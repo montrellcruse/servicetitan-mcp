@@ -1,7 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import type { ZodType } from "zod";
-import { z } from "zod";
+import type { ZodType } from "./schema.js";
+import { z } from "./schema.js";
 
 import { type AuditEntry, AuditLogger, sanitizeParams } from "./audit.js";
 import type { ServiceTitanClient } from "./client.js";

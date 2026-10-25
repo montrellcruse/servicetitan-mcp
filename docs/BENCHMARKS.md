@@ -1,5 +1,23 @@
 # V3 latency and load measurements
 
+## October 25, 2026 focused security-patch protocol check
+
+The compatibility-preserving Zod candidate passes a fresh local synthetic
+stdio/HTTP protocol comparison on Node 22.23.3 and 24.22.1. Each runtime uses
+32 samples, one repetition, a three-second soak and 24 steady scenarios against
+the independently installed, locked v2.6.4 baseline. Row/amount, expected-overload,
+recovery, session-churn and controlled-upstream assertions all pass. Real traffic
+is loopback-only; the fixture adapter and proxy isolation prevent ServiceTitan
+access. No tenant credentials or live API requests are used.
+
+This short run checks protocol correctness and recovery for the changed build.
+It does not establish production capacity, stable percentile comparisons, a
+retained-memory/leak result or a latency SLA. Earlier broad load/cache/memory
+results below remain historical. The new runtime build has SHA-256
+`b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6`
+(sorted JavaScript paths and bytes, separated by NULs). It is not byte-identical
+to earlier accepted runtime artifacts.
+
 ## Local security-maintenance focused refresh — September 13, 2026 (Arizona)
 
 The unpublished 3.0.1 security candidate passes a new focused protocol run on

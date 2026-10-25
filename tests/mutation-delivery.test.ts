@@ -2,7 +2,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { describe, expect, it, vi } from "vitest";
-import { z } from "zod";
+import { z } from "../src/schema.js";
 
 import { loadConfig } from "../src/config.js";
 import { ToolRegistry, type ToolOperation } from "../src/registry.js";
