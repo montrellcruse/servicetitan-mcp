@@ -1,5 +1,15 @@
 # Changelog
 
+## [3.0.2] - 2026-10-25
+
+### Fixed
+- Updated locked runtime and test dependencies with the security repairs merged since 3.0.1.
+- Added early rejection of oversized Zod arrays before child validation, preserving the existing tool schemas and accepted inputs.
+
+### Compatibility
+- Stable support remains read-only under readonly-v1. Writes and deletes remain experimental and require explicit opt-in.
+- Live production and broad load evidence is historical. This patch adds local compatibility, transport, discovery, and package checks; it does not certify live mutations or a second company.
+
 All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
