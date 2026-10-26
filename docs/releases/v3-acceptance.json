@@ -1,5 +1,5 @@
 {
-  "version": "3.0.1",
+  "version": "3.0.2",
   "supportPolicy": {
     "id": "readonly-v1",
     "stableOperations": [
@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "fefab5eff08508a53938279cf7a4e7ff891530e0a244b3cfde109e764950a01d",
+  "sourceFingerprint": "520684bbbd7497fb7dabaa24ca70b582814a02dae42bc37d67c8b54a64bee20a",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -133,5 +133,33 @@
       "upstreamCalls": 0
     }
   },
-  "releaseDisposition": "stable-readonly"
+  "releaseDisposition": "stable-readonly",
+  "releasePreparation": {
+    "date": "2026-10-25",
+    "baseCommit": "3917429b5165c005e7523269ce8516b977025ac1",
+    "status": "passed",
+    "scope": "Patch version, current README install pins, changelog and evidence metadata only. Runtime source, tests, build/release policy and dependencies match the merged October25 candidate. Historical live/load evidence and scoped-out mutations/second company remain unchanged.",
+    "localChecks": {
+      "node": "24.22.1",
+      "tests": 602,
+      "wireTests": 18,
+      "packagingTests": 2,
+      "discoveryProfiles": 9,
+      "upstreamCalls": 0,
+      "prepublishOnly": "passed"
+    },
+    "freshPackedConsumer": {
+      "node": "24.22.1",
+      "profiles": 5,
+      "tools": [
+        264,
+        33,
+        75,
+        34,
+        458
+      ],
+      "upstreamCalls": 0,
+      "status": "passed"
+    }
+  }
 }

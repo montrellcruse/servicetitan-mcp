@@ -6,7 +6,7 @@
 
 A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [Rowvyn](https://rowvyn.com). Version **3.0.1** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+Built by [Rowvyn](https://rowvyn.com). Version **3.0.2** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
 
 ## Start with a focused profile
 
@@ -28,7 +28,7 @@ For analytics:
   "mcpServers": {
     "servicetitan": {
       "command": "npx",
-      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.1"],
+      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.2"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -51,7 +51,7 @@ For CRM:
   "mcpServers": {
     "servicetitan": {
       "command": "npx",
-      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.1"],
+      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.2"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -69,7 +69,7 @@ For CRM:
 
 For dispatch, change only `ST_TOOL_PROFILE` in either configuration to `dispatch`. Choose `full` for all 264 read tools. The profile, `ST_DOMAINS`, and `ST_TOOLS` filters intersect; a tool must satisfy each configured filter. For example, adding `ST_TOOLS=crm_customers_get` to the CRM configuration exposes that customer lookup plus the three system tools. Profiles select tools and do not grant ServiceTitan scopes. Start with `st_health_check` for authentication/read access and `st_readiness_check` for module and report compatibility.
 
-The [tool catalog](TOOLS.md) explains selection among list, get, and export operations. Four export feeds retain equivalent generic and domain-specific names for compatibility; use one available name per feed. Focused profiles naturally exclude the generic `export` domain. Every existing v3.0.0 name remains available under its original configuration in v3.0.1.
+The [tool catalog](TOOLS.md) explains selection among list, get, and export operations. Four export feeds retain equivalent generic and domain-specific names for compatibility; use one available name per feed. Focused profiles naturally exclude the generic `export` domain. Every existing v3.0.0 name remains available under its original configuration in v3.0.2.
 
 ## Run from source
 
