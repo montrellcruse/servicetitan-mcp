@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./schema.js";
 
 import { shapeResponse } from "./response-shaping.js";
 import { getRequestContext, updateRequestContext } from "./request-context.js";

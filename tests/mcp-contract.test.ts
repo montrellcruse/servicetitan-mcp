@@ -12,7 +12,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { Tool, ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
+import { z } from "../src/schema.js";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ServiceTitanClient } from "../src/client.js";

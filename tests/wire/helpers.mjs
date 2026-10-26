@@ -93,11 +93,11 @@ async function freePort() {
   return port;
 }
 
-export async function launchHttp(overrides = {}) {
+export async function launchHttp(overrides = {}, entrypoint = "streamable-http.js") {
   await assertBuild();
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
-  const child = spawn(process.execPath, [resolve(ROOT, "build/streamable-http.js")], {
+  const child = spawn(process.execPath, [resolve(ROOT, "build", entrypoint)], {
     cwd: ROOT, env: childEnvironment({ ST_MCP_PORT: String(port), ...overrides }), stdio: ["ignore", "pipe", "pipe"],
   });
   let stderr = "";

@@ -1,5 +1,52 @@
 # V3 stable read-only validation
 
+## October 25, 2026 compatibility-preserving Zod security repair
+
+Zod is pinned to 4.6.6. Application schemas use the local v3-compatible facade,
+which rejects arrays above an existing max or exact-length bound before parsing
+their elements. The bundled legacy parser needs this explicit backport; importing
+`zod/v3` alone leaves the vulnerable traversal intact. SDK protocol schemas use
+the patched native v4 implementation. No installed dependency source is patched.
+
+Fresh clean local matrices on Node 22.23.3 and 24.22.1, with npm 11.19.1, pass
+contracts, typecheck, lint, 602 coverage tests in 44 files, 18 built-wire tests,
+all nine discovery profiles, two packaging tests, package dry runs and full
+zero-finding dependency audits. Nineteen schema regressions cover size-chain
+cloning, synchronous/asynchronous parsing, nested records/unions, generated
+official schemas, ordinary errors and valid controls. Three added built-process
+tests exercise the actual journal-entry array inputs over stdio, HTTP and SSE.
+Oversized inputs visit zero child validators and remain bounded to one size
+issue per failing branch. Both complete SDK discovery captures exactly match
+the preserved pre-migration output for all 458 tools, including descriptions.
+The pinned discovery fixture is unchanged.
+
+Fresh focused synthetic protocol checks also pass on both runtimes: 32 samples,
+one repetition, three-second soak and 24 steady scenarios each. Row/amount,
+overload, recovery, session-churn and controlled-upstream assertions pass. The
+historical v2.6.4 comparison has its own locked installation; dependencies are
+not shared with the candidate. These are bounded fixture measurements, with no
+production-capacity or percentile-stability claim. Final packed-consumer results
+and release-policy checks are recorded separately in the acceptance record.
+
+The business handlers, routes, official contract snapshot, tool membership,
+confirmation/authentication policy and support policy are unchanged. Existing
+source edits outside the facade are mechanical import routing. Accepted array
+sizes delegate to the same legacy validator; the new early return applies only
+to already-invalid oversized arrays. Legacy integer, UUID, date-time, default,
+optional, strip/passthrough and strict-object controls pass. Upstream legacy
+runtime differences were reviewed: comment changes, emoji-regex spelling and
+intersection/error-format prototype handling. The application does not use the
+changed emoji, intersection or error-format helpers. This review supports
+continuity of the explicitly historical bounded readonly production evidence.
+It does not claim fresh production acceptance or identical dependency files.
+
+Generated runtime/declaration output changes, so prior JavaScript build hashes
+are historical. Unbounded arrays retain their existing behavior; this repair
+does not add a universal request-resource cap. Future schema work must use the
+facade and keep its size-clone, all-tool and transport regressions. Version 3.0.1
+and `readonly-v1` remain unchanged. No live tenant call, credential change,
+publication, deployment or Linux CI run occurred in this local verification.
+
 ## October 18, 2026 dependency-security maintenance
 
 This candidate updates three lockfile resolutions: MCP TypeScript SDK 1.30.0 to

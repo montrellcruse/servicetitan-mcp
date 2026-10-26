@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../src/schema.js";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import {

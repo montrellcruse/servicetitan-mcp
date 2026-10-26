@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "../src/schema.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { AuditLogger } from "../src/audit.js";

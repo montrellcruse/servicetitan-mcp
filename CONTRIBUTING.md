@@ -42,6 +42,8 @@ Use `npm start` for stdio and `npm run start:streamable-http` for remote MCP. `n
 
 Tool names follow `<domain>_<resource>_<action>`. Files use kebab-case, functions and variables use camelCase, and types use PascalCase. Every tool needs an accurate description and operation classification. Mutation annotations may be narrowed only when ServiceTitan behavior supports it; `readOnlyHint` always comes from the operation.
 
+Import Zod through the local `src/schema.ts` facade. It preserves the v3 validation and discovery contract and rejects oversized bounded arrays before parsing their elements. Zod 4.6.6's bundled `zod/v3` parser still walks those elements, so a direct legacy import bypasses this protection. Build collections with `z.array(element)`; legacy instance `.array()` and `.deepPartial()` can recreate unguarded arrays and are lint-blocked. Keep the all-tool schema regression and the stdio/HTTP/SSE oversized-input checks when changing schema construction. Unbounded arrays retain their existing behavior; the facade does not impose a universal request-resource limit.
+
 ## Writing tool definitions
 
 Write for an agent choosing among the actual tools returned by `tools/list`. Lead with the concrete action, resource, and returned record type when ambiguous. Explain the closest alternative and when to use it. Add non-obvious input relationships and behavior such as one-page results, continuation tokens, cache freshness, report scheduling, or incomplete optional feeds only when supported by the pinned API operation and the handler.
