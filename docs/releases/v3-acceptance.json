@@ -12,60 +12,64 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "520684bbbd7497fb7dabaa24ca70b582814a02dae42bc37d67c8b54a64bee20a",
+  "sourceFingerprint": "df91c188480ddf1cc5c6b2e812ad8761d379348708ae2904ac4c3668b0c01c3c",
   "gates": {
     "maintenance": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "October 25 2026: Zod pinned to 4.6.6, with a repository-owned v3-compatible early array-size gate. Earlier prepared dependency repairs are retained. Node 22.23.3/24.22.1 clean matrices and fresh packed consumers pass with zero full audits. Version 3.0.1 and readonly-v1 are unchanged. No npm publication, deployment, installed dependency edit or tenant call."
+      "boundary": "November15: runtime Hono/node-server/follow-redirects security patches plus supported ESLint and narrowly scoped estree/minimatch dev repair; clean Node22.23.5/24.22.1 matrices and full audits zero. Version3.0.2/readonly-v1 unchanged; no tenant calls, publication or deployment."
     },
     "contracts": {
       "status": "passed",
       "coverage": "All operation associations and 210 official schemas; standard date-filter schemas checked for 102 stable reads with seven captured-dispatch cases. Captured request dispatch covers corrected high-risk adapters, not every write handler or query parameter.",
       "summary": "VALIDATION-v3.md",
-      "boundary": "October 25: unchanged official contract snapshot and business handlers; fresh contract checks and full 602-test matrices pass on Node 22/24. The added generated-schema regression proves oversized nested arrays stop before child validation while valid legacy integer inputs still parse."
+      "boundary": "November15: unchanged official snapshots and business handlers; contracts and604 coverage tests pass on both supported Node majors. No claim of every parameter or live write verification."
     },
     "analytics": {
       "status": "passed",
-      "boundary": "October 25: all existing analytics/company-isolation fixtures pass in both 602-test matrices. Fresh focused synthetic protocol row/amount assertions pass. Historical live totals/dashboard evidence is not rerun; dashboard parity remains uncertified.",
+      "boundary": "November15: analytics/company-isolation fixtures pass in both604-test matrices; fresh deterministic pagination/cache/fan-in/TTL/company-isolation checks pass. Historical live totals/dashboard evidence not rerun; dashboard parity uncertified.",
       "summary": "VALIDATION-v3.md"
     },
     "interface": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "October 25: complete SDK discovery is exactly identical to the preserved pre-migration capture for all nine profiles and 458 tools. Nineteen schema regressions plus three added built stdio/HTTP/SSE security cases pass; unchanged input/output/annotation/profile fixture passes."
+      "boundary": "November15: nine-profile discovery membership,validation/output schemas and annotations match unchanged fixture. Both18-test actual built-wire matrices pass, including stdio/HTTP/SSE,authentication/confirmation and bounded schema checks. No fresh full-prose identity claim."
     },
     "runtimeMatrix": {
       "status": "passed",
       "runtimes": [
-        "22.23.3",
+        "22.23.5",
         "24.22.1"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 602,
-      "testFiles": 44,
+      "testsPerRuntime": 604,
+      "testFiles": 45,
       "wireTestsPerRuntime": 18,
       "summary": "VALIDATION-v3.md",
       "packagingTestsPerRuntime": 2,
-      "boundary": "October 25 local macOS arm64 clean installs with npm 11.19.1 pass dependency-tree validation, zero full audits, contracts, types, lint, 602 coverage tests, 18 built-wire tests, nine discovery profiles, two packaging tests and pack dry runs on each runtime. Linux CI is separate and has not run for this candidate."
+      "boundary": "November15 clean darwin-arm64 scripts-disabled installations; valid trees and full audits zero; contracts/types/lint/604 coverage tests/18 wire/nine discovery/two packaging fixtures/pack checks pass per runtime. Docker context is synthetic,not a real image build. Remote Linux CI not run.",
+      "packagingPassedPerRuntime": 2,
+      "packagingSkippedPerRuntime": 0
     },
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "October 25: fresh isolated packed-consumer installs on both supported Node majors pass package imports, five-profile discovery, readonly/experimental/confirmation safeguards and actual stdio execution with zero upstream calls. Full fresh-consumer audits are zero. Runtime and declarations changed; no identical-build claim is made. Final archive metadata is separately checked after this evidence update. No publication or deployment.",
-      "javascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
+      "boundary": "November15 actual archives match candidate runtime/docs; isolated Node22.23.5/24.22.1 consumers pass imports,Node ambient types/public declarations,five profiles and safeguards,installed stdio and zero full audits. Generated JavaScript matches the preserved runtime-only candidate; dependencies changed. No publication,deployment or tenant calls.",
+      "javascriptBuildSha256": "b1c288490dd4ef18f0a6172c2fc3d62265ea2f54bba31daf19bd9bee2b692cc6",
       "runtimes": [
-        "22.23.3",
+        "22.23.5",
         "24.22.1"
       ],
       "profilesPerRuntime": 5,
-      "upstreamCalls": 0
+      "upstreamCalls": 0,
+      "previousJavascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
+      "digestAlgorithm": "SHA256 of sorted build-relative *.js paths + NUL + exact bytes + NUL"
     },
     "liveProduction": {
       "status": "passed",
-      "boundary": "October 25: historical bounded readonly production evidence is retained, not rerun. Business handlers, routes, official contracts, auth/confirmation policy and tool membership are unchanged; existing source edits are mechanical schema import routing. The new gate returns early only for already-invalid oversized arrays and delegates accepted sizes to the legacy parser. Complete nine-profile discovery is identical, legacy integer/UUID/datetime/default/object controls pass, all active array schemas are checked, and both 602-test/18-wire/packed-consumer matrices pass. The reviewed v3 runtime differences affect unused emoji/intersection/error-format helpers plus comments. Generated runtime/declaration and native SDK protocol dependency files changed, so this is a scoped compatibility continuity review, not identical dependency behavior or fresh production acceptance.",
+      "boundary": "November15 continuity review: earlier bounded read-only production evidence remains historical,not rerun. Application handlers/routes/contracts/auth/confirmation/tool membership unchanged. Hono/node-server/follow-redirects runtime dependencies changed; identical dependency behavior is not assumed. Clean unit/coverage,actual transport/discovery,controlled-load/fault and packed-consumer matrices support local compatibility,not fresh tenant acceptance,rollout or broad production certification.",
       "summary": "VALIDATION-v3.md",
-      "evidenceKind": "historical bounded-readonly evidence with local continuity review",
+      "evidenceKind": "historical bounded-readonly production evidence with November15 local dependency-compatibility continuity checks",
       "freshTenantCalls": 0
     },
     "liveIntegration": {
@@ -80,8 +84,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "October 25: fresh focused synthetic stdio/HTTP protocol comparison passes on Node 22.23.3 and 24.22.1 with an independently locked v2.6.4 baseline. Historical broad client-load/cache/retained-memory and production-latency results are retained, not rerun. Business request/cache logic is unchanged; the guarded parser changes already-invalid oversized-array traversal. No capacity, stable-percentile, retained-memory or SLA claim is made.",
-      "javascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
+      "boundary": "November15 current deterministic client-load (ten load/nine fault scenarios per runtime) and analytics correctness checks pass on Node22.23.5/24.22.1. Prior protocol-v2 comparison,broad retained-memory and production-latency measurements remain historical,not rerun. No new percentile-stability,capacity,retained-memory or SLA claim.",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
       "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
@@ -120,6 +123,21 @@
           "controlledUpstreamOnly": true
         },
         "boundary": "Local deterministic fixtures; independently pinned baseline installation. Source fingerprint at measurement precedes the final evidence-documentation refresh; runtime bytes match the recorded digest. No tenant calls or fresh broad capacity/production claim."
+      },
+      "previousJavascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
+      "november15RuntimeDigest": {
+        "sha256": "b1c288490dd4ef18f0a6172c2fc3d62265ea2f54bba31daf19bd9bee2b692cc6",
+        "algorithm": "SHA256 of sorted build-relative *.js paths + NUL + exact bytes + NUL"
+      },
+      "november15ClientLoad": {
+        "status": "passed",
+        "runtimes": [
+          "22.23.5",
+          "24.22.1"
+        ],
+        "loadScenariosPerRuntime": 10,
+        "faultScenariosPerRuntime": 9,
+        "upstream": "controlled adapter only"
       }
     },
     "discoveryCompatibility": {
@@ -129,8 +147,9 @@
       "experimentalTools": 458,
       "equivalentPairs": 4,
       "fixture": "../../tests/fixtures/discovery-v3.0.0.json",
-      "exactFullCaptureMatch": true,
-      "upstreamCalls": 0
+      "upstreamCalls": 0,
+      "historicalExactFullCaptureMatch": true,
+      "november15Comparison": "All nine profile memberships,validation/output schemas and annotations match unchanged fixture;full prose bytes not compared."
     }
   },
   "releaseDisposition": "stable-readonly",
@@ -161,5 +180,17 @@
       "upstreamCalls": 0,
       "status": "passed"
     }
+  },
+  "maintenanceRefresh": {
+    "date": "2026-11-15",
+    "status": "passed-local",
+    "previousSourceFingerprint": "520684bbbd7497fb7dabaa24ca70b582814a02dae42bc37d67c8b54a64bee20a",
+    "versionUnchanged": true,
+    "remoteCI": "not run",
+    "DockerContext": "passed: synthetic local engine/CLI context fixture,not image build",
+    "freshTenantCalls": 0,
+    "published": false,
+    "policyAndGateImplementationUnchanged": true,
+    "summary": "VALIDATION-v3.md"
   }
 }

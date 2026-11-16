@@ -1,5 +1,51 @@
 # V3 stable read-only validation
 
+## November 15, 2026 dependency-security continuity refresh (unpublished)
+
+Based on current GitHub main, this candidate patches runtime lockfile resolutions:
+Hono 4.13.13 to 4.13.18, @hono/node-server 2.1.0 to 2.1.8 and follow-redirects 1.16.1
+to 1.16.3. The patched Hono release includes follow-up security repairs beyond the
+original advisory floor 4.13.16. Application source, MCP SDK, API contracts,
+readonly-v1 and package version 3.0.2 are unchanged.
+
+Development-only minimatch security is repaired with supported ESLint 10.15.0 /
+config-array 0.23.6 and an override scoped to typescript-estree's minimatch 11.0.5.
+The v11 release genuinely removes AST/makeRe/regexp/internal helpers and changes
+some advanced glob semantics; compatibility is not assumed merely from version
+numbers. The installed estree consumer uses only the retained
+minimatch(path,pattern,{dot:true}) function. A public parser project-service test
+passes on both old 10.2.6 and patched 11.0.5: top-level configuration and dotfiles
+receive type information, while a nested out-of-project file is denied. Supported
+Node 22/24 remain covered; removal of Node 18 support does not narrow this package's
+Node>=22 contract. The override is not a blanket replacement for other consumers.
+
+Clean scripts-disabled installations on darwin-arm64 Node 22.23.5 and 24.22.1 each
+pass dependency-tree validation, zero-finding full npm audits, contracts, types,
+lint, 604 coverage tests in 45 files, 18 actual built-wire tests, nine discovery
+profiles and two packaging fixtures. Docker CLI context exclusion uses a fake
+local engine, not a real image build. Fresh deterministic analytics checks and
+ten client-load / nine fault scenarios pass per runtime. These fixtures do not
+contact ServiceTitan and are not a production-capacity or stable-percentile claim.
+
+Fresh actual npm archives are compared file-by-file with the built candidate and
+installed in isolated consumers on both Node majors. Imports, Node ambient types,
+public declarations, five profile/safeguard checks and installed CLI stdio execution
+pass with zero upstream calls and zero consumer audits. Discovery membership,
+validation/output schemas and annotations match the unchanged fixture; no fresh
+full-prose identity claim is made. Generated JavaScript files match the preserved
+runtime-only candidate digest, but patched dependency implementations differ.
+
+This is the established local dependency-compatibility continuity procedure, not
+fresh production acceptance. Business handlers/routes/contract snapshots and
+confirmation/authentication policy are unchanged; fresh transport, correctness,
+load/fault and package checks support carrying forward the explicitly historical
+bounded read-only production evidence. Earlier protocol-v2 comparison,
+retained-memory and production latency measurements were not rerun. Integration
+writes and second-company certification remain scoped out. No version bump,
+remote Linux CI, push/PR/merge, publication, deployment, credential or tenant change is
+included. Release acceptance is rebound to these source bytes only after local
+verification; gate implementation, requirements and discovery fixture are unchanged.
+
 ## October 25, 2026 compatibility-preserving Zod security repair
 
 Zod is pinned to 4.6.6. Application schemas use the local v3-compatible facade,
