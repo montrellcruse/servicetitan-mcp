@@ -30,7 +30,9 @@ function label(value: unknown): string {
 function abandonedLead(value: unknown): boolean | null {
   const duration = typeof value === "string" && /^(?:(\d+)\.)?(\d{1,2}):([0-5]\d):([0-5]\d(?:\.\d+)?)$/.exec(value);
   if (!duration) return null;
-  return Number(duration[1] ?? 0) > 0 || Number(duration[2]) > 0 || Number(duration[3]) > 0;
+  const seconds = Number(duration[1] ?? 0) * 86_400 + Number(duration[2]) * 3_600
+    + Number(duration[3]) * 60 + Number(duration[4]);
+  return seconds >= 60;
 }
 
 function parseCall(row: RecordData): Call {
@@ -79,6 +81,7 @@ async function countCreditedJobs(client: ServiceTitanClient, calls: Call[], book
     const batch = ids.slice(offset, offset + 50);
     const jobs = await fetchAllPages<RecordData>(client, "/tenant/{tenant}/jobs", { ids: batch.join(",") });
     const byId = new Map(jobs.map(job => [positiveId(job.id), job]));
+    if (byId.size !== jobs.length) throw new Error("Job lookup returned duplicate job IDs");
     for (const id of batch) {
       const job = byId.get(id);
       if (!job) throw new Error("A linked job could not be read");
@@ -89,7 +92,9 @@ async function countCreditedJobs(client: ServiceTitanClient, calls: Call[], book
       if (pointer === null) continue;
       const canonical = callsById.get(pointer);
       if (!canonical) throw new Error("A job points to a call outside the confirmed call window");
-      if (canonical.jobId === id && scopedBookedIds.has(canonical.id)) credits += 1;
+      if (!scopedBookedIds.has(canonical.id)) continue;
+      if (canonical.jobId !== id) throw new Error("A Booked inbound call and its canonical job pointer disagree");
+      credits += 1;
     }
   }
   return credits;

@@ -506,6 +506,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
             : Promise.resolve(null),
         ]);
 
+        const paceAvailable = revenueReport !== null && workingDays > 0;
         let revenueRows = parseRevenueReport(revenueReport);
         let productivityRows = parseProductivityReport(productivityReport);
         let leadGenerationRows = parseLeadGenerationReport(leadGenerationReport);
@@ -586,7 +587,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
             recallsCaused: productivity?.recallsCaused ?? 0,
             upsold: productivity?.upsold ?? 0,
             jobsPerDay: null,
-            convertedJobsPerWeekday: revenueReport ? round(safeDivide(convertedJobs, workingDays), 2) : null,
+            convertedJobsPerWeekday: paceAvailable ? round(convertedJobs / workingDays, 2) : null,
             leadGeneration: toLeadGenerationMetrics(leadGeneration),
             memberships: toMembershipMetrics(memberships),
             salesFromTechLeads: toLeadSalesMetrics(salesFromTechLeads),
@@ -612,7 +613,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
           recallsCaused: averageBy(scorecards, (tech) => tech.recallsCaused, 2),
           upsold: averageBy(scorecards, (tech) => tech.upsold, 2),
           jobsPerDay: null,
-          convertedJobsPerWeekday: revenueReport
+          convertedJobsPerWeekday: paceAvailable
             ? averageBy(scorecards, (tech) => tech.convertedJobsPerWeekday ?? 0, 2)
             : null,
           leadGeneration: {

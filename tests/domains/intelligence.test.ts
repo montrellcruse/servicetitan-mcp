@@ -869,7 +869,12 @@ describe("intelligence domain", () => {
     // Report 165 is no longer called (jobsCompleted now uses ConvertedJobs from Report 168)
   });
 
-  it("ranks the scorecard by revenue before limiting and never treats conversions as completions", async () => {
+  it.each([
+    { startDate: "2026-01-05", endDate: "2026-01-09", pace: 0.4, teamPace: 0.4 },
+    { startDate: "2026-01-10", endDate: "2026-01-11", pace: null, teamPace: null },
+  ])("ranks by revenue before limiting and reports conversion pace for $startDate through $endDate", async ({
+    startDate, endDate, pace, teamPace,
+  }) => {
     const { handlers, postMock } = createContext();
     postMock.mockImplementation(async (path: string) => path.endsWith("/168/data") ? {
       fields: reportFields(
@@ -885,14 +890,15 @@ describe("intelligence domain", () => {
     } : EMPTY_REPORT);
 
     const payload = payloadFrom(await getHandler(handlers, "intel_technician_scorecard")({
-      startDate: "2026-01-05", endDate: "2026-01-09", limit: 2,
+      startDate, endDate, limit: 2,
     }));
 
     expect(payload.technicians.map((tech: { id: number }) => tech.id)).toEqual([10, 11]);
     expect(payload.technicians[0]).toMatchObject({
-      jobsCompleted: null, jobsPerDay: null, convertedJobs: 2, convertedJobsPerWeekday: 0.4,
+      jobsCompleted: null, jobsPerDay: null, convertedJobs: 2, convertedJobsPerWeekday: pace,
     });
     expect(payload.teamAverages.revenue).toBe(633.33);
+    expect(payload.teamAverages.convertedJobsPerWeekday).toBe(teamPace);
     expect(payload.rankedBy).toBe("revenue");
   });
 
@@ -2135,23 +2141,26 @@ describe("intelligence domain", () => {
   });
 
   it.each([
-    { broken: "duplicate call IDs", duplicate: true },
-    { broken: "unresolved canonical booking", duplicate: false },
-  ])("withholds unverified metrics for $broken", async ({ duplicate }) => {
+    { broken: "duplicate call IDs", duplicate: true, conflict: false, warning: "repeated call IDs" },
+    { broken: "unresolved canonical booking", duplicate: false, conflict: false, warning: "outside the confirmed call window" },
+    { broken: "conflicting call and job records", duplicate: false, conflict: true, warning: "canonical job pointer disagree" },
+  ])("withholds unverified metrics for $broken", async ({ duplicate, conflict, warning }) => {
     const { handlers, getMock, postMock } = createContext();
     const at = "2026-03-04T12:00:00Z";
     getMock.mockImplementation(async (path: string, params: Record<string, unknown>) => {
       if (path === "/v3/tenant/{tenant}/calls") {
         const secondPage = params.page === 2;
         return {
-          data: [{ id: 9, jobNumber: "JOB-9", leadCall: {
+          data: [{ id: secondPage && conflict ? 10 : 9, jobNumber: "JOB", leadCall: {
             id: secondPage && !duplicate ? 2 : 1, direction: "Inbound", callType: "Booked", createdOn: at,
           } }],
           hasMore: !secondPage, page: params.page, totalCount: 2,
         };
       }
-      if (path === "/tenant/{tenant}/jobs" && params.ids === "9") {
-        return { data: [{ id: 9, leadCallId: 99, partnerLeadCallId: null }], hasMore: false };
+      if (path === "/tenant/{tenant}/jobs" && params.ids) {
+        const jobs = [{ id: 9, leadCallId: conflict ? 2 : 99, partnerLeadCallId: null }];
+        if (conflict) jobs.push({ id: 10, leadCallId: 2, partnerLeadCallId: null });
+        return { data: jobs, hasMore: false };
       }
       return { data: [], hasMore: false };
     });
@@ -2160,15 +2169,15 @@ describe("intelligence domain", () => {
     const payload = payloadFrom(await getHandler(handlers, "intel_daily_snapshot")({ date: "2026-03-04" }));
     if (duplicate) {
       expect(payload.calls).toEqual({ total: null, booked: null, missed: null, inbound: null });
-      expect(payload._warnings).toContainEqual(expect.stringContaining("repeated call IDs"));
+
       expect(getMock.mock.calls.some(([path, params]) => path === "/tenant/{tenant}/jobs" && params.ids)).toBe(false);
     } else {
       expect(payload.calls).toMatchObject({
         total: 2, booked: 2,
         inbound: { eligibleLeads: 2, markedBooked: 2, creditedJobs: null, bookingRate: null },
       });
-      expect(payload._warnings).toContainEqual(expect.stringContaining("outside the confirmed call window"));
     }
+    expect(payload._warnings).toContainEqual(expect.stringContaining(warning));
   });
 
   it("intel_daily_snapshot returns partial results and warnings when one feed fails", async () => {
