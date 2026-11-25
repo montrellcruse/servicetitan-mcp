@@ -166,6 +166,12 @@ function fitsBudget(response: ToolResponse, limit: number): boolean {
   return JSON.stringify(response).length <= limit;
 }
 
+function splitsSurrogatePair(text: string, offset: number): boolean {
+  const before = text.charCodeAt(offset - 1);
+  const after = text.charCodeAt(offset);
+  return before >= 0xd800 && before <= 0xdbff && after >= 0xdc00 && after <= 0xdfff;
+}
+
 const MAX_STORED_RESULTS = 4;
 const MAX_STORED_BYTES = 4_000_000;
 const RESULT_LIFETIME_MS = 300_000;
@@ -230,9 +236,9 @@ export class ResultDelivery {
     const result = this.results.get(resultId);
     if (!result || result.expiresAt <= Date.now()) {
       if (result) this.remove(resultId, result);
-      throw new Error("Result is unavailable or expired. Inspect the resource with a read operation; do not repeat a completed mutation to retrieve its result.");
+      throw new Error("Result is unavailable or expired. Inspect with a read. Do not repeat a completed mutation.");
     }
-    if (!Number.isSafeInteger(offset) || offset < 0 || offset > result.text.length) {
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > result.text.length || splitsSurrogatePair(result.text, offset)) {
       throw new Error("Invalid result offset");
     }
 
@@ -241,7 +247,10 @@ export class ResultDelivery {
     const overhead = JSON.stringify(toolResultChunk({ text: "", nextOffset: result.text.length })).length;
     let length = Math.min(result.text.length - offset, Math.max(1, Math.floor((limit - overhead) / 2)));
     for (;;) {
-      const end = offset + length;
+      let end = offset + length;
+      // Retain UTF-16 offsets without splitting a Unicode character. Even the
+      // smallest candidate must include one complete character when data remains.
+      if (splitsSurrogatePair(result.text, end)) end += length > 1 ? -1 : 1;
       const chunk = { text: result.text.slice(offset, end), nextOffset: end < result.text.length ? end : null };
       if (fitsBudget(toolResultChunk(chunk), limit)) return chunk;
       if (length <= 1) throw new Error("Response budget cannot deliver a result chunk");

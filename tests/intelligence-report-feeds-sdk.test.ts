@@ -91,6 +91,63 @@ describe("intelligence report feeds over MCP", () => {
     );
   });
 
+  it("discards a technician feed with an object-valued ID and keeps other scorecard metrics", async () => {
+    let technicianId: unknown = { id: 10 };
+    await withMcpReportFixture(
+      "intel_technician_scorecard",
+      async (path) => {
+        switch (path) {
+          case "/tenant/{tenant}/report-category/technician-dashboard/reports/168/data":
+            return {
+              fields: fields(
+                "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+                "ConvertedJobs", "CustomerSatisfaction", "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+              ),
+              data: [["Ada", "120.50", null, 0.5, 2, 1, null, technicianId, 0, 120.5]],
+              hasMore: false,
+            };
+          case "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data":
+            return {
+              fields: fields(
+                "Name", "ReplacementOpportunity", "LeadsSet", "AverageLeadSale", "ReplacementLeadConversionRate",
+                "ReplacementLeadsSold", "TotalLeadSales", "AverageReplacementLeadSale", "TechnicianId",
+              ),
+              data: [],
+              hasMore: false,
+            };
+          case "/tenant/{tenant}/report-category/technician-dashboard/reports/170/data":
+            return {
+              fields: fields(
+                "Name", "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+                "OptionsPerOpportunity", "RecallsCaused", "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+              ),
+              data: [["Ada", 60, 0.5, 0, 0, 0, 0, 10, 0, 0]],
+              hasMore: false,
+            };
+          default:
+            throw new Error(`Unexpected fixture request ${path}`);
+        }
+      },
+      async (client) => {
+        const request = { name: "intel_technician_scorecard", arguments: period };
+        const partial = await client.callTool(request);
+        expect(partial.isError).not.toBe(true);
+        expect(partial.structuredContent).toMatchObject({
+          technicians: [{ id: 10, revenue: 0, revenuePerHour: 60 }],
+          _warnings: [expect.stringMatching(/Report 168.*invalid value for TechnicianId/)],
+        });
+
+        technicianId = "10";
+        const complete = await client.callTool(request);
+        expect(complete.isError).not.toBe(true);
+        expect(complete.structuredContent).toMatchObject({
+          technicians: [{ id: 10, revenue: 120.5, revenuePerHour: 60, customerSatisfaction: 0 }],
+        });
+        expect(complete.structuredContent).not.toHaveProperty("_warnings");
+      },
+    );
+  });
+
   const revenuePage = {
     fields: fields(
       "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate",

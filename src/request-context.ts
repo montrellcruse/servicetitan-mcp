@@ -10,6 +10,8 @@ export interface RequestContext {
   mutatingOperation?: boolean;
   /** Publisher and storage owned by the current server/session. */
   resultDelivery?: ResultDelivery;
+  /** Set by Streamable HTTP when dispatching an existing session during drain. */
+  drainingHttpSession?: boolean;
 }
 
 const requestContext = new AsyncLocalStorage<Readonly<RequestContext>>();
