@@ -1,4 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
+import type { ResultDelivery } from "./result-delivery.js";
 
 /** Settings and cancellation belong to one MCP invocation, never the process. */
 export interface RequestContext {
@@ -7,8 +8,8 @@ export interface RequestContext {
   maxResponseChars?: number;
   /** Set by the registry only while an authorized mutation handler executes. */
   mutatingOperation?: boolean;
-  /** Per-server/session bounded storage for results that cannot fit inline. */
-  storeOversized?: (payload: unknown) => Record<string, unknown>;
+  /** Publisher and storage owned by the current server/session. */
+  resultDelivery?: ResultDelivery;
 }
 
 const requestContext = new AsyncLocalStorage<Readonly<RequestContext>>();
