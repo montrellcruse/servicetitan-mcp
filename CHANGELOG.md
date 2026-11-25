@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- Preserve the exact JSON during result retrieval and keep existing handles readable when a new handle exceeds the response budget.
+- Validate explicit tool selections before startup and scope default readiness to the deployed catalog.
+- Decode report pages by field name and reject malformed or inconsistent feeds.
+
 ## [3.0.2] - 2026-10-25
 
 ### Fixed

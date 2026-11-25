@@ -70,7 +70,7 @@ The built-in logger also sanitizes diagnostic messages and nested data at the fi
 
 ## Responses and large results
 
-`src/utils.ts` emits the same payload as text and `structuredContent`, converts recognized UTC timestamps to the configured display timezone, and preserves sanitized ServiceTitan error metadata. When a response exceeds `ST_MAX_RESPONSE_CHARS`, the server attempts to place the complete payload in a five-minute session-local result store for bounded `st_result_read` retrieval. If storage or even its retrieval metadata cannot fit the configured limits, it returns an explicit `RESPONSE_TOO_LARGE` error without partial records. Closing the server clears the store.
+`src/result-delivery.ts` formats tool results and errors as equivalent text and `structuredContent`. It publishes a session-owned result handle only when the complete payload can be stored and the handle fits the response budget. `st_result_read` retrieves exact chunks of the published JSON. Expiry, eviction, and session close release the stored text.
 
 For completed mutations, `RESPONSE_TOO_LARGE` and `INVALID_RESPONSE` describe a delivery failure: their error object includes `mutationCompleted: true` and `retryable: false`, even at the minimum response budget. Stored mutation results carry the same flags beside their retrieval handle. The registry sets mutation context only around the authorized handler, after confirmations. A private weak reference map tracks delivery failures for audit classification; an upstream or custom error code cannot establish successful execution. Expired handles never advise replaying the original mutation.
 
