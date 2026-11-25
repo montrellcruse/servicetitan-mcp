@@ -106,7 +106,7 @@ function parsePayload(result: ToolResponse): Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 describe("crm domain", () => {
-  it.each(["customers", "locations"] as const)("requires a modified date bound for %s contacts", async (resource) => {
+  it.each(["customers", "locations"] as const)("requires parent IDs or a modified date bound for %s contacts", async (resource) => {
     const { handlers, getMock } = createContext();
     const handle = getHandler(handlers, `crm_${resource}_contacts_modified_list`);
     const timestamp = "2026-11-24T00:00:00Z";
@@ -121,6 +121,27 @@ describe("crm domain", () => {
       expect(result.isError).not.toBe(true);
       expect(getMock).toHaveBeenLastCalledWith(`/tenant/{tenant}/${resource}/contacts`, { [bound]: timestamp });
     }
+  });
+
+  it.each([
+    ["customers", "customerIds"],
+    ["locations", "locationIds"],
+  ] as const)("forwards parent IDs for %s contacts without a modified date bound", async (resource, idFilter) => {
+    const { handlers, getMock } = createContext();
+    const handle = getHandler(handlers, `crm_${resource}_contacts_modified_list`);
+    const params = { [idFilter]: "42,43", page: 2, pageSize: 5, includeTotal: true };
+    getMock.mockResolvedValue({ data: [], hasMore: false });
+
+    const blank = await handle({ [idFilter]: " " });
+    expect(blank.isError).toBe(true);
+    expect(blank.content[0]?.text).toContain(idFilter);
+    expect(getMock).not.toHaveBeenCalled();
+
+    const result = await handle(params);
+
+    expect(result.isError).not.toBe(true);
+    expect(getMock).toHaveBeenCalledOnce();
+    expect(getMock).toHaveBeenCalledWith(`/tenant/{tenant}/${resource}/contacts`, params);
   });
 
   beforeEach(() => {
