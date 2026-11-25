@@ -77,8 +77,12 @@ export function validateReportDefinition(contract: ReportContract, definition: u
     .map((name) => `missing required parameter ${name}`);
   for (const parameter of parameters) {
     const name = typeof parameter.name === "string" ? parameter.name : undefined;
-    if (parameter.isRequired === true && (!name || !contract.requiredParameters.includes(name))) {
+    const sendsScalar = name !== undefined && contract.requiredParameters.includes(name);
+    if (parameter.isRequired === true && !sendsScalar) {
       errors.push(name ? `unsupported required parameter ${name}` : "invalid required parameter metadata");
+    }
+    if (sendsScalar && parameter.isArray === true) {
+      errors.push(`parameter ${name} expects an array where a scalar is required`);
     }
     const expected = name ? contract.parameterTypes?.[name] : undefined;
     if (expected && typeof parameter.dataType === "string" && parameter.dataType.toLowerCase() !== expected.toLowerCase()) {
@@ -131,13 +135,24 @@ function readReportColumns(fields: unknown, label: string): Map<string, number> 
   return columns;
 }
 
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
 function validateReportCells(contract: ReportContract, row: ReportRow, pageLabel: string): void {
-  for (const field of contract.fields) {
+  for (const [field, value] of Object.entries(row)) {
     if (contract.collectionFields?.includes(field)) continue;
-    const value = row[field];
     let valid = value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
-    // Business-unit summaries require a nonempty name and finite metric values.
-    if (contract.businessUnitSummary) {
+    if (field === "TechnicianId") {
+      // Report consumers skip non-positive integer IDs.
+      valid = typeof value === "string"
+        ? /^[+-]?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))
+        : Number.isSafeInteger(value);
+    } else if (field === "GrossPay") {
+      // Require a complete decimal because toNumber also accepts numeric prefixes.
+      valid = typeof value === "string"
+        ? DECIMAL_NUMBER.test(value.trim()) && Number.isFinite(Number.parseFloat(value))
+        : Number.isFinite(value);
+    } else if (contract.businessUnitSummary) {
+      // Business-unit summaries require a nonempty name and finite metric values.
       if (field === "Name") valid = typeof value === "string" && value.trim().length > 0;
       else if (!contract.businessUnitSummary.unusedMetrics?.includes(field)) {
         valid = Number.isFinite(typeof value === "string" ? Number.parseFloat(value) : value);

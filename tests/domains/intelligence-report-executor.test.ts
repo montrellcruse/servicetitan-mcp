@@ -70,6 +70,20 @@ describe("intelligence report executor", () => {
     })).toContain("parameter DateType has type String; expected Number");
   });
 
+  it("checks required scalar parameters against array metadata", () => {
+    const contract = getReportContract("162");
+    const errors = validateReportDefinition(contract, {
+      parameters: [
+        { name: "DateType", dataType: "Number", isArray: true },
+        { name: "From" },
+        { name: "To", isArray: false },
+        { name: "OptionalFilter", isArray: true },
+      ],
+      fields: contract.fields.map((name) => ({ name })),
+    });
+    expect(errors).toEqual(["parameter DateType expects an array where a scalar is required"]);
+  });
+
   it("preserves a verified optional GrossPay column and rejects malformed rows", async () => {
     const names = [...fields166, "GrossPay"];
     const good = vi.fn().mockResolvedValue({ fields: responseFields(names), data: [["Ada", "d", 1, 0, 0, 125]], hasMore: false, totalCount: 1 });

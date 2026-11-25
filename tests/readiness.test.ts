@@ -93,6 +93,12 @@ describe("readiness compatibility manifests",()=>{
   it.each([
     ["duplicate field names", { fields: [...laborDefinition.fields, laborDefinition.fields[0]] }],
     ["invalid field metadata", { fields: [...laborDefinition.fields, { name: " " }] }],
+    ["parameter From", {
+      parameters: laborDefinition.parameters.map(parameter => ({
+        ...parameter,
+        isArray: parameter.name === "From",
+      })),
+    }],
     ["unsupported required parameter PayrollCode", {
       parameters: [...laborDefinition.parameters, { name: "PayrollCode", isRequired: true }],
     }],
@@ -191,6 +197,58 @@ describe("readiness compatibility manifests",()=>{
     });
     await expect(withRequestContext({signal:controller.signal},()=>checkReadiness(client,loadConfig(base),{domains:[]}))).rejects.toMatchObject({name:"AbortError"});
     expect(originalGet.mock.calls.at(-1)?.[0]).toMatch(/\/reports\/2282$/);
+  });
+  it.each([
+    ["export_customers", "/crm/v2/tenant/{tenant}/customers"],
+    ["export_payments", "/accounting/v2/tenant/{tenant}/payments"],
+  ])("probes a bounded read with the scope used by %s", async (tool, path) => {
+    const client = fakeClient();
+    const result = await mcpReadiness(client, tool);
+
+    expect(result).toMatchObject({
+      status: "ready",
+      modules: [{ domain: "export", path, status: "available" }],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith(path, { page: 1, pageSize: 1 });
+  });
+  it("reports a denied export scope without disclosing the upstream error", async () => {
+    const client = fakeClient();
+    const path = "/crm/v2/tenant/{tenant}/customers";
+    vi.mocked(client.get).mockRejectedValueOnce(new ServiceTitanApiError(403, "Sensitive fixture value", path));
+
+    const result = await mcpReadiness(client, "export_customers");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      modules: [{ domain: "export", path, status: "unavailable", httpStatus: 403 }],
+    });
+    expect(JSON.stringify(result)).not.toContain("Sensitive fixture value");
+  });
+  it("reports partial when the only selected export has no bounded scope probe", async () => {
+    const client = fakeClient();
+
+    const result = await mcpReadiness(client, "export_invoice_items");
+
+    expect(result).toMatchObject({
+      authentication: "ok",
+      status: "partial",
+      modules: [{ domain: "export", status: "unverified" }],
+    });
+    expect(client.get).not.toHaveBeenCalled();
+  });
+  it("shares a matching scope probe with an exposed list domain", async () => {
+    const client = fakeClient();
+    const path = "/crm/v2/tenant/{tenant}/customers";
+    const result = await mcpReadiness(client, "export_customers,crm_customers_list");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      modules: [
+        { domain: "crm", path, status: "available" },
+        { domain: "export", path, status: "available" },
+      ],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith(path, { page: 1, pageSize: 1 });
   });
   it("limits probes to the selected profile and explicit tool allowlist",async()=>{
     const profileClient=fakeClient();

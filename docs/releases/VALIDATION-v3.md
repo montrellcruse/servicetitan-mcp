@@ -2,16 +2,16 @@
 
 ## Architecture integration candidate for #32
 
-The candidate at `67f4009988d3` passed the local checks below on darwin-arm64. The Node 22 build generated the JavaScript bundle and public declarations. Both runtimes exercised the bundled wire and packed consumer interfaces.
+The PR #38 candidate passed the following local checks on darwin-arm64 after addressing the review. Node 22 built the JavaScript and public declarations. Both runtimes exercised the built wire and packed consumer interfaces.
 
 | Node | Tests | Built wire | Packaging | Installed profiles | Synthetic client scenarios |
 | --- | --- | --- | --- | --- | --- |
-| v22.20.0 | 627 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
-| v24.22.1 | 627 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
+| v22.20.0 | 651 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
+| v24.22.1 | 651 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
 
-Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The packed consumer exercised package imports and stdio with synthetic inputs.
+Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The report and readiness regressions ran against synthetic fixtures. The packed consumer exercised package imports and stdio with synthetic inputs.
 
-These results describe local compatibility for the architecture candidate. The live-company and broader performance evidence below refers to the historical runs recorded for previous revisions. Revalidation for publication follows the release policy.
+The acceptance record identifies the tested source by fingerprint. Bounded read-only production validation is pending for this candidate. [Acceptance record](v3-acceptance.json)
 
 ## November 15, 2026 dependency-security continuity refresh (unpublished)
 
@@ -283,6 +283,8 @@ The subsequent PR review fixes were validated using deterministic fault adapters
 
 Earlier validation of the initial candidate exercised additional representative modules, repaired read tools, and report behavior for the same production company. Labor aggregates matched an independent sum of all paginated API source rows; missing gross-pay data remained null. The corrected CSR date filter succeeded. Those amount/filter results were not repeated in the final readiness refresh. Scheduling Pro previously returned HTTP 403; its scope, entitlement, or policy cause remains unresolved and was not retested.
 
+The November 15 dependency-compatibility continuity review drew on earlier production evidence and recorded zero fresh tenant calls. Its original source revision and fingerprint are recorded under `historicalLiveProduction`. [Acceptance record](v3-acceptance.json)
+
 No live business mutation was tested. Integration write behavior and cleanup, dashboard parity, all possible scopes, and an independent second company remain unverified. Synthetic company fixtures demonstrate isolation in their tested cases. Every additional installation still needs its own scopes/modules, readiness, report definitions, and representative result validation. Live write/cleanup validation would be required to expand stable support to mutations; independent-company live evidence would be required to make that certification claim.
 
 Public validation material retains only aggregate statuses, counts, timings, and sanitized failure classifications. Credential files, secrets, tokens, tenant identifiers, local paths, and raw customer responses are not release evidence. Known credential/JWT scans found no matches in the current tracked files, final package, or new validation logs; earlier published-history, PR, and CI checks were also clean. Temporary output remains access-restricted and must be removed when no longer required. ServiceTitan's [API Terms](https://www.servicetitan.com/legal/api-terms) govern credential security and customer-content handling.
@@ -295,6 +297,10 @@ Run the commands in [CONTRIBUTING.md](../../CONTRIBUTING.md), regenerate the too
 
 The fixed `readonly-v1` policy requires maintenance, contracts, analytics, interface, runtime-matrix, package-smoke, bounded read-only production, and latency/load evidence. The checker cannot scope these core gates out. Integration and independent-company checks must either have verified passing evidence or an explicit `scoped_out` status with a reason and the broader support commitment they would validate. Expanding the support policy requires a reviewed code change and supporting evidence.
 
-Update the acceptance record only for verified results. `node scripts/check-release.mjs --fingerprint` computes the source fingerprint, including source, tests, scripts, workflows, benchmark harnesses, exclusion policies, and maintained support/validation documentation. Recording a fingerprint alone is not validation. `npm run release:check`, CI, the npm prepublication hook, and the tag-triggered release workflow enforce the policy, required statuses, version, and fingerprint. The checker validates the record's structure and current inputs; reviewers remain responsible for the truth of the evidence.
+CI for pull requests and `main` runs `npm run candidate:check`. This mode accepts a `pending` production gate and enforces the remaining gates, scope, support policy, package version, and current source fingerprint.
+
+For publication, finalize the package version and all fingerprinted files, including this guide. Compute the source fingerprint with `node scripts/check-release.mjs --fingerprint` and complete an authorized bounded read-only production check on that exact source. Record sanitized results in `v3-acceptance.json`. Set both the top-level `sourceFingerprint` and `gates.liveProduction.sourceFingerprint` to the computed value. Set the production status to `passed` and record the verified positive integer in `gates.liveProduction.freshTenantCalls`. The acceptance record is outside the fingerprinted inputs so it can record these results. If fingerprinted files change, recompute the fingerprint and revalidate the changed source before recording new evidence.
+
+Run `npm run release:check` before tagging. The tag-triggered release workflow and the npm prepublication hook use this strict check. Reviewers remain responsible for verifying that the recorded results support the gate.
 
 Contract provenance and regeneration instructions are in [docs/contracts](../contracts/README.md). API definitions are pinned so contributors can reproduce contract checks without credentials or live API access.

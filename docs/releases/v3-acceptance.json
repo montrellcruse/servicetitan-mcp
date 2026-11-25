@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "692baf5f3e4cc12013a1bd33c29aa3697e427cb9d9ccc37c689051d81fa0f101",
+  "sourceFingerprint": "417ce763cc2386a125981d3378017d3044b19a91dde22fc7dc2ed518250d80b3",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -66,10 +66,9 @@
       "digestAlgorithm": "SHA256 of sorted build-relative *.js paths + NUL + exact bytes + NUL"
     },
     "liveProduction": {
-      "status": "passed",
-      "boundary": "November15 continuity review: earlier bounded read-only production evidence remains historical,not rerun. Application handlers/routes/contracts/auth/confirmation/tool membership unchanged. Hono/node-server/follow-redirects runtime dependencies changed; identical dependency behavior is not assumed. Clean unit/coverage,actual transport/discovery,controlled-load/fault and packed-consumer matrices support local compatibility,not fresh tenant acceptance,rollout or broad production certification.",
+      "status": "pending",
+      "boundary": "The architecture candidate requires bounded read-only production validation of the final release source.",
       "summary": "VALIDATION-v3.md",
-      "evidenceKind": "historical bounded-readonly production evidence with November15 local dependency-compatibility continuity checks",
       "freshTenantCalls": 0
     },
     "liveIntegration": {
@@ -153,6 +152,23 @@
     }
   },
   "releaseDisposition": "stable-readonly",
+  "historicalLiveProduction": {
+    "latestDocumentedLiveRun": {
+      "version": "3.0.0",
+      "sourceRevision": "786f15b1ada4e73434f3da829d79271afb0054a1",
+      "date": "2026-09-05",
+      "summary": "VALIDATION-v3.md"
+    },
+    "continuityRecord": {
+      "sourceRevision": "359607875b42b20998fc4ab02fafbd1035082f37",
+      "sourceFingerprint": "df91c188480ddf1cc5c6b2e812ad8761d379348708ae2904ac4c3668b0c01c3c",
+      "recordedStatus": "passed",
+      "summary": "VALIDATION-v3.md",
+      "evidenceKind": "Historical bounded read-only production evidence with November 15 local dependency-compatibility checks",
+      "boundary": "The November 15 continuity review used local unit, transport, discovery, controlled-load, fault, and packed-consumer checks. Application handlers, routes, contracts, authentication, confirmation, and tool membership were unchanged. Hono, @hono/node-server, and follow-redirects changed.",
+      "freshTenantCalls": 0
+    }
+  },
   "releasePreparation": {
     "date": "2026-10-25",
     "baseCommit": "3917429b5165c005e7523269ce8516b977025ac1",
@@ -195,14 +211,14 @@
   },
   "architectureCandidate": {
     "issue": 32,
-    "implementationRevision": "67f4009988d396aaff93aed28b16f3d3e8f22afa",
+    "reviewBaseRevision": "95eea3771ab3c93c06ab5e6644050659b3d41128",
     "scope": "Local synthetic compatibility, lifecycle, and packed consumer verification",
     "runtimes": [
       {
         "node": "v22.20.0",
         "platform": "darwin-arm64",
         "testFiles": 48,
-        "tests": 627,
+        "tests": 651,
         "wireTests": 24,
         "packagingTests": 2,
         "packedConsumerProfiles": 5,
@@ -213,7 +229,7 @@
         "node": "v24.22.1",
         "platform": "darwin-arm64",
         "testFiles": 48,
-        "tests": 627,
+        "tests": 651,
         "wireTests": 24,
         "packagingTests": 2,
         "packedConsumerProfiles": 5,
@@ -221,9 +237,9 @@
         "faultScenarios": 9
       }
     ],
-    "javascriptBuildSha256": "c15925d726d072371ad799f9b23f71ca093bd0ab9631b38cc160d650cb68521c",
+    "javascriptBuildSha256": "eafb70d6d5e4bbc89bef63f2e8db3b09b01af6c929b7f3a5ac609d66ca6c97b3",
     "verifiedExportOperations": 44,
     "documentedExportExclusions": 5,
-    "liveProductionEvidence": "Historical evidence recorded for the earlier release"
+    "liveProductionEvidence": "Pending bounded read-only production validation of the final release source"
   }
 }

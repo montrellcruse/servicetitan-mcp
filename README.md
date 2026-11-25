@@ -111,7 +111,7 @@ Writes are outside the stable v3 support commitment. To expose these experimenta
 
 ## Readiness and report compatibility
 
-`st_readiness_check` and the check CLI validate authentication, representative reads for exposed tool domains, and the report definitions those tools use. A missing or incompatible report required by an exposed tool makes readiness partial. Failures for opt-in reports appear as limitations. In `st_readiness_check`, set `reports: true` to audit all supported definitions or `reports: false` to skip definitions. The manifest contains field and parameter metadata and definition fingerprints. Representative read access does not certify every operation, write scope, or KPI amount.
+`st_readiness_check` and the check CLI validate authentication, representative reads for exposed tool domains, and the report definitions those tools use. A missing or incompatible report required by an exposed tool makes readiness partial. Failures for opt-in reports appear as limitations. In `st_readiness_check`, set `reports: true` to audit all supported definitions or `reports: false` to skip definitions. The manifest contains field and parameter metadata and definition fingerprints. For the export domain, readiness uses a one-record read with the same scopes as a selected export. If no bounded read applies, the export domain is unverified and readiness is partial. Representative read access does not certify every operation, write scope, or KPI amount.
 
 Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
 
@@ -179,7 +179,7 @@ npm run test:packaging
 npm run docs:tools
 npm run discovery:check
 npm pack --dry-run
-npm run release:check
+npm run candidate:check
 ```
 
 The contract generator uses the [pinned official September 4, 2026 snapshot](docs/contracts/README.md); upstream changes require a reviewed manifest regeneration. Contract tests cover resolved paths and request payloads. The normal suite includes auth/retry, paging, cancellation, DST, schema/metric, configuration isolation, transport and response-budget regressions. Built-process tests use dummy credentials and do not execute ServiceTitan business reads or writes.

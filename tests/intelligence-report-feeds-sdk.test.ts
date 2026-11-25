@@ -91,8 +91,60 @@ describe("intelligence report feeds over MCP", () => {
     );
   });
 
-  it("discards a technician feed with an object-valued ID and keeps other scorecard metrics", async () => {
-    let technicianId: unknown = { id: 10 };
+  it.each([
+    { form: "nonnumeric text", value: "unknown" },
+    { form: "a numeric prefix with trailing text", value: "160.25oops" },
+    { form: "a hexadecimal string", value: "0xA0" },
+    { form: "a boolean", value: true },
+    { form: "an object", value: { amount: 160.25 } },
+    { form: "null", value: null },
+  ])("marks labor cost unavailable when GrossPay is $form and recovers after correction", async ({ value }) => {
+    let grossPay: unknown = value;
+    await withMcpReportFixture(
+      "intel_labor_cost",
+      async (path) => {
+        expect(path).toBe("/tenant/{tenant}/report-category/custom/reports/9166/data");
+        return {
+          fields: fields("EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"),
+          data: [["Ada", "2026-01-01", 7, 1, 0, grossPay]],
+          hasMore: false,
+        };
+      },
+      async (client) => {
+        const request = { name: "intel_labor_cost", arguments: period };
+        const partial = await client.callTool(request);
+        expect(partial.isError).not.toBe(true);
+        expect(partial.structuredContent).toMatchObject({
+          totalGrossPay: null,
+          avgHourlyRate: null,
+          costAvailability: { available: false },
+          employees: [],
+          _warnings: [expect.stringMatching(/Report 166.*invalid value for GrossPay/)],
+        });
+
+        grossPay = " +1.6025e2 ";
+        const complete = await client.callTool(request);
+        expect(complete.isError).not.toBe(true);
+        expect(complete.structuredContent).toMatchObject({
+          totalGrossPay: 160.25,
+          avgHourlyRate: 20.03,
+          costAvailability: { available: true },
+          employees: [{ name: "Ada", totalHours: 8, grossPay: 160.25 }],
+        });
+        expect(complete.structuredContent).not.toHaveProperty("_warnings");
+      },
+      '{"166":{"category":"custom","reportId":9166}}',
+    );
+  });
+
+  it.each([
+    { form: "an object", value: { id: 10 } },
+    { form: "nonnumeric text", value: "unknown" },
+    { form: "a numeric prefix with trailing text", value: "10oops" },
+    { form: "a fractional number", value: 10.5 },
+    { form: "an unsafe integer", value: "9007199254740992" },
+  ])("discards an invalid technician feed when the ID is $form and keeps other scorecard metrics", async ({ value }) => {
+    let technicianId: unknown = value;
     await withMcpReportFixture(
       "intel_technician_scorecard",
       async (path) => {
@@ -103,7 +155,11 @@ describe("intelligence report feeds over MCP", () => {
                 "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
                 "ConvertedJobs", "CustomerSatisfaction", "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
               ),
-              data: [["Ada", "120.50", null, 0.5, 2, 1, null, technicianId, 0, 120.5]],
+              data: [
+                ["Ada", "120.50", null, 0.5, 2, 1, null, technicianId, 0, 120.5],
+                ["Total", 120.5, null, 0.5, 2, 1, null, 0, 0, 120.5],
+                ["Unassigned", 120.5, null, 0.5, 2, 1, null, "-1", 0, 120.5],
+              ],
               hasMore: false,
             };
           case "/tenant/{tenant}/report-category/technician-dashboard/reports/169/data":

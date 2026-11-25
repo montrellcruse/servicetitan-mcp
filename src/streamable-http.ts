@@ -20,11 +20,11 @@
 import { randomUUID } from "node:crypto";
 import { createServer, type ServerResponse } from "node:http";
 
-import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
+import { loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 import { prepareMcpDeployment, VERSION } from "./server.js";
 import { StreamableHttpSessions } from "./streamable-http-sessions.js";
-import { ToolSelectionError } from "./tool-catalog.js";
+import { startupErrorMessage } from "./startup-diagnostics.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal, sendJson } from "./http-policy.js";
 
 const PORT = Number(process.env.PORT ?? process.env.ST_MCP_PORT ?? 3100);
@@ -172,8 +172,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof ExperimentalWritesDisabledError || error instanceof ToolSelectionError
-    ? error.message : "Check required ServiceTitan and transport configuration.";
+  const message = startupErrorMessage(error, "Check required ServiceTitan and transport configuration.");
   process.stderr.write(
     `${JSON.stringify({
       level: "error",

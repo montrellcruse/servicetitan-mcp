@@ -1,12 +1,12 @@
 import { createHash } from "node:crypto";
-import type { ServiceTitanClient } from "./client.js";
+import { ServiceTitanApiError, type ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
-import { ServiceTitanApiError } from "./client.js";
+import { getOfficialOperation, OFFICIAL_OPERATIONS } from "./contracts/index.js";
 import { INTELLIGENCE_REPORT_CONTRACTS, inspectReportDefinition, type ReportKey } from "./domains/intelligence/report-executor.js";
 import { Logger } from "./logger.js";
 import { prepareToolCatalog } from "./prepare-tool-catalog.js";
 import { getRequestContext, throwIfAborted } from "./request-context.js";
-import type { ToolCatalog } from "./tool-catalog.js";
+import type { ToolCatalog, ToolDeclaration } from "./tool-catalog.js";
 
 /** Small documented reads verify module access, not every scope or product entitlement. */
 export const READINESS_PROBES = [
@@ -40,6 +40,26 @@ function fingerprint(value: unknown): string {
 }
 
 type ReadinessOptions = { reports?: boolean; domains?: readonly string[] };
+
+function findExportProbe(tools: readonly Readonly<ToolDeclaration>[], preferredPaths: ReadonlySet<string>): string | undefined {
+  const scopeKey = (scopes: readonly string[]) => [...scopes].sort().join(" ");
+  const exportScopes = new Set<string>();
+  for (const { domain, apiContract } of tools) {
+    if (domain !== "export" || !apiContract || !("operationId" in apiContract)) continue;
+    const { scopes } = getOfficialOperation(apiContract.operationId);
+    if (scopes.length) exportScopes.add(scopeKey(scopes));
+  }
+
+  // Incremental exports lack a page-size bound. Check a documented paginated read
+  // with the same scopes and no required filters, using only the first record.
+  const boundedReads = OFFICIAL_OPERATIONS.filter(({ method, path, scopes, parameters }) =>
+    method === "GET" && !path.includes("/export/") && exportScopes.has(scopeKey(scopes))
+    && !parameters.some(parameter => parameter.required && (parameter.in !== "path" || parameter.name !== "tenant"))
+    && ["page", "pageSize"].every(name =>
+      parameters.some(parameter => parameter.in === "query" && parameter.name === name)),
+  );
+  return boundedReads.find(({ fullPath }) => preferredPaths.has(fullPath))?.fullPath ?? boundedReads[0]?.fullPath;
+}
 
 function planReports(catalog: ToolCatalog, reports: boolean | undefined) {
   if (reports === false) return [];
@@ -85,11 +105,27 @@ export async function checkCatalogReadiness(
   try { await client.ensureToken(); throwIfAborted(getRequestContext().signal); manifest.authentication = "ok"; }
   catch (error) { throwIfAborted(getRequestContext().signal); return { ...manifest, status: "unavailable", authentication: "failed", failure: safeFailure(error) }; }
 
-  const selected = new Set(catalog.getSelectedTools().map(tool => tool.domain));
+  const selectedTools = catalog.getSelectedTools();
+  const selectedDomains = new Set(selectedTools.map(tool => tool.domain));
+  const includesDomain = (domain: string) => selectedDomains.has(domain) && (!options.domains || options.domains.includes(domain));
+  const probePlan: Array<readonly [domain: string, path: string]> = READINESS_PROBES.filter(([domain]) => includesDomain(domain));
   const probes: Array<Record<string, unknown>> = [];
-  for (const [domain, path] of READINESS_PROBES) {
-    if (!selected.has(domain) || (options.domains && !options.domains.includes(domain))) continue;
+  if (includesDomain("export")) {
+    const exportPath = findExportProbe(selectedTools, new Set(probePlan.map(([, path]) => path)));
+    if (exportPath) {
+      probePlan.push(["export", exportPath]);
+    } else {
+      probes.push({ domain: "export", status: "unverified", reason: "No bounded read shares the scopes of a selected export" });
+      manifest.status = "partial";
+    }
+  }
+  for (const [domain, path] of probePlan) {
     getRequestContext().signal?.throwIfAborted();
+    const existing = probes.find(probe => probe.path === path);
+    if (existing) {
+      probes.push({ ...existing, domain });
+      continue;
+    }
     try {
       await client.get(path, { page: 1, pageSize: 1 });
       throwIfAborted(getRequestContext().signal);
