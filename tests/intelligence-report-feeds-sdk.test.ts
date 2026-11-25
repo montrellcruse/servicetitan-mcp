@@ -149,6 +149,42 @@ describe("intelligence report feeds over MCP", () => {
     );
   });
 
+  it.each([{ grossPay: false }, { grossPay: true }])(
+    "preserves recorded hours when some labor rows have no hours (GrossPay exposed: $grossPay)",
+    async ({ grossPay }) => {
+      await withMcpReportFixture(
+        "intel_labor_cost",
+        async () => ({
+          fields: fields("EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours",
+            ...(grossPay ? ["GrossPay"] : [])),
+          data: [
+            ["Ada", "2026-01-01", 7, 1, 0, ...(grossPay ? [160] : [])],
+            ["Lin", "2026-01-02", null, null, null, ...(grossPay ? [35] : [])],
+          ],
+          hasMore: false,
+          totalCount: 2,
+        }),
+        async (client) => {
+          const response = await client.callTool({ name: "intel_labor_cost", arguments: period });
+          expect(response.isError).not.toBe(true);
+          expect(response.structuredContent).toMatchObject({
+            totalHours: 8,
+            regularHours: 7,
+            overtimeHours: 1,
+            doubleOvertimeHours: 0,
+            totalGrossPay: grossPay ? 195 : null,
+            costAvailability: { available: grossPay },
+            employees: [
+              { name: "Ada", totalHours: 8, grossPay: grossPay ? 160 : null },
+              ...(grossPay ? [{ name: "Lin", totalHours: 0, grossPay: 35 }] : []),
+            ],
+          });
+          expect(response.structuredContent).not.toHaveProperty("_warnings");
+        },
+      );
+    },
+  );
+
   it.each([
     { field: "RegularHours", hours: ["unavailable", 1, 0] },
     { field: "OvertimeHours", hours: [7, "1.5 hours", 0] },
