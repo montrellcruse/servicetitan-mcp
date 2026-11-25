@@ -144,6 +144,7 @@ export function registerIntelligenceEstimatePipelineTool(
     name: "intel_estimate_pipeline",
     domain: "intelligence",
     operation: "read",
+    reports: { optional: ["172"] },
     description:
       "Analyze all fetched estimate pages as an open, sold, and dismissed pipeline, with value, conversion, close speed, age buckets, and open estimates older than 30 days. startDate and endDate bound estimate creation timestamps; when both are supplied, Report 172 adds technician sales metrics. soldById filters both sources. Partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "What\'s our close rate on estimates?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show me stale estimates over 30 days" -> returns staleEstimates automatically\n- "How is Andrew doing on sales?" -> soldById=<Andrew\'s ID>',

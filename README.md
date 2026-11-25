@@ -111,7 +111,7 @@ Writes are outside the stable v3 support commitment. To expose these experimenta
 
 ## Readiness and report compatibility
 
-`st_readiness_check` and the check CLI validate authentication, representative enabled-module reads, and configured report definitions. They return field/parameter metadata and definition fingerprints, not customer records. Missing scopes, missing reports, and incompatible fields are actionable failures. Representative read access does not certify every operation, write scope, or KPI amount.
+`st_readiness_check` and the check CLI validate authentication, representative reads for exposed tool domains, and the report definitions those tools use. A missing or incompatible report required by an exposed tool makes readiness partial. Failures for opt-in reports appear as limitations. In `st_readiness_check`, set `reports: true` to audit all supported definitions or `reports: false` to skip definitions. The manifest contains field and parameter metadata and definition fingerprints. Representative read access does not certify every operation, write scope, or KPI amount.
 
 Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
 

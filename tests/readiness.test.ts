@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ServiceTitanApiError, type ServiceTitanClient } from "../src/client.js";
 import { loadConfig } from "../src/config.js";
 import { checkReadiness } from "../src/readiness.js";
 import { withRequestContext } from "../src/request-context.js";
+import { createMcpServer } from "../src/server.js";
 
 // Minimal synthetic definitions, explicitly maintained apart from the production
 // contract table so a changed requirement cannot silently change its fixture.
@@ -47,7 +50,74 @@ function fakeClient(overrides:Record<string,unknown>={},alternate=false) {
   })} as unknown as ServiceTitanClient;
 }
 
+async function mcpReadiness(client: ServiceTitanClient, tool: string, reports?: boolean) {
+  const config = loadConfig({ ...base, ST_TOOLS: tool });
+  const runtime = await createMcpServer(config, { client });
+  const sdk = new Client({ name: "readiness-fixture", version: "1" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await runtime.server.connect(serverTransport);
+    await sdk.connect(clientTransport);
+    const result = await sdk.callTool({ name: "st_readiness_check", arguments: reports === undefined ? {} : { reports } });
+    expect(result.isError).toBeFalsy();
+    return result.structuredContent;
+  } finally {
+    await sdk.close();
+    await runtime.server.close();
+  }
+}
+
 describe("readiness compatibility manifests",()=>{
+  it("checks only the required labor report in a labor-cost-only MCP catalog", async () => {
+    const client = fakeClient();
+    const result = await mcpReadiness(client, "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      reports: [{ key: "166", status: "available", required: true, grossPayAvailable: false }],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith("/tenant/{tenant}/report-category/accounting/reports/166");
+  });
+  it.each([
+    ["unavailable", new ServiceTitanApiError(404, "Missing fixture definition", "/report")],
+    ["incompatible", { parameters: [], fields: [] }],
+  ])("is partial when its required definition is %s", async (reportStatus, definition) => {
+    const result = await mcpReadiness(fakeClient({ "166": definition }), "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      reports: [{ key: "166", status: reportStatus, required: true }],
+    });
+  });
+  it("reports unavailable extended metrics while default scorecard readiness stays ready", async () => {
+    const client = fakeClient({ "171": new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
+    const result = await mcpReadiness(client, "intel_technician_scorecard");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      reports: [
+        { key: "168", required: true, status: "available" },
+        { key: "169", required: true, status: "available" },
+        { key: "170", required: true, status: "available" },
+        { key: "171", required: false, status: "unavailable", httpStatus: 404 },
+        { key: "173", required: false, status: "available" },
+        { key: "174", required: false, status: "available" },
+      ],
+      limitations: expect.arrayContaining(["Optional report 171 is unavailable"]),
+    });
+  });
+  it("explicitly checks definitions beyond the catalog or skips report checks", async () => {
+    const client = fakeClient();
+    const expanded = await mcpReadiness(client, "intel_labor_cost", true);
+    expect(expanded).toMatchObject({ status: "ready" });
+    expect(expanded?.reports).toHaveLength(18);
+    expect(expanded?.reports).toContainEqual(expect.objectContaining({ key: "2282" }));
+
+    const skipClient = fakeClient();
+    const skipped = await mcpReadiness(skipClient, "intel_labor_cost", false);
+    expect(skipped).toMatchObject({ status: "ready", reports: [] });
+    expect(skipClient.get).not.toHaveBeenCalled();
+  });
   it("validates synthetic definitions without reading report rows",async()=>{
     const client=fakeClient();const result=await checkReadiness(client,loadConfig(base),{domains:["crm"]});
     expect(result.authentication).toBe("ok");expect(result.status).toBe("ready");

@@ -2,6 +2,7 @@
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { createMcpServer } from "./server.js";
+import { ToolSelectionError } from "./tool-catalog.js";
 
 async function main(): Promise<void> {
   const { server, registry, logger } = await createMcpServer(loadConfig());
@@ -13,7 +14,7 @@ async function main(): Promise<void> {
   logger.info("Stdio server ready", registry.getStats());
 }
 main().catch((error: unknown) => {
-  process.stderr.write(error instanceof ExperimentalWritesDisabledError
+  process.stderr.write(error instanceof ExperimentalWritesDisabledError || error instanceof ToolSelectionError
     ? `${error.message}\n`
     : "Fatal startup error. Check required ServiceTitan configuration.\n");
   process.exitCode = 1;

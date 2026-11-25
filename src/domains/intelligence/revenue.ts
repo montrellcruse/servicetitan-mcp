@@ -536,6 +536,7 @@ export function registerIntelligenceRevenueTool(
     name: "intel_revenue_summary",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["175", "179"], optional: ["177"] },
     description:
       "Summarize Report 175 revenue and Report 179 sales for the selected date range, optionally filtered to one business unit. Returns completed, non-job, adjustment, and total revenue plus opportunities, conversion, and sales metrics by business unit; the aggregate reflects returned report rows and is not certified as an all-company total or as matching every tenant dashboard configuration. includeProductivityMetrics adds Report 177 metrics, and includeCollections fetches all payment pages for the period. Report calls are cached briefly and serialized per report/client with at least 65 seconds between starts; a failed source is identified in _warnings and its affected metrics may be empty." +
       '\n\nExamples:\n- "What was our total revenue last month?" -> startDate="2026-02-01", endDate="2026-03-01"\n- "How much did HVAC bring in this quarter?" -> startDate="2026-01-01", endDate="2026-04-01", businessUnitName="HVAC"\n- "Revenue year to date" -> startDate="2026-01-01", endDate="2026-03-10"',

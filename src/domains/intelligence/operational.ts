@@ -147,6 +147,7 @@ export function registerIntelligenceDailySnapshotTool(
     name: "intel_daily_snapshot",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["163"] },
     cacheTtlMs: 60_000,
     cacheKeyParams: (params) => {
       const input = dailySnapshotSchema.parse(params);
