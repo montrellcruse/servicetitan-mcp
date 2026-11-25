@@ -59,7 +59,7 @@ async function main(): Promise<void> {
   const logger = new Logger(config.logLevel, [config.clientSecret, config.appKey, API_KEY]);
   const deployment = await prepareMcpDeployment(config, { logger });
   const stats = deployment.catalog.getStats();
-  const sessions = new StreamableHttpSessions(config.maxSessions ?? 32, () => deployment.createServer().server, logger);
+  const sessions = new StreamableHttpSessions(config.maxSessions ?? 32, deployment.createServer, logger);
 
   const httpServer = createServer(async (req, res) => {
     const requestId = randomUUID();

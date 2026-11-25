@@ -1,5 +1,14 @@
+import { subscribe } from "node:diagnostics_channel";
 import { mock } from "node:test";
 import axios from "axios";
+
+subscribe("http.server.request.start", ({ request, response }) => {
+  if (request.headers["x-fixture-watch-close"] === "true") {
+    response.once("close", () => {
+      process.send({ clientDisconnected: !response.writableFinished });
+    });
+  }
+});
 
 let releaseCustomer;
 process.on("message", message => {

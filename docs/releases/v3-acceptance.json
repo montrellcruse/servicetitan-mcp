@@ -12,58 +12,58 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "348608eabf7f9aa94bb43257d9c787d1db63466aed21905be882674a9397a5a4",
+  "sourceFingerprint": "6b3e155181e7c7c0d823674f82a9ce568862b1601f33aaf8139999027376630e",
   "gates": {
     "maintenance": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "November15: runtime Hono/node-server/follow-redirects security patches plus supported ESLint and narrowly scoped estree/minimatch dev repair; clean Node22.23.5/24.22.1 matrices and full audits zero. Version3.0.2/readonly-v1 unchanged; no tenant calls, publication or deployment."
+      "boundary": "Clean locked installs and full npm audits reported zero vulnerabilities on both candidate runtimes. No deployment or publication."
     },
     "contracts": {
       "status": "passed",
       "coverage": "All operation associations and 210 official schemas; standard date-filter schemas checked for 102 stable reads with seven captured-dispatch cases. Captured request dispatch covers corrected high-risk adapters, not every write handler or query parameter.",
       "summary": "VALIDATION-v3.md",
-      "boundary": "November15: unchanged official snapshots and business handlers; contracts and604 coverage tests pass on both supported Node majors. No claim of every parameter or live write verification."
+      "boundary": "Pinned contracts and 210 official request body schemas verified, including 44 registered export requests and five documented exclusions. No live write verification."
     },
     "analytics": {
       "status": "passed",
-      "boundary": "November15: analytics/company-isolation fixtures pass in both604-test matrices; fresh deterministic pagination/cache/fan-in/TTL/company-isolation checks pass. Historical live totals/dashboard evidence not rerun; dashboard parity uncertified.",
+      "boundary": "Coverage and synthetic analytics checks passed on both candidate runtimes, including required numeric report fields, source isolation, and retry after malformed feeds. No live KPI reconciliation.",
       "summary": "VALIDATION-v3.md"
     },
     "interface": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "November15: nine-profile discovery membership,validation/output schemas and annotations match unchanged fixture. Both18-test actual built-wire matrices pass, including stdio/HTTP/SSE,authentication/confirmation and bounded schema checks. No fresh full-prose identity claim."
+      "boundary": "Built stdio, HTTP, SSE, and readiness checks passed on both candidate runtimes. V3 discovery matches the pinned fixture across nine configurations."
     },
     "runtimeMatrix": {
       "status": "passed",
       "runtimes": [
-        "22.23.5",
+        "22.20.0",
         "24.22.1"
       ],
       "platform": "darwin-arm64",
-      "testsPerRuntime": 604,
-      "testFiles": 45,
-      "wireTestsPerRuntime": 18,
-      "summary": "VALIDATION-v3.md",
+      "testFiles": 48,
+      "testsPerRuntime": 660,
+      "wireTestsPerRuntime": 26,
       "packagingTestsPerRuntime": 2,
-      "boundary": "November15 clean darwin-arm64 scripts-disabled installations; valid trees and full audits zero; contracts/types/lint/604 coverage tests/18 wire/nine discovery/two packaging fixtures/pack checks pass per runtime. Docker context is synthetic,not a real image build. Remote Linux CI not run.",
+      "summary": "VALIDATION-v3.md",
       "packagingPassedPerRuntime": 2,
-      "packagingSkippedPerRuntime": 0
+      "packagingSkippedPerRuntime": 0,
+      "boundary": "Clean locked installs, pinned contracts, types, lint, coverage, built wire, discovery, and packaging passed per runtime. Docker context is tested without building an image. GitHub Linux CI is tracked separately."
     },
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "November15 actual archives match candidate runtime/docs; isolated Node22.23.5/24.22.1 consumers pass imports,Node ambient types/public declarations,five profiles and safeguards,installed stdio and zero full audits. Generated JavaScript matches the preserved runtime-only candidate; dependencies changed. No publication,deployment or tenant calls.",
-      "javascriptBuildSha256": "b1c288490dd4ef18f0a6172c2fc3d62265ea2f54bba31daf19bd9bee2b692cc6",
+      "boundary": "Fresh packed consumers passed imports, Node ambient types, public declarations, discovery, and installed stdio on both candidate runtimes. No tenant calls or npm publication.",
+      "javascriptBuildSha256": "833563d936813336cbacfe872ccc29e390346aff9d34947644e7cacfaf51f4f3",
+      "typescriptDeclarationsSha256": "df7ce1df03eb9b658c99017fa4dae1092b5b3fad9b6c3342eccb756040c62eb7",
       "runtimes": [
-        "22.23.5",
+        "22.20.0",
         "24.22.1"
       ],
       "profilesPerRuntime": 5,
       "upstreamCalls": 0,
-      "previousJavascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
-      "digestAlgorithm": "SHA256 of sorted build-relative *.js paths + NUL + exact bytes + NUL"
+      "digestAlgorithm": "SHA256 of sorted build-relative paths + NUL + exact bytes + NUL, calculated separately for JavaScript and declarations"
     },
     "liveProduction": {
       "status": "pending",
@@ -83,7 +83,7 @@
     },
     "latencyAndLoad": {
       "status": "passed",
-      "boundary": "November15 current deterministic client-load (ten load/nine fault scenarios per runtime) and analytics correctness checks pass on Node22.23.5/24.22.1. Prior protocol-v2 comparison,broad retained-memory and production-latency measurements remain historical,not rerun. No new percentile-stability,capacity,retained-memory or SLA claim.",
+      "boundary": "Current synthetic analytics and deterministic client load passed on both candidate runtimes (10 load and 9 fault cases each). Earlier protocol-v2, retained-memory, and production latency results are historical.",
       "summary": "../BENCHMARKS.md",
       "fullMatrixCommit": "786f15b1ada4e73434f3da829d79271afb0054a1",
       "fullMatrixJavascriptBuildSha256": "6f749dae3e0e85ddf4a69838583ff60c6e319469503c87c99c277b574d03f846",
@@ -137,6 +137,16 @@
         "loadScenariosPerRuntime": 10,
         "faultScenariosPerRuntime": 9,
         "upstream": "controlled adapter only"
+      },
+      "candidateClientLoad": {
+        "status": "passed",
+        "runtimes": [
+          "22.20.0",
+          "24.22.1"
+        ],
+        "loadScenariosPerRuntime": 10,
+        "faultScenariosPerRuntime": 9,
+        "upstream": "controlled adapter only"
       }
     },
     "discoveryCompatibility": {
@@ -148,7 +158,8 @@
       "fixture": "../../tests/fixtures/discovery-v3.0.0.json",
       "upstreamCalls": 0,
       "historicalExactFullCaptureMatch": true,
-      "november15Comparison": "All nine profile memberships,validation/output schemas and annotations match unchanged fixture;full prose bytes not compared."
+      "november15Comparison": "All nine profile memberships,validation/output schemas and annotations match unchanged fixture;full prose bytes not compared.",
+      "boundary": "Nine candidate configurations matched pinned v3 tool membership, input/output schemas, and annotations without upstream calls."
     }
   },
   "releaseDisposition": "stable-readonly",
@@ -207,39 +218,41 @@
     "freshTenantCalls": 0,
     "published": false,
     "policyAndGateImplementationUnchanged": true,
-    "summary": "VALIDATION-v3.md"
+    "summary": "VALIDATION-v3.md",
+    "runtimeMatrix": {
+      "status": "passed",
+      "runtimes": [
+        "22.23.5",
+        "24.22.1"
+      ],
+      "platform": "darwin-arm64",
+      "testsPerRuntime": 604,
+      "testFiles": 45,
+      "wireTestsPerRuntime": 18,
+      "summary": "VALIDATION-v3.md",
+      "packagingTestsPerRuntime": 2,
+      "boundary": "November15 clean darwin-arm64 scripts-disabled installations; valid trees and full audits zero; contracts/types/lint/604 coverage tests/18 wire/nine discovery/two packaging fixtures/pack checks pass per runtime. Docker context is synthetic,not a real image build. Remote Linux CI not run.",
+      "packagingPassedPerRuntime": 2,
+      "packagingSkippedPerRuntime": 0
+    },
+    "packageSmoke": {
+      "status": "passed",
+      "summary": "VALIDATION-v3.md",
+      "boundary": "November15 actual archives match candidate runtime/docs; isolated Node22.23.5/24.22.1 consumers pass imports,Node ambient types/public declarations,five profiles and safeguards,installed stdio and zero full audits. Generated JavaScript matches the preserved runtime-only candidate; dependencies changed. No publication,deployment or tenant calls.",
+      "javascriptBuildSha256": "b1c288490dd4ef18f0a6172c2fc3d62265ea2f54bba31daf19bd9bee2b692cc6",
+      "runtimes": [
+        "22.23.5",
+        "24.22.1"
+      ],
+      "profilesPerRuntime": 5,
+      "upstreamCalls": 0,
+      "previousJavascriptBuildSha256": "b6f2ee1ed26fe7b67fa871ae3603151527f98785fe3d2f571105330560a49ed6",
+      "digestAlgorithm": "SHA256 of sorted build-relative *.js paths + NUL + exact bytes + NUL"
+    }
   },
   "architectureCandidate": {
     "issue": 32,
-    "reviewBaseRevision": "77ae2f86072f3d63891049daf9b767891bb3377e",
-    "scope": "Local synthetic compatibility, lifecycle, and packed consumer verification",
-    "runtimes": [
-      {
-        "node": "v22.20.0",
-        "platform": "darwin-arm64",
-        "testFiles": 48,
-        "tests": 652,
-        "wireTests": 25,
-        "packagingTests": 2,
-        "packedConsumerProfiles": 5,
-        "loadScenarios": 10,
-        "faultScenarios": 9
-      },
-      {
-        "node": "v24.22.1",
-        "platform": "darwin-arm64",
-        "testFiles": 48,
-        "tests": 652,
-        "wireTests": 25,
-        "packagingTests": 2,
-        "packedConsumerProfiles": 5,
-        "loadScenarios": 10,
-        "faultScenarios": 9
-      }
-    ],
-    "javascriptBuildSha256": "244e389635a23ebd73733d1a4a0ce1dd836947491494a0d9e81b3b1f58526035",
-    "verifiedExportOperations": 44,
-    "documentedExportExclusions": 5,
-    "liveProductionEvidence": "Pending bounded read-only production validation of the final release source"
+    "auditedPrHead": "79ebadea197553420785b668f8338c5b89753b45",
+    "scope": "Synthetic runtime, compatibility, controlled-load, and packed consumer verification. No live tenant calls."
   }
 }

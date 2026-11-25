@@ -11,7 +11,10 @@ export interface ReportContract extends ReportBinding {
   optionalFields?: readonly string[];
   parameterTypes?: Readonly<Record<string, string>>;
   collectionFields?: readonly string[];
-  businessUnitSummary?: { unusedMetrics?: readonly string[] };
+  numericFields?: readonly string[];
+  /** Some existing KPI calculations treat a missing upstream value as zero. */
+  nullableNumericFields?: readonly string[];
+  requiresBusinessUnitName?: boolean;
 }
 
 export type ReportRow = Readonly<Record<string, unknown>>;
@@ -31,24 +34,197 @@ export interface ReportExecution {
 }
 
 export const INTELLIGENCE_REPORT_CONTRACTS = [
-  { key:"162",category:"operations",reportId:162,requiredParameters:["DateType","From","To"],parameterTypes:{DateType:"Number"},fields:["BookedBy","JobNumber","InvoiceNumber","JobType","CustomerName","LocationAddress","CustomerPhone","JobSummary","FirstDispatch","JobStatus","Campaign","Total","CampaignCategory","IsPrevailingWageJob"] },
-  { key:"163",category:"operations",reportId:163,requiredParameters:["DateType","From","To"],parameterTypes:{DateType:"Number"},fields:["JobNumber","ScheduledDate","CustomerName","CustomerAddress","CustomerPhone","CustomerEmail","LocationName","LocationAddress","LocationPhone","LocationEmail","JobType","AssignedTechnicians","JobSummary","Tags","IsPrevailingWageJob","CampaignCategory"],collectionFields:["AssignedTechnicians","Tags"] },
-  { key:"166",category:"accounting",reportId:166,requiredParameters:["From","To"],fields:["EmployeeName","Date","RegularHours","OvertimeHours","DoubleOvertimeHours"],optionalFields:["GrossPay"] },
-  { key:"168",category:"technician-dashboard",reportId:168,requiredParameters:["From","To"],fields:["Name","CompletedRevenue","OpportunityJobAverage","OpportunityConversionRate","Opportunity","ConvertedJobs","CustomerSatisfaction","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"169",category:"technician-dashboard",reportId:169,requiredParameters:["From","To"],fields:["Name","ReplacementOpportunity","LeadsSet","AverageLeadSale","ReplacementLeadConversionRate","ReplacementLeadsSold","TotalLeadSales","AverageReplacementLeadSale","TechnicianId"] },
-  { key:"170",category:"technician-dashboard",reportId:170,requiredParameters:["From","To"],fields:["Name","RevenuePerHour","BillableEfficiency","Upsold","TasksPerOpportunity","OptionsPerOpportunity","RecallsCaused","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"171",category:"technician-dashboard",reportId:171,requiredParameters:["From","To"],fields:["Name","MembershipOpportunities","MembershipsSold","MembershipConversionRate","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"172",category:"technician-dashboard",reportId:172,requiredParameters:["From","To"],fields:["Name","TotalSales","ClosedAverageSale","CloseRate","SalesOpportunity","OptionsPerOpportunity","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"173",category:"technician-dashboard",reportId:173,requiredParameters:["From","To"],fields:["Name","TechnicianBusinessUnit","TotalSalesFromTgl","ClosedAverageSaleFromTgl","CloseRateFromTgl","OptionsPerOpportunityFromTgl","TechnicianBusinessUnitId","TechnicianDivision","PaidTimeByBusinessUnit","AdjustmentRevenue","CompletedRevenueWithAdjustments","TechnicianId"] },
-  { key:"174",category:"technician-dashboard",reportId:174,requiredParameters:["From","To"],fields:["Name","TotalSalesFromMarketingLeads","ClosedAverageSaleFromMarketingLeads","CloseRateFromMarketingLeads","OptionsPerOpportunityFromMarketingLeads","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"175",category:"business-unit-dashboard",reportId:175,requiredParameters:["From","To"],fields:["Name","CompletedRevenue","OpportunityJobAverage","OpportunityConversionRate","Opportunity","ConvertedJobs","CustomerSatisfaction","AdjustmentRevenue","TotalRevenue","NonJobRevenue"],businessUnitSummary:{unusedMetrics:["OpportunityJobAverage","CustomerSatisfaction"]} },
-  { key:"176",category:"business-unit-dashboard",reportId:176,requiredParameters:["From","To"],fields:["Name","LeadGenerationOpportunity","LeadsSet","LeadConversionRate","AverageLeadSale","ReplacementOpportunity","ReplacementLeadsSet","ReplacementLeadConversionRate","MembershipSales","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"177",category:"business-unit-dashboard",reportId:177,requiredParameters:["From","To"],fields:["Name","RevenuePerHour","BillableEfficiency","Upsold","TasksPerOpportunity","OptionsPerOpportunity","RecallsCaused","AdjustmentRevenue","TotalRevenue","NonJobRevenue"],businessUnitSummary:{} },
-  { key:"178",category:"business-unit-dashboard",reportId:178,requiredParameters:["From","To"],fields:["Name","MembershipOpportunities","MembershipsConverted","MembershipConversionRate","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"179",category:"business-unit-dashboard",reportId:179,requiredParameters:["From","To"],fields:["Name","TotalSales","ClosedAverageSale","CloseRate","SalesOpportunity","OptionsPerOpportunity","AdjustmentRevenue","TotalRevenue","NonJobRevenue"],businessUnitSummary:{} },
-  { key:"182",category:"marketing",reportId:182,requiredParameters:["From","To"],fields:["Name","Suspended","Canceled","Expired","Deleted","Renewed","Reactivated","NewSales","ActiveAtEnd"] },
-  { key:"2281",category:"operations",reportId:2281,requiredParameters:["From","To"],fields:["InvoiceNumber","Customer","EMail","Amount","InvoiceBalance","CustomerBalance","Project","ProjectEmailed","JobNumber","JobType","BusinessUnit","Technician","InvoicedOn","EmailedOn"] },
-  { key:"2282",category:"operations",reportId:2282,requiredParameters:["From","To"],fields:["InvoiceNumber","Customer","EMail","Amount","InvoiceBalance","CustomerBalance","Project","ProjectEmailed","JobNumber","JobType","BusinessUnit","Technician","InvoicedOn"] }
+  {
+    key: "162", category: "operations", reportId: 162,
+    requiredParameters: ["DateType", "From", "To"],
+    parameterTypes: { DateType: "Number" },
+    fields: [
+      "BookedBy", "JobNumber", "InvoiceNumber", "JobType", "CustomerName", "LocationAddress",
+      "CustomerPhone", "JobSummary", "FirstDispatch", "JobStatus", "Campaign", "Total", "CampaignCategory",
+      "IsPrevailingWageJob",
+    ],
+    nullableNumericFields: ["Total"],
+  },
+  {
+    key: "163", category: "operations", reportId: 163,
+    requiredParameters: ["DateType", "From", "To"],
+    parameterTypes: { DateType: "Number" },
+    fields: [
+      "JobNumber", "ScheduledDate", "CustomerName", "CustomerAddress", "CustomerPhone", "CustomerEmail",
+      "LocationName", "LocationAddress", "LocationPhone", "LocationEmail", "JobType",
+      "AssignedTechnicians", "JobSummary", "Tags", "IsPrevailingWageJob", "CampaignCategory",
+    ],
+    collectionFields: ["AssignedTechnicians", "Tags"],
+  },
+  {
+    key: "166", category: "accounting", reportId: 166,
+    requiredParameters: ["From", "To"],
+    fields: ["EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours"],
+    optionalFields: ["GrossPay"],
+    numericFields: ["RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"],
+  },
+  {
+    key: "168", category: "technician-dashboard", reportId: 168,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction", "TechnicianId", "AdjustmentRevenue",
+      "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: [
+      "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction",
+    ],
+  },
+  {
+    key: "169", category: "technician-dashboard", reportId: 169,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "ReplacementOpportunity", "LeadsSet", "AverageLeadSale", "ReplacementLeadConversionRate",
+      "ReplacementLeadsSold", "TotalLeadSales", "AverageReplacementLeadSale", "TechnicianId",
+    ],
+    nullableNumericFields: [
+      "ReplacementOpportunity", "LeadsSet", "AverageLeadSale", "ReplacementLeadConversionRate",
+      "TotalLeadSales",
+    ],
+  },
+  {
+    key: "170", category: "technician-dashboard", reportId: 170,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+      "OptionsPerOpportunity", "RecallsCaused", "TechnicianId", "AdjustmentRevenue",
+      "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["RevenuePerHour", "BillableEfficiency", "Upsold", "RecallsCaused"],
+  },
+  {
+    key: "171", category: "technician-dashboard", reportId: 171,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "MembershipOpportunities", "MembershipsSold", "MembershipConversionRate", "TechnicianId",
+      "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["MembershipOpportunities", "MembershipsSold", "MembershipConversionRate"],
+  },
+  {
+    key: "172", category: "technician-dashboard", reportId: 172,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity"],
+  },
+  {
+    key: "173", category: "technician-dashboard", reportId: 173,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TechnicianBusinessUnit", "TotalSalesFromTgl", "ClosedAverageSaleFromTgl",
+      "CloseRateFromTgl", "OptionsPerOpportunityFromTgl", "TechnicianBusinessUnitId", "TechnicianDivision",
+      "PaidTimeByBusinessUnit", "AdjustmentRevenue", "CompletedRevenueWithAdjustments", "TechnicianId",
+    ],
+    nullableNumericFields: ["TotalSalesFromTgl", "ClosedAverageSaleFromTgl", "CloseRateFromTgl"],
+  },
+  {
+    key: "174", category: "technician-dashboard", reportId: 174,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSalesFromMarketingLeads", "ClosedAverageSaleFromMarketingLeads",
+      "CloseRateFromMarketingLeads", "OptionsPerOpportunityFromMarketingLeads", "TechnicianId",
+      "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["TotalSalesFromMarketingLeads", "ClosedAverageSaleFromMarketingLeads", "CloseRateFromMarketingLeads"],
+  },
+  {
+    key: "175", category: "business-unit-dashboard", reportId: 175,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "CompletedRevenue", "OpportunityConversionRate", "Opportunity", "ConvertedJobs", "AdjustmentRevenue",
+      "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "176", category: "business-unit-dashboard", reportId: 176,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "LeadGenerationOpportunity", "LeadsSet", "LeadConversionRate", "AverageLeadSale",
+      "ReplacementOpportunity", "ReplacementLeadsSet", "ReplacementLeadConversionRate", "MembershipSales",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    nullableNumericFields: [
+      "LeadGenerationOpportunity", "LeadsSet", "LeadConversionRate", "AverageLeadSale",
+      "ReplacementOpportunity", "ReplacementLeadsSet", "ReplacementLeadConversionRate", "MembershipSales",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "177", category: "business-unit-dashboard", reportId: 177,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+      "OptionsPerOpportunity", "RecallsCaused", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity", "OptionsPerOpportunity",
+      "RecallsCaused", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "178", category: "business-unit-dashboard", reportId: 178,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "MembershipOpportunities", "MembershipsConverted", "MembershipConversionRate",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    nullableNumericFields: ["MembershipOpportunities", "MembershipsConverted", "MembershipConversionRate"],
+  },
+  {
+    key: "179", category: "business-unit-dashboard", reportId: 179,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "182", category: "marketing", reportId: 182,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "Suspended", "Canceled", "Expired", "Deleted", "Renewed", "Reactivated", "NewSales",
+      "ActiveAtEnd",
+    ],
+    nullableNumericFields: ["Suspended", "Canceled", "Expired", "Deleted", "Renewed", "Reactivated", "NewSales", "ActiveAtEnd"],
+  },
+  {
+    key: "2281", category: "operations", reportId: 2281,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "InvoiceNumber", "Customer", "EMail", "Amount", "InvoiceBalance", "CustomerBalance", "Project",
+      "ProjectEmailed", "JobNumber", "JobType", "BusinessUnit", "Technician", "InvoicedOn", "EmailedOn",
+    ],
+    numericFields: ["Amount"],
+  },
+  {
+    key: "2282", category: "operations", reportId: 2282,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "InvoiceNumber", "Customer", "EMail", "Amount", "InvoiceBalance", "CustomerBalance", "Project",
+      "ProjectEmailed", "JobNumber", "JobType", "BusinessUnit", "Technician", "InvoicedOn",
+    ],
+    numericFields: ["Amount"],
+  },
 ] as const satisfies readonly ReportContract[];
 
 export type ReportKey = typeof INTELLIGENCE_REPORT_CONTRACTS[number]["key"];
@@ -139,6 +315,29 @@ function readReportColumns(fields: unknown, label: string): Map<string, number> 
 
 const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 
+function isReportNumber(value: unknown): boolean {
+  // A numeric prefix followed by text is not a reported amount.
+  return typeof value === "string"
+    ? DECIMAL_NUMBER.test(value.trim()) && Number.isFinite(Number(value))
+    : Number.isFinite(value);
+}
+
+function isValidReportCell(contract: ReportContract, field: string, value: unknown): boolean {
+  if (contract.collectionFields?.includes(field)) return true;
+  if (field === "TechnicianId") {
+    // Report consumers skip unidentified rows and non-positive integer IDs.
+    return value === null || (typeof value === "string"
+      ? /^[+-]?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))
+      : Number.isSafeInteger(value));
+  }
+  if (contract.numericFields?.includes(field)) return isReportNumber(value);
+  if (contract.nullableNumericFields?.includes(field)) return value === null || isReportNumber(value);
+  if (contract.requiresBusinessUnitName && field === "Name") {
+    return typeof value === "string" && value.trim().length > 0;
+  }
+  return value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
+}
+
 function validateReportCells(
   contract: ReportContract,
   row: ReportRow,
@@ -146,26 +345,7 @@ function validateReportCells(
   optionalFieldWarnings: Map<string, string>,
 ): void {
   for (const [field, value] of Object.entries(row)) {
-    if (contract.collectionFields?.includes(field)) continue;
-    let valid = value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
-    if (field === "TechnicianId") {
-      // Report consumers skip unidentified rows and non-positive integer IDs.
-      valid = value === null || (typeof value === "string"
-        ? /^[+-]?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))
-        : Number.isSafeInteger(value));
-    } else if (field === "GrossPay") {
-      // Require a complete decimal because toNumber also accepts numeric prefixes.
-      valid = typeof value === "string"
-        ? DECIMAL_NUMBER.test(value.trim()) && Number.isFinite(Number.parseFloat(value))
-        : Number.isFinite(value);
-    } else if (contract.businessUnitSummary) {
-      // Business-unit summaries require a nonempty name and finite metric values.
-      if (field === "Name") valid = typeof value === "string" && value.trim().length > 0;
-      else if (!contract.businessUnitSummary.unusedMetrics?.includes(field)) {
-        valid = Number.isFinite(typeof value === "string" ? Number.parseFloat(value) : value);
-      }
-    }
-    if (valid) continue;
+    if (isValidReportCell(contract, field, value)) continue;
     const warning = `${pageLabel} returned an invalid value for ${field}`;
     if (!contract.optionalFields?.includes(field)) throw new Error(warning);
     if (!optionalFieldWarnings.has(field)) optionalFieldWarnings.set(field, warning);

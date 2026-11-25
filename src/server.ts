@@ -34,7 +34,7 @@ export async function prepareMcpDeployment(config: ServiceTitanConfig, options: 
         } else { checks.tenant_access = "NOT_CHECKED"; }
         return toolResult(checks);
       },
-      st_readiness_check: async params => toolResult(await checkCatalogReadiness(client, config, catalog, { reports: (params as { reports?: boolean }).reports })),
+      st_readiness_check: async params => toolResult(await checkCatalogReadiness(client, config, registry.catalog, { reports: (params as { reports?: boolean }).reports })),
       st_result_read: async params => {
         const { resultId, offset = 0 } = params as { resultId: string; offset?: number };
         return toolResultChunk(registry.readResult(resultId, offset));

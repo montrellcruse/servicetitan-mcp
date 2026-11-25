@@ -58,6 +58,8 @@ export interface ToolDefinition {
   /** Pinned operation identity or the candidate request for a documented exclusion. */
   apiContract?: { operationId: string } | { unsupportedRequest: { method: string; path: string } };
   reports?: { required?: readonly ReportKey[]; optional?: readonly ReportKey[] };
+  /** Additional modules needed for this tool's default behavior. */
+  readinessDomains?: readonly string[];
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -97,6 +99,10 @@ export class ToolRegistry {
 
   attachClient(client: ServiceTitanClient): void {
     this.client = client;
+  }
+
+  get hasActiveToolCalls(): boolean {
+    return this.activeCalls > 0;
   }
 
   /**

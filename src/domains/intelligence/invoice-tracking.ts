@@ -188,7 +188,9 @@ export function registerIntelligenceInvoiceTrackingTool(
         const topTechnician = byTechnician[0];
 
         const highlights =
-          notSentCount === 0
+          !sentReport || !notSentReportRaw
+            ? ["Invoice delivery totals are incomplete because a report is unavailable."]
+            : notSentCount === 0
             ? [`All ${sentCount} invoices in the period were sent.`]
             : [
                 `${sentCount} of ${totalInvoices} invoices were sent (${sendRate}%).`,

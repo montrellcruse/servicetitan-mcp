@@ -106,8 +106,12 @@ export async function checkCatalogReadiness(
   catch (error) { throwIfAborted(getRequestContext().signal); return { ...manifest, status: "unavailable", authentication: "failed", failure: safeFailure(error) }; }
 
   const selectedTools = catalog.getSelectedTools();
-  const selectedDomains = new Set(selectedTools.map(tool => tool.domain));
-  const includesDomain = (domain: string) => selectedDomains.has(domain) && (!options.domains || options.domains.includes(domain));
+  const probeDomains = new Set(
+    selectedTools
+      .filter(tool => !options.domains || options.domains.includes(tool.domain))
+      .flatMap(tool => [tool.domain, ...(tool.readinessDomains ?? [])]),
+  );
+  const includesDomain = (domain: string) => probeDomains.has(domain);
   const probePlan: Array<readonly [domain: string, path: string]> = READINESS_PROBES.filter(([domain]) => includesDomain(domain));
   const probes: Array<Record<string, unknown>> = [];
   if (includesDomain("export")) {

@@ -150,6 +150,43 @@ describe("intelligence report feeds over MCP", () => {
   });
 
   it.each([
+    { field: "RegularHours", hours: ["unavailable", 1, 0] },
+    { field: "OvertimeHours", hours: [7, "1.5 hours", 0] },
+    { field: "DoubleOvertimeHours", hours: [7, 1, null] },
+  ])("rejects a malformed required $field without caching the labor result", async ({ field, hours }) => {
+    let sourceHours: unknown[] = hours;
+    await withMcpReportFixture(
+      "intel_labor_cost",
+      async (_path, _body, { page }) => ({
+        fields: fields("EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"),
+        data: page === 1
+          ? [["Ada", "2026-01-01", 7, 1, 0, 160]]
+          : [["Lin", "2026-01-02", ...sourceHours, 160]],
+        hasMore: page === 1,
+      }),
+      async (client) => {
+        const request = { name: "intel_labor_cost", arguments: period };
+        const partial = await client.callTool(request);
+        expect(partial.structuredContent).toMatchObject({
+          totalHours: 0,
+          totalGrossPay: null,
+          employees: [],
+          _warnings: [expect.stringContaining(`Report 166 page 2 returned an invalid value for ${field}`)],
+        });
+
+        sourceHours = [" 7.0 ", "1e0", 0];
+        const complete = await client.callTool(request);
+        expect(complete.structuredContent).toMatchObject({
+          totalHours: 16,
+          totalGrossPay: 320,
+          avgHourlyRate: 20,
+        });
+        expect(complete.structuredContent).not.toHaveProperty("_warnings");
+      },
+    );
+  });
+
+  it.each([
     { form: "an object", value: { id: 10 } },
     { form: "nonnumeric text", value: "unknown" },
     { form: "a numeric prefix with trailing text", value: "10oops" },
@@ -211,6 +248,60 @@ describe("intelligence report feeds over MCP", () => {
         expect(complete.isError).not.toBe(true);
         expect(complete.structuredContent).toMatchObject({
           technicians: [{ id: 10, revenue: 120.5, revenuePerHour: 60, customerSatisfaction: 0 }],
+        });
+        expect(complete.structuredContent).not.toHaveProperty("_warnings");
+      },
+    );
+  });
+
+  it.each([
+    { badReport: "2281", amount: "100 pending", sentCount: 0, notSentCount: 1 },
+    { badReport: "2282", amount: "unavailable", sentCount: 1, notSentCount: 0 },
+  ])("preserves the other invoice feed and retries invalid report $badReport", async ({
+    badReport, amount, sentCount, notSentCount,
+  }) => {
+    let corrected = false;
+    await withMcpReportFixture(
+      "intel_invoice_tracking",
+      async (path) => {
+        const sent = path.endsWith("/2281/data");
+        const key = sent ? "2281" : "2282";
+        expect(path).toBe(`/tenant/{tenant}/report-category/operations/reports/${key}/data`);
+        const names = [
+          "InvoiceNumber", "Customer", "EMail", "Amount", "InvoiceBalance", "CustomerBalance",
+          "Project", "ProjectEmailed", "JobNumber", "JobType", "BusinessUnit", "Technician", "InvoicedOn",
+        ];
+        const row = [
+          sent ? "INV-1" : "INV-2", "Fixture Customer", null,
+          key === badReport && !corrected ? amount : sent ? 100 : "250.50",
+          0, 0, null, false, "JOB-1", "Fixture", "HVAC", "Ada", "2026-01-01",
+        ];
+        if (sent) {
+          names.push("EmailedOn");
+          row.push("2026-01-02");
+        }
+        return { fields: fields(...names), data: [row], hasMore: false };
+      },
+      async (client) => {
+        const request = { name: "intel_invoice_tracking", arguments: period };
+        const partial = await client.callTool(request);
+        expect(partial.structuredContent).toMatchObject({
+          sentCount,
+          notSentCount,
+          totalAmountSent: sentCount * 100,
+          totalAmountNotSent: notSentCount * 250.5,
+          highlights: [expect.stringContaining("unavailable")],
+          _warnings: [expect.stringContaining(`Report ${badReport} page 1 returned an invalid value for Amount`)],
+        });
+
+        corrected = true;
+        const complete = await client.callTool(request);
+        expect(complete.structuredContent).toMatchObject({
+          sentCount: 1,
+          notSentCount: 1,
+          totalAmountSent: 100,
+          totalAmountNotSent: 250.5,
+          sendRate: 50,
         });
         expect(complete.structuredContent).not.toHaveProperty("_warnings");
       },

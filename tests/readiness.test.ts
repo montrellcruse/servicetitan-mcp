@@ -78,6 +78,36 @@ describe("readiness compatibility manifests",()=>{
     });
     expect(client.get).toHaveBeenCalledExactlyOnceWith("/tenant/{tenant}/report-category/accounting/reports/166");
   });
+  it("checks reports required by tools added to an embedded server", async () => {
+    const client = fakeClient({ 166: new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
+    const config = loadConfig({ ...base, ST_DOMAINS: "reporting" });
+    const { server, registry } = await createMcpServer(config, { client });
+    registry.register({
+      name: "fixture_labor_report",
+      domain: "reporting",
+      operation: "read",
+      description: "Fixture report dependency",
+      reports: { required: ["166"] },
+      schema: {},
+      handler: async () => ({ content: [] }),
+    });
+    const sdk = new Client({ name: "embedded-readiness-fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport);
+      await sdk.connect(clientTransport);
+      expect((await sdk.listTools()).tools.map(tool => tool.name)).toContain("fixture_labor_report");
+      const result = await sdk.callTool({ name: "st_readiness_check", arguments: {} });
+      expect(result.structuredContent).toMatchObject({
+        status: "partial",
+        reports: [{ key: "166", required: true, status: "unavailable" }],
+      });
+    } finally {
+      await sdk.close();
+      await server.close();
+    }
+  });
+
   it.each([
     ["unavailable", new ServiceTitanApiError(404, "Missing fixture definition", "/report")],
     ["incompatible", { parameters: [], fields: [] }],
@@ -113,6 +143,25 @@ describe("readiness compatibility manifests",()=>{
       }],
     });
   });
+  it.each([
+    { estimatesAvailable: true, moduleStatus: "available", status: "ready" },
+    { estimatesAvailable: false, moduleStatus: "unavailable", status: "partial" },
+  ])("checks estimate access when only pipeline is selected: $status", async ({ estimatesAvailable, moduleStatus, status }) => {
+    const path = "/sales/v2/tenant/{tenant}/estimates";
+    const denied = new ServiceTitanApiError(403, "Fixture access denied", path);
+    const client = fakeClient({ 172: denied });
+    if (!estimatesAvailable) vi.mocked(client.get).mockRejectedValueOnce(denied);
+
+    const result = await mcpReadiness(client, "intel_estimate_pipeline");
+
+    expect(result).toMatchObject({
+      status,
+      modules: [{ domain: "estimates", path, status: moduleStatus }],
+      reports: [{ key: "172", status: "unavailable", required: false }],
+    });
+    expect(client.get).toHaveBeenCalledWith(path, { page: 1, pageSize: 1 });
+  });
+
   it("reports unavailable extended metrics while default scorecard readiness stays ready", async () => {
     const client = fakeClient({ "171": new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
     const result = await mcpReadiness(client, "intel_technician_scorecard");

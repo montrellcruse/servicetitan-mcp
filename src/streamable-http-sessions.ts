@@ -4,6 +4,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sendJson } from "./http-policy.js";
 import type { Logger } from "./logger.js";
+import type { ToolRegistry } from "./registry.js";
 import { withRequestContext } from "./request-context.js";
 
 const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
@@ -11,9 +12,13 @@ const SESSION_REAP_INTERVAL_MS = 60 * 1000;
 const SHUTDOWN_DEADLINE_MS = 10_000;
 const DRAINING_ERROR = "Server is shutting down";
 
-type Session = {
-  id?: string;
+type SessionRuntime = {
   server: McpServer;
+  registry: Pick<ToolRegistry, "hasActiveToolCalls">;
+};
+
+type Session = SessionRuntime & {
+  id?: string;
   transport: StreamableHTTPServerTransport;
   lastSeen: number;
   activeRequests: number;
@@ -24,6 +29,11 @@ type Handshake = { response: ServerResponse; requestId: string };
 function isInitializeRequest(body: unknown): boolean {
   return body !== null && typeof body === "object" && !Array.isArray(body)
     && (body as { method?: unknown }).method === "initialize";
+}
+
+function sessionHasWork(session: Session): boolean {
+  // The SDK can keep a tool handler running after its HTTP response disconnects.
+  return session.activeRequests > 0 || session.registry.hasActiveToolCalls;
 }
 
 function startsNewWork(message: unknown): boolean {
@@ -43,7 +53,7 @@ export class StreamableHttpSessions {
 
   constructor(
     private readonly maxSessions: number,
-    private readonly createServer: () => McpServer,
+    private readonly createServer: () => SessionRuntime,
     private readonly logger: Logger,
   ) {}
 
@@ -83,14 +93,14 @@ export class StreamableHttpSessions {
   }
 
   private async initialize(req: IncomingMessage, res: ServerResponse, body: unknown, requestId: string): Promise<void> {
-    const server = this.createServer();
+    const { server, registry } = this.createServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: randomUUID,
       onsessioninitialized: id => {
         if (this.pending.has(session)) session.id = id;
       },
     });
-    const session: Session = { server, transport, lastSeen: Date.now(), activeRequests: 0 };
+    const session: Session = { server, registry, transport, lastSeen: Date.now(), activeRequests: 0 };
     this.pending.set(session, { response: res, requestId });
 
     transport.onclose = () => {
@@ -173,7 +183,7 @@ export class StreamableHttpSessions {
   private reapIdleSessions(): void {
     const now = Date.now();
     for (const session of this.sessions.values()) {
-      if (session.activeRequests === 0 && now - session.lastSeen > SESSION_IDLE_TTL_MS) {
+      if (!sessionHasWork(session) && now - session.lastSeen > SESSION_IDLE_TTL_MS) {
         void this.closeSession(session, "idle-timeout");
       }
     }
@@ -196,7 +206,7 @@ export class StreamableHttpSessions {
       });
     };
     const deadline = setTimeout(() => {
-      interruptedWork = [...this.sessions.values()].some(session => session.activeRequests > 0);
+      interruptedWork = [...this.sessions.values()].some(sessionHasWork);
       if (interruptedWork) this.logger.error("HTTP drain deadline reached with unfinished requests");
       for (const session of this.sessions.values()) void this.closeSession(session, "shutdown-deadline");
       stopListening();

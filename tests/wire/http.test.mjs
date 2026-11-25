@@ -197,6 +197,58 @@ test("built HTTP aborts unfinished work at the first signal's ten-second deadlin
   }
 });
 
+test("built HTTP reports a cutoff when a disconnected client still has admitted work", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000" }, "streamable-http.js", drainFixture);
+  const { child } = runtime;
+  const nextMessage = () => once(child, "message", { signal: AbortSignal.timeout(5000) });
+  const controller = new AbortController();
+
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const headers = { "mcp-session-id": sessionId };
+    const idle = await idleStream(runtime.url, headers);
+    assert.equal(idle.status, 200);
+
+    const started = nextMessage();
+    const request = fetch(`${runtime.url}/mcp`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "x-api-key": API_KEY,
+        "x-fixture-watch-close": "true",
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify(toolCall(2, "crm_customers_get", { id: 8 })),
+      signal: controller.signal,
+    }).then(response => response.text());
+    const disconnected = assert.rejects(request, { name: "AbortError" });
+    // Keep a failing initialization from leaving a rejected promise unobserved.
+    void disconnected.catch(() => {});
+    assert.deepEqual((await started)[0], { upstreamStarted: 8 });
+    const responseClosed = nextMessage();
+    controller.abort();
+    await disconnected;
+    assert.deepEqual((await responseClosed)[0], { clientDisconnected: true });
+
+    const frozen = nextMessage();
+    child.send("freeze-clock");
+    assert.equal((await frozen)[0], "clock-frozen");
+    child.kill("SIGTERM");
+    await idle.text();
+
+    const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
+    const aborted = nextMessage();
+    child.send(10_000);
+    assert.deepEqual((await aborted)[0], { upstreamAborted: 8 });
+    assert.deepEqual(await exited, [1, null]);
+  } finally {
+    controller.abort();
+    await runtime.stop(1);
+  }
+});
+
 test("built HTTP exits cleanly at the drain deadline when no work remains", { timeout: 20000 }, async () => {
   const runtime = await launchHttp({}, "streamable-http.js", drainFixture);
   const { child } = runtime;
