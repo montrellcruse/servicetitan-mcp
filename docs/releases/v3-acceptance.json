@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c",
+  "sourceFingerprint": "fa68e0187b5969d971eae7a4eece48f6eb557e3faea7fa25ed505cdf16406ce1",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -70,30 +70,9 @@
       "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c"
     },
     "liveProduction": {
-      "status": "passed",
-      "boundary": "One production company, forced read-only. Targeted replay of technician ranking, invoice-calendar delivery/selection, and canonical inbound call/job credit. Readiness and return-type list passed. No broader dashboard parity, Claude client, live business mutations, additional company, CRM scope, or deployment claim.",
+      "status": "pending",
       "summary": "VALIDATION-v3.md",
-      "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c",
-      "sourceRevision": "99d915cb891b50269a1efaa978cfe732c06eaa83",
-      "javascriptBuildSha256": "611f210cf66a521ae2247d32896e9f676da3ea7df65e8d635137854e3c739ab0",
-      "testedArchiveSha256": "fa59cb6ffea2147b2a7e68ed2c2caaf9e63ce5f8bf3444a9710fbf56fb9855dc",
-      "runtime": "v24.22.1",
-      "checkedAt": "2026-11-25T20:06:03.955Z",
-      "freshTenantCalls": 45,
-      "readCallsByKind": {
-        "get": 41,
-        "report-data": 4
-      },
-      "authenticated": true,
-      "readOnlyTools": 264,
-      "readiness": {
-        "namedModuleChecks": 14,
-        "reportDefinitions": 18
-      },
-      "scorecardTopThreeMatched": true,
-      "invoiceCalendarDatesPreserved": true,
-      "canonicalInboundCreditReconciled": true,
-      "returnTypeListPassed": true
+      "boundary": "The previous production evidence applies to the earlier source. This CRM contact-filter candidate is not a verified publication artifact."
     },
     "liveIntegration": {
       "status": "scoped_out",

@@ -438,13 +438,13 @@ export function registerCustomerTools(
     name: "crm_customers_contacts_modified_list",
     domain: "crm",
     operation: "read",
-    description: "Search contact records across customers. Supply modifiedBefore or modifiedOnOrAfter; created dates and parent IDs are additional filters. Returns one page; use crm_customers_contacts_list for all contacts of one known customer.",
+    description: "List one page of customer contacts. Use customerIds alone for a lookup, or supply modifiedOnOrAfter, modifiedBefore, or both for an incremental sync. ServiceTitan can reject customer IDs combined with modified dates. Use crm_customers_contacts_list for one known customer.",
     schema: customerModifiedContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerModifiedContactsListSchema>;
 
-      if (input.modifiedBefore === undefined && input.modifiedOnOrAfter === undefined) {
-        return toolError("Provide modifiedBefore or modifiedOnOrAfter to search modified contacts.");
+      if (!input.customerIds?.trim() && input.modifiedBefore === undefined && input.modifiedOnOrAfter === undefined) {
+        return toolError("Provide customerIds or a modified date bound (modifiedBefore or modifiedOnOrAfter) to list contacts.");
       }
 
       try {

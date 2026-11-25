@@ -435,13 +435,13 @@ export function registerLocationTools(
     name: "crm_locations_contacts_modified_list",
     domain: "crm",
     operation: "read",
-    description: "Search contact records across locations. Supply modifiedBefore or modifiedOnOrAfter; created dates and parent IDs are additional filters. Returns one page; use crm_locations_contacts_list for all contacts of one known location.",
+    description: "List one page of location contacts. Use locationIds alone for a lookup, or supply modifiedOnOrAfter, modifiedBefore, or both for an incremental sync. ServiceTitan can reject location IDs combined with modified dates. Use crm_locations_contacts_list for one known location.",
     schema: locationModifiedContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof locationModifiedContactsListSchema>;
 
-      if (input.modifiedBefore === undefined && input.modifiedOnOrAfter === undefined) {
-        return toolError("Provide modifiedBefore or modifiedOnOrAfter to search modified contacts.");
+      if (!input.locationIds?.trim() && input.modifiedBefore === undefined && input.modifiedOnOrAfter === undefined) {
+        return toolError("Provide locationIds or a modified date bound (modifiedBefore or modifiedOnOrAfter) to list contacts.");
       }
 
       try {
