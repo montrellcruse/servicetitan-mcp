@@ -10,11 +10,20 @@ export interface ReportContract extends ReportBinding {
   fields: readonly string[];
   optionalFields?: readonly string[];
   parameterTypes?: Readonly<Record<string, string>>;
+  collectionFields?: readonly string[];
+  numericFields?: readonly string[];
+  /** Some existing KPI calculations treat a missing upstream value as zero. */
+  nullableNumericFields?: readonly string[];
+  requiresBusinessUnitName?: boolean;
 }
 
+export type ReportRow = Readonly<Record<string, unknown>>;
+
 export interface ReportExecution {
-  fields: Array<{ name: string; [key: string]: unknown }>;
-  data: unknown[][];
+  fields: ReadonlySet<string>;
+  /** A present optional column can be unusable without invalidating the required data. */
+  optionalFieldWarnings: ReadonlyMap<string, string>;
+  data: ReportRow[];
   page: number;
   pageSize: number;
   hasMore: boolean;
@@ -24,28 +33,203 @@ export interface ReportExecution {
   binding: ReportBinding;
 }
 
-export const INTELLIGENCE_REPORT_CONTRACTS: readonly ReportContract[] = [
-  { key:"162",category:"operations",reportId:162,requiredParameters:["DateType","From","To"],parameterTypes:{DateType:"Number"},fields:["BookedBy","JobNumber","InvoiceNumber","JobType","CustomerName","LocationAddress","CustomerPhone","JobSummary","FirstDispatch","JobStatus","Campaign","Total","CampaignCategory","IsPrevailingWageJob"] },
-  { key:"163",category:"operations",reportId:163,requiredParameters:["DateType","From","To"],parameterTypes:{DateType:"Number"},fields:["JobNumber","ScheduledDate","CustomerName","CustomerAddress","CustomerPhone","CustomerEmail","LocationName","LocationAddress","LocationPhone","LocationEmail","JobType","AssignedTechnicians","JobSummary","Tags","IsPrevailingWageJob","CampaignCategory"] },
-  { key:"166",category:"accounting",reportId:166,requiredParameters:["From","To"],fields:["EmployeeName","Date","RegularHours","OvertimeHours","DoubleOvertimeHours"],optionalFields:["GrossPay"] },
-  { key:"168",category:"technician-dashboard",reportId:168,requiredParameters:["From","To"],fields:["Name","CompletedRevenue","OpportunityJobAverage","OpportunityConversionRate","Opportunity","ConvertedJobs","CustomerSatisfaction","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"169",category:"technician-dashboard",reportId:169,requiredParameters:["From","To"],fields:["Name","ReplacementOpportunity","LeadsSet","AverageLeadSale","ReplacementLeadConversionRate","ReplacementLeadsSold","TotalLeadSales","AverageReplacementLeadSale","TechnicianId"] },
-  { key:"170",category:"technician-dashboard",reportId:170,requiredParameters:["From","To"],fields:["Name","RevenuePerHour","BillableEfficiency","Upsold","TasksPerOpportunity","OptionsPerOpportunity","RecallsCaused","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"171",category:"technician-dashboard",reportId:171,requiredParameters:["From","To"],fields:["Name","MembershipOpportunities","MembershipsSold","MembershipConversionRate","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"172",category:"technician-dashboard",reportId:172,requiredParameters:["From","To"],fields:["Name","TotalSales","ClosedAverageSale","CloseRate","SalesOpportunity","OptionsPerOpportunity","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"173",category:"technician-dashboard",reportId:173,requiredParameters:["From","To"],fields:["Name","TechnicianBusinessUnit","TotalSalesFromTgl","ClosedAverageSaleFromTgl","CloseRateFromTgl","OptionsPerOpportunityFromTgl","TechnicianBusinessUnitId","TechnicianDivision","PaidTimeByBusinessUnit","AdjustmentRevenue","CompletedRevenueWithAdjustments","TechnicianId"] },
-  { key:"174",category:"technician-dashboard",reportId:174,requiredParameters:["From","To"],fields:["Name","TotalSalesFromMarketingLeads","ClosedAverageSaleFromMarketingLeads","CloseRateFromMarketingLeads","OptionsPerOpportunityFromMarketingLeads","TechnicianId","AdjustmentRevenue","CompletedRevenueWithAdjustments"] },
-  { key:"175",category:"business-unit-dashboard",reportId:175,requiredParameters:["From","To"],fields:["Name","CompletedRevenue","OpportunityJobAverage","OpportunityConversionRate","Opportunity","ConvertedJobs","CustomerSatisfaction","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"176",category:"business-unit-dashboard",reportId:176,requiredParameters:["From","To"],fields:["Name","LeadGenerationOpportunity","LeadsSet","LeadConversionRate","AverageLeadSale","ReplacementOpportunity","ReplacementLeadsSet","ReplacementLeadConversionRate","MembershipSales","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"177",category:"business-unit-dashboard",reportId:177,requiredParameters:["From","To"],fields:["Name","RevenuePerHour","BillableEfficiency","Upsold","TasksPerOpportunity","OptionsPerOpportunity","RecallsCaused","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"178",category:"business-unit-dashboard",reportId:178,requiredParameters:["From","To"],fields:["Name","MembershipOpportunities","MembershipsConverted","MembershipConversionRate","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"179",category:"business-unit-dashboard",reportId:179,requiredParameters:["From","To"],fields:["Name","TotalSales","ClosedAverageSale","CloseRate","SalesOpportunity","OptionsPerOpportunity","AdjustmentRevenue","TotalRevenue","NonJobRevenue"] },
-  { key:"182",category:"marketing",reportId:182,requiredParameters:["From","To"],fields:["Name","Suspended","Canceled","Expired","Deleted","Renewed","Reactivated","NewSales","ActiveAtEnd"] },
-  { key:"2281",category:"operations",reportId:2281,requiredParameters:["From","To"],fields:["InvoiceNumber","Customer","EMail","Amount","InvoiceBalance","CustomerBalance","Project","ProjectEmailed","JobNumber","JobType","BusinessUnit","Technician","InvoicedOn","EmailedOn"] },
-  { key:"2282",category:"operations",reportId:2282,requiredParameters:["From","To"],fields:["InvoiceNumber","Customer","EMail","Amount","InvoiceBalance","CustomerBalance","Project","ProjectEmailed","JobNumber","JobType","BusinessUnit","Technician","InvoicedOn"] }
-] as const;
+export const INTELLIGENCE_REPORT_CONTRACTS = [
+  {
+    key: "162", category: "operations", reportId: 162,
+    requiredParameters: ["DateType", "From", "To"],
+    parameterTypes: { DateType: "Number" },
+    fields: [
+      "BookedBy", "JobNumber", "InvoiceNumber", "JobType", "CustomerName", "LocationAddress",
+      "CustomerPhone", "JobSummary", "FirstDispatch", "JobStatus", "Campaign", "Total", "CampaignCategory",
+      "IsPrevailingWageJob",
+    ],
+    nullableNumericFields: ["Total"],
+  },
+  {
+    key: "163", category: "operations", reportId: 163,
+    requiredParameters: ["DateType", "From", "To"],
+    parameterTypes: { DateType: "Number" },
+    fields: [
+      "JobNumber", "ScheduledDate", "CustomerName", "CustomerAddress", "CustomerPhone", "CustomerEmail",
+      "LocationName", "LocationAddress", "LocationPhone", "LocationEmail", "JobType",
+      "AssignedTechnicians", "JobSummary", "Tags", "IsPrevailingWageJob", "CampaignCategory",
+    ],
+    collectionFields: ["AssignedTechnicians", "Tags"],
+  },
+  {
+    key: "166", category: "accounting", reportId: 166,
+    requiredParameters: ["From", "To"],
+    fields: ["EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours"],
+    optionalFields: ["GrossPay"],
+    numericFields: ["RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"],
+  },
+  {
+    key: "168", category: "technician-dashboard", reportId: 168,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction", "TechnicianId", "AdjustmentRevenue",
+      "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: [
+      "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction",
+    ],
+  },
+  {
+    key: "169", category: "technician-dashboard", reportId: 169,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "ReplacementOpportunity", "LeadsSet", "AverageLeadSale", "ReplacementLeadConversionRate",
+      "ReplacementLeadsSold", "TotalLeadSales", "AverageReplacementLeadSale", "TechnicianId",
+    ],
+    nullableNumericFields: [
+      "ReplacementOpportunity", "LeadsSet", "AverageLeadSale", "ReplacementLeadConversionRate",
+      "TotalLeadSales",
+    ],
+  },
+  {
+    key: "170", category: "technician-dashboard", reportId: 170,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+      "OptionsPerOpportunity", "RecallsCaused", "TechnicianId", "AdjustmentRevenue",
+      "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["RevenuePerHour", "BillableEfficiency", "Upsold", "RecallsCaused"],
+  },
+  {
+    key: "171", category: "technician-dashboard", reportId: 171,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "MembershipOpportunities", "MembershipsSold", "MembershipConversionRate", "TechnicianId",
+      "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["MembershipOpportunities", "MembershipsSold", "MembershipConversionRate"],
+  },
+  {
+    key: "172", category: "technician-dashboard", reportId: 172,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity"],
+  },
+  {
+    key: "173", category: "technician-dashboard", reportId: 173,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TechnicianBusinessUnit", "TotalSalesFromTgl", "ClosedAverageSaleFromTgl",
+      "CloseRateFromTgl", "OptionsPerOpportunityFromTgl", "TechnicianBusinessUnitId", "TechnicianDivision",
+      "PaidTimeByBusinessUnit", "AdjustmentRevenue", "CompletedRevenueWithAdjustments", "TechnicianId",
+    ],
+    nullableNumericFields: ["TotalSalesFromTgl", "ClosedAverageSaleFromTgl", "CloseRateFromTgl"],
+  },
+  {
+    key: "174", category: "technician-dashboard", reportId: 174,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSalesFromMarketingLeads", "ClosedAverageSaleFromMarketingLeads",
+      "CloseRateFromMarketingLeads", "OptionsPerOpportunityFromMarketingLeads", "TechnicianId",
+      "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+    ],
+    nullableNumericFields: ["TotalSalesFromMarketingLeads", "ClosedAverageSaleFromMarketingLeads", "CloseRateFromMarketingLeads"],
+  },
+  {
+    key: "175", category: "business-unit-dashboard", reportId: 175,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+      "ConvertedJobs", "CustomerSatisfaction", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "CompletedRevenue", "OpportunityConversionRate", "Opportunity", "ConvertedJobs", "AdjustmentRevenue",
+      "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "176", category: "business-unit-dashboard", reportId: 176,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "LeadGenerationOpportunity", "LeadsSet", "LeadConversionRate", "AverageLeadSale",
+      "ReplacementOpportunity", "ReplacementLeadsSet", "ReplacementLeadConversionRate", "MembershipSales",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    nullableNumericFields: [
+      "LeadGenerationOpportunity", "LeadsSet", "LeadConversionRate", "AverageLeadSale",
+      "ReplacementOpportunity", "ReplacementLeadsSet", "ReplacementLeadConversionRate", "MembershipSales",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "177", category: "business-unit-dashboard", reportId: 177,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+      "OptionsPerOpportunity", "RecallsCaused", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity", "OptionsPerOpportunity",
+      "RecallsCaused", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "178", category: "business-unit-dashboard", reportId: 178,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "MembershipOpportunities", "MembershipsConverted", "MembershipConversionRate",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    nullableNumericFields: ["MembershipOpportunities", "MembershipsConverted", "MembershipConversionRate"],
+  },
+  {
+    key: "179", category: "business-unit-dashboard", reportId: 179,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+    requiresBusinessUnitName: true,
+    numericFields: [
+      "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+      "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+    ],
+  },
+  {
+    key: "182", category: "marketing", reportId: 182,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "Name", "Suspended", "Canceled", "Expired", "Deleted", "Renewed", "Reactivated", "NewSales",
+      "ActiveAtEnd",
+    ],
+    nullableNumericFields: ["Suspended", "Canceled", "Expired", "Deleted", "Renewed", "Reactivated", "NewSales", "ActiveAtEnd"],
+  },
+  {
+    key: "2281", category: "operations", reportId: 2281,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "InvoiceNumber", "Customer", "EMail", "Amount", "InvoiceBalance", "CustomerBalance", "Project",
+      "ProjectEmailed", "JobNumber", "JobType", "BusinessUnit", "Technician", "InvoicedOn", "EmailedOn",
+    ],
+    numericFields: ["Amount"],
+  },
+  {
+    key: "2282", category: "operations", reportId: 2282,
+    requiredParameters: ["From", "To"],
+    fields: [
+      "InvoiceNumber", "Customer", "EMail", "Amount", "InvoiceBalance", "CustomerBalance", "Project",
+      "ProjectEmailed", "JobNumber", "JobType", "BusinessUnit", "Technician", "InvoicedOn",
+    ],
+    numericFields: ["Amount"],
+  },
+] as const satisfies readonly ReportContract[];
 
-const CONTRACTS = new Map(INTELLIGENCE_REPORT_CONTRACTS.map((c) => [c.key, c]));
+export type ReportKey = typeof INTELLIGENCE_REPORT_CONTRACTS[number]["key"];
+
+const CONTRACTS = new Map<string, ReportContract>(INTELLIGENCE_REPORT_CONTRACTS.map((c) => [c.key, c]));
 
 export function getReportContract(key: string): ReportContract {
   const contract = CONTRACTS.get(key);
@@ -65,21 +249,31 @@ export interface ReportDefinition { parameters?: unknown[]; fields?: unknown[]; 
 
 export function validateReportDefinition(contract: ReportContract, definition: unknown): string[] {
   if (!isRecord(definition)) return ["definition is not an object"];
-  const parameterNames = new Set((Array.isArray(definition.parameters) ? definition.parameters : [])
-    .filter(isRecord).map((p) => p.name).filter((n): n is string => typeof n === "string"));
-  const fieldNames = (Array.isArray(definition.fields) ? definition.fields : [])
-    .filter(isRecord).map((f) => f.name).filter((n): n is string => typeof n === "string");
+  const parameters = (Array.isArray(definition.parameters) ? definition.parameters : []).filter(isRecord);
+  const parameterNames = new Set(parameters.map(parameter => parameter.name));
   const errors = contract.requiredParameters.filter((name) => !parameterNames.has(name))
     .map((name) => `missing required parameter ${name}`);
-  for (const parameter of (Array.isArray(definition.parameters) ? definition.parameters : []).filter(isRecord)) {
+  for (const parameter of parameters) {
     const name = typeof parameter.name === "string" ? parameter.name : undefined;
+    const sendsScalar = name !== undefined && contract.requiredParameters.includes(name);
+    if (parameter.isRequired === true && !sendsScalar) {
+      errors.push(name ? `unsupported required parameter ${name}` : "invalid required parameter metadata");
+    }
+    if (sendsScalar && parameter.isArray === true) {
+      errors.push(`parameter ${name} expects an array where a scalar is required`);
+    }
     const expected = name ? contract.parameterTypes?.[name] : undefined;
     if (expected && typeof parameter.dataType === "string" && parameter.dataType.toLowerCase() !== expected.toLowerCase()) {
       errors.push(`parameter ${name} has type ${parameter.dataType}; expected ${expected}`);
     }
   }
-  const missingFields = contract.fields.filter((name) => !fieldNames.includes(name));
-  if (missingFields.length) errors.push(`missing required fields ${missingFields.join(", ")}`);
+  try {
+    const columns = readReportColumns(definition.fields, "definition");
+    const missingFields = contract.fields.filter((name) => !columns.has(name));
+    if (missingFields.length) errors.push(`missing required fields ${missingFields.join(", ")}`);
+  } catch (error) {
+    errors.push(getErrorMessage(error));
+  }
   return errors;
 }
 
@@ -106,8 +300,56 @@ interface ExecutorOptions {
 interface ReportState { lastStartedAt: number; tail: Promise<void>; cache: Map<string,{expiresAt:number;value:ReportExecution}> }
 const CLIENT_STATES = new WeakMap<object, Map<string, ReportState>>();
 
-function fieldNames(fields: unknown): string[] {
-  return Array.isArray(fields) ? fields.filter(isRecord).map((f) => f.name).filter((v):v is string => typeof v === "string") : [];
+function readReportColumns(fields: unknown, label: string): Map<string, number> {
+  if (!Array.isArray(fields)) throw new Error(`${label} returned invalid fields`);
+  const columns = new Map<string, number>();
+  for (const [index, field] of fields.entries()) {
+    if (!isRecord(field) || typeof field.name !== "string" || field.name.trim().length === 0) {
+      throw new Error(`${label} returned invalid field metadata`);
+    }
+    if (columns.has(field.name)) throw new Error(`${label} has duplicate field names`);
+    columns.set(field.name, index);
+  }
+  return columns;
+}
+
+const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
+
+function isReportNumber(value: unknown): boolean {
+  // A numeric prefix followed by text is not a reported amount.
+  return typeof value === "string"
+    ? DECIMAL_NUMBER.test(value.trim()) && Number.isFinite(Number(value))
+    : Number.isFinite(value);
+}
+
+function isValidReportCell(contract: ReportContract, field: string, value: unknown): boolean {
+  if (contract.collectionFields?.includes(field)) return true;
+  if (field === "TechnicianId") {
+    // Report consumers skip unidentified rows and non-positive integer IDs.
+    return value === null || (typeof value === "string"
+      ? /^[+-]?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))
+      : Number.isSafeInteger(value));
+  }
+  if (contract.numericFields?.includes(field)) return isReportNumber(value);
+  if (contract.nullableNumericFields?.includes(field)) return value === null || isReportNumber(value);
+  if (contract.requiresBusinessUnitName && field === "Name") {
+    return typeof value === "string" && value.trim().length > 0;
+  }
+  return value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
+}
+
+function validateReportCells(
+  contract: ReportContract,
+  row: ReportRow,
+  pageLabel: string,
+  optionalFieldWarnings: Map<string, string>,
+): void {
+  for (const [field, value] of Object.entries(row)) {
+    if (isValidReportCell(contract, field, value)) continue;
+    const warning = `${pageLabel} returned an invalid value for ${field}`;
+    if (!contract.optionalFields?.includes(field)) throw new Error(warning);
+    if (!optionalFieldWarnings.has(field)) optionalFieldWarnings.set(field, warning);
+  }
 }
 
 function canonical(value: unknown): unknown {
@@ -164,13 +406,14 @@ export async function executeReport(
   try {
     const cachedAfterWait = state.cache.get(requestKey);
     if (cachedAfterWait && cachedAfterWait.expiresAt > now()) return cachedAfterWait.value;
-    const allRows: unknown[][] = [];
-    let fields: Array<{name:string;[key:string]:unknown}> = [];
-    let responseFieldNames: string[] = [];
+    const allRows: ReportRow[] = [];
+    const optionalFieldWarnings = new Map<string, string>();
+    let fields = new Set<string>();
+    let responseFields: Set<string> | undefined;
     let totalCount: number | undefined;
     let hasMore = false;
     let pagesFetched = 0;
-    for (let page=1; page<=maxPages; page += 1) {
+    for (let page = 1; page <= maxPages; page += 1) {
       throwIfAborted(signal);
       const waitMs = Math.max(0, state.lastStartedAt + cooldownMs - now());
       if (waitMs > 0) await sleep(waitMs);
@@ -190,40 +433,67 @@ export async function executeReport(
         }
         throw new Error(message);
       }
-      if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`Report ${key} returned an invalid page`);
-      if (typeof response.hasMore !== "boolean") throw new Error(`Report ${key} page ${page} omitted boolean hasMore`);
+      const pageLabel = `Report ${key} page ${page}`;
+      if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`${pageLabel} returned an invalid page`);
+      if (typeof response.hasMore !== "boolean") throw new Error(`${pageLabel} omitted boolean hasMore`);
       if (response.page !== undefined && response.page !== page) throw new Error(`Report ${key} returned page ${String(response.page)} while page ${page} was requested`);
-      if (response.totalCount !== undefined && (!Number.isSafeInteger(response.totalCount) || (response.totalCount as number) < 0)) {
-        throw new Error(`Report ${key} returned an invalid totalCount`);
+      if (response.pageSize !== undefined && response.pageSize !== pageSize) {
+        throw new Error(`${pageLabel} reported pageSize ${String(response.pageSize)} instead of ${pageSize}`);
       }
-      const names = fieldNames(response.fields);
-      if (new Set(names).size !== names.length) throw new Error(`Report ${key} page ${page} has duplicate field names`);
-      if (page === 1) {
-        const missing = contract.fields.filter((name) => !names.includes(name));
+      if (response.data.length > pageSize) throw new Error(`${pageLabel} returned more than ${pageSize} rows`);
+      if (response.data.length === 0 && (page > 1 || response.hasMore)) {
+        throw new Error(`${pageLabel} returned no rows despite indicating more data`);
+      }
+      const declaredTotal = response.totalCount;
+      if (declaredTotal !== undefined && declaredTotal !== null) {
+        if (typeof declaredTotal !== "number" || !Number.isSafeInteger(declaredTotal) || declaredTotal < 0) {
+          throw new Error(`${pageLabel} returned an invalid totalCount`);
+        }
+        if (totalCount !== undefined && totalCount !== declaredTotal) {
+          throw new Error(`${pageLabel} changed totalCount from ${totalCount} to ${declaredTotal}`);
+        }
+        totalCount = declaredTotal;
+      }
+      const columns = readReportColumns(response.fields, pageLabel);
+      if (responseFields === undefined) {
+        const missing = contract.fields.filter((name) => !columns.has(name));
         if (missing.length) throw new Error(`Report ${key} is missing required fields: ${missing.join(", ")}`);
-        responseFieldNames = names;
-        const outputNames = [...contract.fields, ...(contract.optionalFields ?? []).filter((name) => names.includes(name))];
-        fields = outputNames.map((name) => ({ name }));
-        if (typeof response.totalCount === "number") totalCount = response.totalCount;
-      } else if (names.join("\0") !== responseFieldNames.join("\0")) {
+        responseFields = new Set(columns.keys());
+        const optionalFields = (contract.optionalFields ?? []).filter((name) => columns.has(name));
+        fields = new Set([...contract.fields, ...optionalFields]);
+      } else if (columns.size !== responseFields.size || [...responseFields].some((name) => !columns.has(name))) {
         throw new Error(`Report ${key} fields changed between pages`);
       }
-      const indexes = fields.map((field) => names.indexOf(field.name));
-      const rows = (response.data.filter(Array.isArray) as unknown[][])
-        .map((row) => {
-          if (row.length !== names.length) throw new Error(`Report ${key} page ${page} returned a row with ${row.length} cells for ${names.length} fields`);
-          return indexes.map((index) => row[index]);
-        });
-      allRows.push(...rows); pagesFetched += 1; hasMore = response.hasMore === true;
-      if (allRows.length > maxRows) throw new Error(`Report ${key} exceeded the ${maxRows}-row safety limit`);
+      const outputColumns = [...columns].filter(([name]) => fields.has(name));
+
+      if (allRows.length + response.data.length > maxRows) {
+        throw new Error(`Report ${key} exceeded the ${maxRows}-row safety limit`);
+      }
+      for (const cells of response.data) {
+        if (!Array.isArray(cells)) throw new Error(`${pageLabel} returned an invalid row`);
+        if (cells.length !== columns.size) {
+          throw new Error(`${pageLabel} returned a row with ${cells.length} cells for ${columns.size} fields`);
+        }
+        const row: ReportRow = Object.fromEntries(outputColumns.map(([name, index]) => [name, cells[index]]));
+        validateReportCells(contract, row, pageLabel, optionalFieldWarnings);
+        allRows.push(row);
+      }
+      pagesFetched += 1;
+      hasMore = response.hasMore;
       if (!hasMore) break;
-      if (rows.length === 0) throw new Error(`Report ${key} returned hasMore=true with no rows`);
+      if (totalCount !== undefined && allRows.length >= totalCount) {
+        throw new Error(`${pageLabel} reported hasMore=true after reaching totalCount ${totalCount}`);
+      }
     }
-    if (hasMore) throw new Error(`Report ${key} exceeded the ${maxPages}-page safety limit`);
+    if (hasMore || pagesFetched === 0) throw new Error(`Report ${key} exceeded the ${maxPages}-page safety limit`);
     if (totalCount !== undefined && allRows.length !== totalCount) {
       throw new Error(`Report ${key} returned ${allRows.length} rows but totalCount was ${totalCount}`);
     }
-    const result: ReportExecution = { fields, data:allRows, page:1, pageSize, hasMore:false, totalCount, complete:true, pagesFetched, binding };
+    const result: ReportExecution = {
+      fields, optionalFieldWarnings, data: allRows, page: 1, pageSize, hasMore: false,
+      totalCount, complete: optionalFieldWarnings.size === 0, pagesFetched, binding,
+    };
+    if (!result.complete) return result;
     for (const [cacheKey, entry] of state.cache) if (entry.expiresAt <= now()) state.cache.delete(cacheKey);
     while (state.cache.size >= 100) state.cache.delete(state.cache.keys().next().value as string);
     state.cache.set(requestKey,{expiresAt:now()+cooldownMs,value:result});

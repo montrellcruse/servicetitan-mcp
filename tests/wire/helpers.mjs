@@ -93,26 +93,29 @@ async function freePort() {
   return port;
 }
 
-export async function launchHttp(overrides = {}, entrypoint = "streamable-http.js") {
+export async function launchHttp(overrides = {}, entrypoint = "streamable-http.js", fixture) {
   await assertBuild();
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
-  const child = spawn(process.execPath, [resolve(ROOT, "build", entrypoint)], {
-    cwd: ROOT, env: childEnvironment({ ST_MCP_PORT: String(port), ...overrides }), stdio: ["ignore", "pipe", "pipe"],
+  const preload = fixture ? ["--import", fixture] : [];
+  const child = spawn(process.execPath, [...preload, resolve(ROOT, "build", entrypoint)], {
+    cwd: ROOT,
+    env: childEnvironment({ ST_MCP_PORT: String(port), ...overrides }),
+    stdio: fixture ? ["ignore", "pipe", "pipe", "ipc"] : ["ignore", "pipe", "pipe"],
   });
   let stderr = "";
   child.stderr.on("data", chunk => { stderr = (stderr + chunk.toString()).slice(-16000); });
   child.stdout.resume();
   const exited = once(child, "exit");
   let stopped = false;
-  async function stop() {
+  async function stop(expectedExitCode = 0) {
     if (stopped) return;
     stopped = true;
     if (child.exitCode === null) child.kill("SIGTERM");
     let timer;
     try {
       const outcome = await Promise.race([exited, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("HTTP process failed to shut down after SIGTERM")), 12000); })]);
-      assert.equal(outcome[0], 0, `HTTP process exit: ${outcome}; ${stderr}`);
+      assert.deepEqual(outcome, [expectedExitCode, null], `HTTP process exit: ${outcome}; ${stderr}`);
       assert.doesNotMatch(stderr, /wire-fixture-secret|wire-fixture-app-key/);
     } finally {
       clearTimeout(timer);

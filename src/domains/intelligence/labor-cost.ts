@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -24,14 +23,6 @@ const laborCostSchema = z.object({
   technicianId: z.number().int().optional().describe("Filter by technician ID"),
   technicianName: z.string().optional().describe("Filter by technician name (resolved via cache, e.g. 'John'). Alternative to technicianId."),
 });
-
-const FIELD = {
-  EmployeeName: 0,
-  Date: 1,
-  RegularHours: 2,
-  OvertimeHours: 3,
-  DoubleOvertimeHours: 4,
-} as const;
 
 interface ActivityAccumulator {
   activity: string;
@@ -79,14 +70,6 @@ interface EmployeeLaborSummary {
   activityBreakdown: ActivityBreakdown[];
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function normalizeKey(value: string): string {
   return value.trim().toLowerCase();
 }
@@ -107,6 +90,7 @@ export function registerIntelligenceLaborCostTool(
     name: "intel_labor_cost",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["166"] },
     description:
       "Summarize employee regular, overtime, double-overtime, and total hours from Report 166 for the selected date range. When the tenant report exposes GrossPay, the tool also derives cost and effective hourly rate; otherwise those fields are unavailable rather than estimated. Report execution may wait for per-report/client spacing, and source failures are returned in _warnings." +
       '\n\nExamples:\n- "What labor hours were reported this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show overtime hours by employee for Q1" -> startDate="2026-01-01", endDate="2026-04-01"',
@@ -162,22 +146,21 @@ export function registerIntelligenceLaborCostTool(
           null,
         );
 
-        const rows = reportResponse ? extractReportRows(reportResponse) : [];
-        const grossPayIndex = reportResponse && Array.isArray(reportResponse.fields)
-          ? reportResponse.fields.findIndex((field) => field.name === "GrossPay")
-          : -1;
-        const costAvailable = grossPayIndex >= 0;
+        const rows = reportResponse?.data ?? [];
+        const grossPayWarning = reportResponse?.optionalFieldWarnings.get("GrossPay");
+        if (grossPayWarning) warnings.push(grossPayWarning);
+        const costAvailable = !grossPayWarning && (reportResponse?.fields.has("GrossPay") ?? false);
         const employeeMap = new Map<string, EmployeeAccumulator>();
         const businessUnitMap = new Map<string, BusinessUnitAccumulator>();
 
         for (const row of rows) {
-          const employeeName = toText(row[FIELD.EmployeeName]) ?? "Unknown Employee";
+          const employeeName = toText(row.EmployeeName) ?? "Unknown Employee";
           const activityName = "Reported hours";
           const businessUnitName = "Unavailable from Report 166";
-          const regularHours = toNumber(row[FIELD.RegularHours]);
-          const overtimeHours = toNumber(row[FIELD.OvertimeHours]);
-          const doubleOvertimeHours = toNumber(row[FIELD.DoubleOvertimeHours]);
-          const grossPay = costAvailable ? toNumber(row[grossPayIndex]) : 0;
+          const regularHours = toNumber(row.RegularHours);
+          const overtimeHours = toNumber(row.OvertimeHours);
+          const doubleOvertimeHours = toNumber(row.DoubleOvertimeHours);
+          const grossPay = costAvailable ? toNumber(row.GrossPay) : 0;
           const hours = totalHours(regularHours, overtimeHours, doubleOvertimeHours);
 
           const employeeKey = normalizeKey(employeeName);
@@ -338,7 +321,7 @@ export function registerIntelligenceLaborCostTool(
             available: costAvailable,
             reason: costAvailable
               ? "GrossPay is present in the configured report binding."
-              : "ServiceTitan Report 166 provides hours but no gross-pay field; labor cost cannot be calculated from this source.",
+              : grossPayWarning ?? "ServiceTitan Report 166 provides hours but no gross-pay field; labor cost cannot be calculated from this source.",
           },
           overtimePercent: round(
             safeDivide(totalOvertimeHours + totalDoubleOvertimeHours, totalHoursWorked) * 100,

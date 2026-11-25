@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -8,7 +8,13 @@ const script = resolve("scripts/check-release.mjs");
 const directories: string[] = [];
 afterEach(() => { for (const directory of directories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 const required = ["maintenance", "contracts", "analytics", "interface", "runtimeMatrix", "packageSmoke", "liveProduction", "latencyAndLoad"];
-type Gate = { status: string; reason?: string; requiredFor?: string };
+type Gate = {
+  status: string;
+  reason?: string;
+  requiredFor?: string;
+  sourceFingerprint?: string;
+  freshTenantCalls?: number | string;
+};
 function fixture() {
   const cwd = mkdtempSync(join(tmpdir(), "st-release-gate-")); directories.push(cwd);
   for (const dir of ["src", "tests", "scripts", "benchmarks", ".github/workflows", "docs/releases", "docs/contracts", "tests/fixtures"]) mkdirSync(join(cwd, dir), { recursive: true });
@@ -26,10 +32,57 @@ function fixture() {
   };
   const save = () => writeFileSync(join(cwd, "docs/releases/v3-acceptance.json"), JSON.stringify(record));
   const run = (...args: string[]) => spawnSync(process.execPath, [script, ...args], { cwd, encoding: "utf8" });
-  save(); record.sourceFingerprint = run("--fingerprint").stdout.trim(); save();
+  save();
+  record.sourceFingerprint = run("--fingerprint").stdout.trim();
+  gates.liveProduction = { status: "passed", sourceFingerprint: record.sourceFingerprint, freshTenantCalls: 4 };
+  save();
   return { cwd, record, save, run };
 }
 describe("release acceptance enforcement", () => {
+  it("accepts a pending production gate only in candidate mode", () => {
+    const f = fixture();
+    f.record.gates.liveProduction = { status: "pending" };
+    f.save();
+    const candidate = f.run("--candidate");
+    expect(candidate.status).toBe(0);
+    expect(candidate.stdout).toContain("liveProduction: pending");
+    const release = f.run();
+    expect(release.status).toBe(1);
+    expect(release.stderr).toContain("liveProduction: pending");
+  });
+  it("enforces the other acceptance requirements while candidate production is pending", () => {
+    const f = fixture();
+    f.record.gates.liveProduction = { status: "pending" };
+    f.record.gates.latencyAndLoad.status = "pending";
+    f.record.gates.liveIntegration.requiredFor = " ";
+    delete f.record.gates.liveSecondCompany;
+    f.record.supportPolicy.dashboardParity = true;
+    f.record.releaseDisposition = "unrestricted-stable";
+    f.record.version = "2.6.4";
+    writeFileSync(join(f.cwd, "src/example.ts"), "changed\n");
+    f.save();
+
+    const candidate = f.run("--candidate");
+    expect(candidate.status).toBe(1);
+    expect(candidate.stderr).toContain("latencyAndLoad: pending");
+    expect(candidate.stderr).toContain("liveIntegration: scoped_out requires");
+    expect(candidate.stderr).toContain("liveSecondCompany: missing");
+    expect(candidate.stderr).toContain("Support policy must match readonly-v1");
+    expect(candidate.stderr).toContain("Release disposition must be stable-readonly");
+    expect(candidate.stderr).toContain("Acceptance record version differs from package");
+    expect(candidate.stderr).toContain("Acceptance evidence does not match the current source fingerprint");
+    expect(candidate.stderr).not.toContain("liveProduction");
+  });
+  it.each([undefined, 0, -1, 1.5, "1"])("requires a positive integer fresh tenant call count (got %s)", freshTenantCalls => {
+    const f = fixture();
+    f.record.gates.liveProduction.freshTenantCalls = freshTenantCalls;
+    f.save();
+    for (const args of [[], ["--candidate"]]) {
+      const result = f.run(...args);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("liveProduction: passed evidence requires a positive integer freshTenantCalls");
+    }
+  });
   it("accepts scoped evidence only for the matching version and readonly support policy", () => {
     const f = fixture(); const result = f.run(); expect(result.status).toBe(0);
     expect(result.stdout).toContain("readonly-v1"); expect(result.stdout).toContain("scoped out, not verified");
@@ -51,8 +104,14 @@ describe("release acceptance enforcement", () => {
     expect(result.stderr).toContain("liveSecondCompany: scoped_out requires");
   });
   it.each(required)("cannot scope out the required %s gate", key => {
-    const f = fixture(); f.record.gates[key] = { status: "scoped_out", reason: "Unavailable", requiredFor: "Anything" }; f.save();
-    expect(f.run().status).toBe(1); expect(f.run().stderr).toContain(`${key}: scoped_out`);
+    const f = fixture();
+    f.record.gates[key] = { status: "scoped_out", reason: "Unavailable", requiredFor: "Anything" };
+    f.save();
+    for (const args of [[], ["--candidate"]]) {
+      const result = f.run(...args);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(`${key}: scoped_out`);
+    }
   });
   it("rejects broader support claims even with all gates marked passed", () => {
     const f = fixture();
@@ -69,15 +128,32 @@ describe("release acceptance enforcement", () => {
   it("invalidates evidence when credential exclusion rules or support guidance change", () => {
     const f = fixture();
     for (const file of [".dockerignore", ".gitignore", "SECURITY.md", "CONTRIBUTING.md", "ARCHITECTURE.md", "docs/contracts/README.md", "docs/releases/VALIDATION-v3.md", "docs/BENCHMARKS.md", "benchmarks/protocol.mjs", "glama.json", "tests/fixtures/discovery-v3.0.0.json"]) {
-      writeFileSync(join(f.cwd, file), "changed policy\n");
-      expect(f.run().stderr).toContain("source fingerprint");
-      f.record.sourceFingerprint = f.run("--fingerprint").stdout.trim(); f.save(); expect(f.run().status).toBe(0);
+      const target = join(f.cwd, file);
+      const original = readFileSync(target);
+      writeFileSync(target, "changed policy\n");
+      const result = f.run();
+      writeFileSync(target, original);
+      expect(result.stderr).toContain("Acceptance evidence does not match the current source fingerprint");
     }
+    expect(f.run().status).toBe(0);
   });
-  it("invalidates evidence when implementation or shipped catalog changes", () => {
-    const f = fixture(); writeFileSync(join(f.cwd, "src/example.ts"), "changed\n");
-    expect(f.run().stderr).toContain("source fingerprint");
-    f.record.sourceFingerprint = f.run("--fingerprint").stdout.trim(); f.save(); expect(f.run().status).toBe(0);
-    writeFileSync(join(f.cwd, "TOOLS.md"), "changed catalog\n"); expect(f.run().status).toBe(1);
+  it("requires current production evidence even after the acceptance fingerprint is refreshed", () => {
+    const f = fixture();
+    writeFileSync(join(f.cwd, "src/example.ts"), "changed\n");
+    expect(f.run().stderr).toContain("Acceptance evidence does not match the current source fingerprint");
+    f.record.sourceFingerprint = f.run("--fingerprint").stdout.trim();
+    f.save();
+    for (const args of [[], ["--candidate"]]) {
+      const result = f.run(...args);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("liveProduction: passed evidence must match the current source fingerprint");
+      expect(result.stderr).not.toContain("Acceptance evidence does not match");
+    }
+    f.record.gates.liveProduction.sourceFingerprint = f.record.sourceFingerprint;
+    f.save();
+    expect(f.run().status).toBe(0);
+    expect(f.run("--candidate").status).toBe(0);
+    writeFileSync(join(f.cwd, "TOOLS.md"), "changed catalog\n");
+    expect(f.run().status).toBe(1);
   });
 });

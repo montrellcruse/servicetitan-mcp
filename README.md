@@ -111,7 +111,7 @@ Writes are outside the stable v3 support commitment. To expose these experimenta
 
 ## Readiness and report compatibility
 
-`st_readiness_check` and the check CLI validate authentication, representative enabled-module reads, and configured report definitions. They return field/parameter metadata and definition fingerprints, not customer records. Missing scopes, missing reports, and incompatible fields are actionable failures. Representative read access does not certify every operation, write scope, or KPI amount.
+`st_readiness_check` and the check CLI validate authentication, representative reads for exposed tool domains, and the report definitions those tools use. A missing or incompatible report required by an exposed tool makes readiness partial. Failures for opt-in reports appear as limitations. In `st_readiness_check`, set `reports: true` to audit all supported definitions or `reports: false` to skip definitions. The manifest contains field and parameter metadata and definition fingerprints. For the export domain, readiness uses a one-record read with the same scopes as a selected export. If no bounded read applies, the export domain is unverified and readiness is partial. Representative read access does not certify every operation, write scope, or KPI amount.
 
 Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
 
@@ -119,9 +119,9 @@ Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
 ST_REPORT_BINDINGS={"166":{"category":"accounting","reportId":900166}}
 ```
 
-The keys are the logical report IDs used by analytics; the values select this company's category and actual report ID. Required fields are validated by name and reordered before calculations. Default Report 166 provides hours but no gross pay; labor costs and hourly rates are `null` with explicit availability metadata. A compatible configured report that includes `GrossPay` can supply those metrics.
+The keys are the logical report IDs used by analytics; the values select this company's category and actual report ID. Required fields are validated by name and reordered before calculations. Default Report 166 provides hours but no gross pay; labor costs and hourly rates are `null` with explicit availability metadata. A compatible configured report that includes `GrossPay` can supply those metrics. If any pay value is missing or invalid, the tool still returns valid hours and leaves pay-derived metrics `null`.
 
-Analytics follows pagination and rejects missing/inconsistent required data. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
+Analytics reads complete report feeds and matches each page's columns by name. Pages can present the same fields in different orders. A changed field set or malformed row makes that feed unavailable. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
 
 Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Representative readonly behavior has been exercised with one production company. V3 does not certify dashboard parity or independent-company compatibility; Scheduling Pro access returned 403 in that validation and remains unverified.
 
@@ -129,7 +129,7 @@ Metrics have explicit meanings. Period revenue minus payments is no longer label
 
 Successful tools provide the same JSON in `structuredContent` and the text content. Arrays/scalars are wrapped as `{data:...}`. Semantic fields, warnings, continuations, names, and precision are preserved. Timestamps may be rendered in the configured timezone without changing the instant; keys explicitly labeled UTC remain UTC.
 
-`ST_MAX_RESPONSE_CHARS` defaults to 100,000 and covers the final serialized tool envelope, including both representations. Large results can return an opaque handle for `st_result_read`: start at offset 0, concatenate each text chunk in `nextOffset` order, and parse the assembled JSON. Stored results belong to one server/session, expire after five minutes, and are bounded to four entries and 4 MB total. Restarting or closing the session removes them. A full store may evict older entries.
+`ST_MAX_RESPONSE_CHARS` defaults to 100,000 and covers the final serialized tool envelope, including both representations. Large results can return an opaque handle for `st_result_read`: start at offset 0, concatenate each text chunk in `nextOffset` order, and parse the assembled JSON. Stored results belong to one server/session, expire after five minutes, and are bounded to four entries and 4 MB total. Restarting or closing the session removes them. A full store may evict older entries when publishing a usable handle. If a handle cannot fit the response budget, existing entries stay readable within their lifetime.
 
 Stored chunks and normal tool responses can contain customer content. Protect the MCP channel and any client-side transcripts or exports, retrieve only what the workflow needs, and delete locally retained validation output when it is no longer needed. Do not publish raw live responses as test evidence.
 
@@ -147,7 +147,9 @@ Requests with a browser Origin require an exact `ST_CORS_ORIGIN` match. Without 
 
 `ST_ALLOWED_CALLERS` uses authenticated SDK identity. Request `_meta` and arbitrary forwarded identity headers are ignored. With the built-in shared API key, the authenticated principal is `ST_MCP_CLIENT_ID` (default `api-key`); this is one credential identity, not per-user identity. Embedders needing user identities must provide validated SDK `authInfo` through an authenticated transport.
 
-HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
+HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. During Streamable HTTP shutdown, new sessions and upstream tool calls are rejected. Pending handshakes and idle streams close. Admitted calls and existing-session result retrieval have up to ten seconds from the shutdown signal. If the deadline interrupts a request, the process exits with status `1`.
+
+Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
 
 Mutation audit events are emitted even when diagnostic log level is `error`; contact values, credentials, and free text are redacted. Configure durable stderr collection if durable audit retention is required.
 
@@ -177,7 +179,7 @@ npm run test:packaging
 npm run docs:tools
 npm run discovery:check
 npm pack --dry-run
-npm run release:check
+npm run candidate:check
 ```
 
 The contract generator uses the [pinned official September 4, 2026 snapshot](docs/contracts/README.md); upstream changes require a reviewed manifest regeneration. Contract tests cover resolved paths and request payloads. The normal suite includes auth/retry, paging, cancellation, DST, schema/metric, configuration isolation, transport and response-budget regressions. Built-process tests use dummy credentials and do not execute ServiceTitan business reads or writes.

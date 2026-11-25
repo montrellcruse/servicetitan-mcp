@@ -3,31 +3,196 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createMcpServer, loadConfig } from "../src/server.js";
 import type { ServiceTitanClient } from "../src/client.js";
+import { Logger } from "../src/logger.js";
 
 const env={ST_CLIENT_ID:"fixture",ST_CLIENT_SECRET:"fixture",ST_APP_KEY:"fixture",ST_TENANT_ID:"123",ST_LOG_LEVEL:"error"};
 
 describe("v3 real SDK integration",()=>{
-  it("round trips large results and enforces output schemas over the MCP wire",async()=>{
-    const payload={id:1,name:'Quote " slash \\ and 😀 '.repeat(150)};
-    const runtime=await createMcpServer(loadConfig({...env,ST_TOOL_PROFILE:"crm",ST_MAX_RESPONSE_CHARS:"1024"}),{client:{get:vi.fn(async()=>payload)} as unknown as ServiceTitanClient});
-    const client=new Client({name:"fixture",version:"1"});const [ct,st]=InMemoryTransport.createLinkedPair();
+  it("round trips exact published JSON at a constrained budget in a non-UTC timezone", async () => {
+    const budget = 500;
+    const original = {
+      prefix: "p".repeat(15),
+      startUtc: "2026-01-01T00:00:00Z",
+      data: 'Quote " slash \\ newline \n and 😀 '.repeat(150),
+      createdAt: "2026-01-01T00:00:00.1234567Z",
+    };
+    const expected = { ...original, createdAt: "2025-12-31T17:00:00.1234567-07:00" };
+    const runtime = await createMcpServer(loadConfig({
+      ...env, ST_TOOL_PROFILE: "crm", ST_MAX_RESPONSE_CHARS: String(budget), ST_TIMEZONE: "America/Phoenix",
+    }), { client: { get: vi.fn(async () => original) } as unknown as ServiceTitanClient });
+    const client = new Client({ name: "fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
     try {
-      await runtime.server.connect(st);await client.connect(ct);
-      const tools=await client.listTools();expect(tools.tools.every(t=>!!t.outputSchema)).toBe(true);
-      expect(tools.tools.some(t=>t.name==="crm_customers_update")).toBe(false);
-      const result=await client.callTool({name:"crm_customers_get",arguments:{id:1}});
-      expect(result.isError).not.toBe(true);const meta=result.structuredContent as any;
-      expect(meta.retrievalTool).toBe("st_result_read");
-      let offset=0,text="";
-      do {
-        const page=await client.callTool({name:"st_result_read",arguments:{resultId:meta.resultId,offset}});
-        expect(JSON.stringify(page).length).toBeLessThanOrEqual(1024);
-        expect(page.isError).not.toBe(true);
-        const chunk=page.structuredContent as any;text+=chunk.text;
-        if(chunk.nextOffset===null)break;offset=chunk.nextOffset;
-      }while(true);
-      expect(JSON.parse(text)).toEqual(payload);
-    }finally{await client.close();await runtime.server.close();}
+      await runtime.server.connect(serverTransport);
+      await client.connect(clientTransport);
+      const tools = await client.listTools();
+      expect(tools.tools.every(tool => !!tool.outputSchema)).toBe(true);
+      expect(tools.tools.some(tool => tool.name === "crm_customers_update")).toBe(false);
+
+      const result = await client.callTool({ name: "crm_customers_get", arguments: { id: 1 } });
+      expect(result.isError).not.toBe(true);
+      expect(JSON.stringify(result).length).toBeLessThanOrEqual(budget);
+      const handle = result.structuredContent as { retrievalTool: string; resultId: string; totalChars: number };
+      expect(handle.retrievalTool).toBe("st_result_read");
+      expect(handle.totalChars).toBe(JSON.stringify(expected).length);
+
+      let offset: number | null = 0;
+      let text = "";
+      for (let page = 0; page < 500 && offset !== null; page++) {
+        const result = await client.callTool({ name: "st_result_read", arguments: { resultId: handle.resultId, offset } });
+        expect(result.isError).not.toBe(true);
+        expect(JSON.stringify(result).length).toBeLessThanOrEqual(budget);
+        const chunk = result.structuredContent as { text: string; nextOffset: number | null };
+        expect(JSON.parse((result.content[0] as { text: string }).text)).toEqual(chunk);
+        expect(chunk.text.length).toBeGreaterThan(0);
+        expect(chunk.text.isWellFormed()).toBe(true);
+        if (chunk.nextOffset !== null) expect(chunk.nextOffset).toBe(offset + chunk.text.length);
+        text += chunk.text;
+        offset = chunk.nextOffset;
+      }
+      expect(offset).toBeNull();
+      expect(text).toBe(JSON.stringify(expected));
+
+      const invalidOffset = await client.callTool({
+        name: "st_result_read", arguments: { resultId: handle.resultId, offset: text.indexOf("😀") + 1 },
+      });
+      expect(invalidOffset.isError).toBe(true);
+      expect(invalidOffset.structuredContent).toMatchObject({ error: { message: "Invalid result offset" } });
+    } finally {
+      await client.close();
+      await runtime.server.close();
+    }
+  });
+
+  it("preserves all readable handles when a completed mutation cannot publish its result", async () => {
+    const budget = 470;
+    const get = vi.fn(async () => ({ data: "x".repeat(4000) }));
+    const patch = vi.fn(async () => ({ data: "y".repeat(4000) }));
+    const logger = new Logger("error");
+    const audit = vi.spyOn(logger, "audit").mockImplementation(() => {});
+    const runtime = await createMcpServer(loadConfig({
+      ...env,
+      ST_TOOL_PROFILE: "crm",
+      ST_MAX_RESPONSE_CHARS: String(budget),
+      ST_READONLY: "false",
+      ST_EXPERIMENTAL_WRITES: "true",
+      ST_CONFIRM_WRITES: "true",
+    }), { client: { get, patch } as unknown as ServiceTitanClient, logger });
+    const client = new Client({ name: "fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await runtime.server.connect(serverTransport);
+      await client.connect(clientTransport);
+
+      const handles: string[] = [];
+      for (let id = 1; id <= 4; id++) {
+        const result = await client.callTool({ name: "crm_customers_get", arguments: { id } });
+        expect(result.isError).not.toBe(true);
+        expect(result.structuredContent).toMatchObject({ delivery: "stored", resultId: expect.any(String) });
+        handles.push((result.structuredContent as { resultId: string }).resultId);
+      }
+
+      const mutation = await client.callTool({
+        name: "crm_customers_update",
+        arguments: { id: 5, payload: { name: "Synthetic" }, _confirmed: true },
+      });
+      expect(mutation.isError).toBe(true);
+      expect(JSON.stringify(mutation).length).toBeLessThanOrEqual(budget);
+      expect(mutation.structuredContent).toMatchObject({
+        error: { code: "RESPONSE_TOO_LARGE", mutationCompleted: true, retryable: false },
+      });
+      expect(JSON.parse((mutation.content[0] as { text: string }).text)).toEqual(mutation.structuredContent);
+      expect(patch).toHaveBeenCalledTimes(1);
+      expect(audit).toHaveBeenCalledExactlyOnceWith("[AUDIT] WRITE crm_customers_update", expect.objectContaining({
+        success: true, deliveryError: "RESPONSE_TOO_LARGE",
+      }));
+
+      for (const resultId of handles) {
+        const result = await client.callTool({ name: "st_result_read", arguments: { resultId } });
+        expect(result.isError).not.toBe(true);
+        expect(result.structuredContent).toMatchObject({ text: expect.stringMatching(/^{"data":"x+/) });
+      }
+
+      const fifth = await client.callTool({ name: "crm_customers_get", arguments: { id: 5 } });
+      expect(fifth.structuredContent).toMatchObject({ delivery: "stored" });
+      const evicted = await client.callTool({ name: "st_result_read", arguments: { resultId: handles[0] } });
+      expect(evicted.isError).toBe(true);
+      expect(JSON.stringify(evicted).length).toBeLessThanOrEqual(budget);
+      expect(evicted.structuredContent).toMatchObject({ error: { message: expect.stringMatching(/unavailable or expired/) } });
+    } finally {
+      await client.close();
+      await runtime.server.close();
+    }
+  });
+
+  it("evicts by total UTF-8 bytes and validates retrieval offsets", async () => {
+    const runtime = await createMcpServer(loadConfig({ ...env, ST_TOOL_PROFILE: "crm" }), {
+      client: { get: vi.fn(async () => ({ data: "é".repeat(999_994) })) } as unknown as ServiceTitanClient,
+    });
+    const client = new Client({ name: "fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await runtime.server.connect(serverTransport);
+      await client.connect(clientTransport);
+
+      async function publish(id: number) {
+        const result = await client.callTool({ name: "crm_customers_get", arguments: { id } });
+        expect(result.isError).not.toBe(true);
+        expect(result.structuredContent).toMatchObject({ delivery: "stored" });
+        return result.structuredContent as { resultId: string; totalChars: number };
+      }
+
+      // Each stored JSON object occupies 1,999,999 UTF-8 bytes.
+      const first = await publish(1);
+      const second = await publish(2);
+      const read = (resultId: string, offset = 0) => client.callTool({ name: "st_result_read", arguments: { resultId, offset } });
+      expect((await read(first.resultId)).isError).not.toBe(true);
+      const third = await publish(3);
+      expect((await read(first.resultId)).isError).toBe(true);
+      expect((await read(second.resultId)).isError).not.toBe(true);
+      expect((await read(third.resultId, third.totalChars)).structuredContent).toEqual({ text: "", nextOffset: null });
+      expect((await read(third.resultId, third.totalChars + 1)).structuredContent).toMatchObject({
+        error: { message: "Invalid result offset" },
+      });
+    } finally {
+      await client.close();
+      await runtime.server.close();
+    }
+  });
+
+  it("clears result handles when the transport closes and serves a fresh connection", async () => {
+    const budget = 500;
+    const runtime = await createMcpServer(loadConfig({
+      ...env, ST_TOOL_PROFILE: "crm", ST_MAX_RESPONSE_CHARS: String(budget),
+    }), { client: { get: vi.fn(async () => ({ data: "x".repeat(4000) })) } as unknown as ServiceTitanClient });
+    const onServerClose = vi.fn();
+    runtime.server.server.onclose = onServerClose;
+    const clients = [new Client({ name: "original", version: "1" }), new Client({ name: "reconnected", version: "1" })];
+    let oldHandle = "";
+    try {
+      for (const client of clients) {
+        const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+        const onTransportClose = vi.fn();
+        serverTransport.onclose = onTransportClose;
+        await runtime.server.connect(serverTransport);
+        await client.connect(clientTransport);
+        if (oldHandle) {
+          const oldResult = await client.callTool({ name: "st_result_read", arguments: { resultId: oldHandle } });
+          expect(oldResult.isError).toBe(true);
+          expect(oldResult.structuredContent).toMatchObject({ error: { message: expect.stringMatching(/unavailable or expired/) } });
+        }
+        const fresh = await client.callTool({ name: "crm_customers_get", arguments: { id: 1 } });
+        expect(fresh.isError).not.toBe(true);
+        expect(fresh.structuredContent).toMatchObject({ delivery: "stored", resultId: expect.any(String) });
+        oldHandle = (fresh.structuredContent as { resultId: string }).resultId;
+        await client.close();
+        expect(onTransportClose).toHaveBeenCalledTimes(1);
+      }
+      expect(onServerClose).toHaveBeenCalledTimes(2);
+    } finally {
+      await Promise.allSettled(clients.map(client => client.close()));
+      await runtime.server.close();
+    }
   });
 
   it("keeps oversized labor-cost handles session-owned when two SDK servers share the same API client", async () => {

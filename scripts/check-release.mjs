@@ -4,10 +4,14 @@ import path from 'node:path';
 
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
 const record = JSON.parse(await readFile('docs/releases/v3-acceptance.json', 'utf8'));
+const candidate = process.argv.includes('--candidate');
 // The policy is fixed in reviewed code, not weakened by editing the evidence record.
 const required = ['maintenance', 'contracts', 'analytics', 'interface', 'runtimeMatrix', 'packageSmoke', 'liveProduction', 'latencyAndLoad'];
 const scoped = ['liveIntegration', 'liveSecondCompany'];
-const failures = required.filter(key => record.gates?.[key]?.status !== 'passed')
+const production = record.gates?.liveProduction;
+const productionPending = production?.status === 'pending';
+const failures = required.filter(key => record.gates?.[key]?.status !== 'passed'
+  && !(candidate && key === 'liveProduction' && productionPending))
   .map(key => `${key}: ${record.gates?.[key]?.status ?? 'missing'}`);
 const policy = record.supportPolicy;
 if (policy?.id !== 'readonly-v1'
@@ -52,11 +56,20 @@ for (const file of sourceFiles) {
 const sourceFingerprint = hash.digest('hex');
 if (process.argv.includes('--fingerprint')) { console.log(sourceFingerprint); process.exit(0); }
 if (record.sourceFingerprint !== sourceFingerprint) failures.push('Acceptance evidence does not match the current source fingerprint');
+if (production?.status === 'passed') {
+  if (production.sourceFingerprint !== sourceFingerprint) {
+    failures.push('liveProduction: passed evidence must match the current source fingerprint');
+  }
+  if (!Number.isInteger(production.freshTenantCalls) || production.freshTenantCalls <= 0) {
+    failures.push('liveProduction: passed evidence requires a positive integer freshTenantCalls');
+  }
+}
 if (failures.length) {
   console.error('Release gates pending or failed:\n' + failures.map(x => ' - ' + x).join('\n'));
   process.exitCode = 1;
 } else {
-  console.log(`Release gates satisfied for ${pkg.version} under readonly-v1 (stable reads; experimental mutations)`);
+  console.log(`${candidate ? 'Candidate' : 'Release'} gates satisfied for ${pkg.version} under readonly-v1 (stable reads; experimental mutations)`);
+  if (productionPending) console.log(' - liveProduction: pending (required before publication)');
   for (const key of scoped) {
     if (record.gates[key].status === 'scoped_out') console.log(` - ${key}: scoped out, not verified`);
   }

@@ -6,13 +6,14 @@ import { z } from "./schema.js";
 import { type AuditEntry, AuditLogger, sanitizeParams } from "./audit.js";
 import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
-import { assertWritePolicy, ExperimentalWritesDisabledError } from "./config.js";
-import { isUnsupportedTool, UNSUPPORTED_TOOLS } from "./contracts/index.js";
-import { withRequestContext } from "./request-context.js";
-import { ResultStore } from "./result-store.js";
+import { ExperimentalWritesDisabledError } from "./config.js";
+import type { ReportKey } from "./domains/intelligence/report-executor.js";
+import { getRequestContext, withRequestContext } from "./request-context.js";
+import { type ResultChunk, ResultDelivery, getResponseDeliveryFailure } from "./result-delivery.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
-import { getResponseDeliveryFailure, toolError, toolResult } from "./utils.js";
+import { DOMAIN_FILTER_REASON, ToolCatalog } from "./tool-catalog.js";
+import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
 export const EXPERIMENTAL_MUTATION_NOTICE = "EXPERIMENTAL: This mutation has not been verified against a live ServiceTitan Integration environment. ";
@@ -54,6 +55,11 @@ export interface ToolDefinition {
   description: string;
   /** Overrides for hints not fixed by `operation`; `readOnlyHint` cannot be overridden. */
   annotations?: ToolAnnotationOverrides;
+  /** Pinned operation identity or the candidate request for a documented exclusion. */
+  apiContract?: { operationId: string } | { unsupportedRequest: { method: string; path: string } };
+  reports?: { required?: readonly ReportKey[]; optional?: readonly ReportKey[] };
+  /** Additional modules needed for this tool's default behavior. */
+  readinessDomains?: readonly string[];
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -77,27 +83,26 @@ export interface ToolHandlerExtra {
 }
 
 export class ToolRegistry {
-  private registered = 0;
-  private skipped = 0;
-  private domainFiltered = 0;
-  private readonly byDomain: Record<string, number> = {};
   private readonly registeredTools: ToolDefinition[] = [];
-  private readonly registeredToolNames = new Set<string>();
   private client: ServiceTitanClient | null = null;
   private activeCalls = 0;
-  private readonly resultStore = new ResultStore();
-  private readonly unavailableTools: Record<string, string> = {};
-  private readonly seenToolNames = new Set<string>();
+  private sessionResults?: ResultDelivery;
+  readonly catalog: ToolCatalog;
 
   constructor(
-    private readonly server: McpServer,
+    private readonly server: McpServer | undefined,
     private readonly config: ServiceTitanConfig,
     private readonly logger: Logger,
     private readonly auditLogger: AuditLogger = new AuditLogger(logger),
-  ) { assertWritePolicy(config); }
+    catalog?: ToolCatalog,
+  ) { this.catalog = new ToolCatalog(config, catalog); }
 
   attachClient(client: ServiceTitanClient): void {
     this.client = client;
+  }
+
+  get hasActiveToolCalls(): boolean {
+    return this.activeCalls > 0;
   }
 
   /**
@@ -112,69 +117,54 @@ export class ToolRegistry {
     return this.config.reportBindings ?? {};
   }
 
-  getUnavailableTools(): Record<string, string> { return { ...this.unavailableTools }; }
+  getUnavailableTools(): Record<string, string> {
+    return Object.fromEntries(this.catalog.getInventory().flatMap(({ tool, exclusionReason }) =>
+      exclusionReason ? [[tool.name, exclusionReason]] : []));
+  }
 
-  clearResults(): void { this.resultStore.clear(); }
-  readResult(resultId: string, offset: number): Record<string, unknown> {
-    // Worst-case JSON escaping and duplicated text/structured content stay within the response budget.
-    return this.resultStore.read(resultId, offset, Math.max(1, Math.floor((this.config.maxResponseChars - 180) / 16)));
+  clearResults(): void {
+    // Legacy SSE reconnects the registry to a new transport. In-flight calls
+    // from the closed session keep their closed publisher.
+    this.sessionResults?.close();
+    this.sessionResults = undefined;
+  }
+
+  private get resultDelivery(): ResultDelivery {
+    return this.sessionResults ??= new ResultDelivery();
+  }
+
+  readResult(resultId: string, offset: number): ResultChunk {
+    return this.resultDelivery.read(resultId, offset, this.config.maxResponseChars);
   }
 
 
-  validateSelection(): void {
-    const missing = (this.config.enabledTools ?? []).filter(name => !this.seenToolNames.has(name));
-    if (missing.length) throw new Error(`ST_TOOLS includes unknown tools: ${missing.join(", ")}`);
-    const unavailable = (this.config.enabledTools ?? []).filter(name => this.unavailableTools[name]);
-    if (unavailable.length) throw new Error(`ST_TOOLS includes unavailable tools: ${unavailable.map(name => `${name} (${this.unavailableTools[name]})`).join(", ")}`);
-  }
+  validateSelection(): void { this.catalog.validateSelection(); }
 
   register(tool: ToolDefinition): void {
-    assertWritePolicy(this.config);
-    const domain = tool.domain.toLowerCase();
-    this.seenToolNames.add(tool.name);
-    const profiles: Record<string, readonly string[]> = {
-      crm: ["crm"], dispatch: ["dispatch", "scheduling", "people", "settings"],
-      analytics: ["intelligence", "reporting", "settings"],
-    };
-    const profileDomains = profiles[this.config.toolProfile ?? "full"];
-    const reason = isUnsupportedTool(tool.name) ? UNSUPPORTED_TOOLS[tool.name].reason
-      : this.config.readonlyMode && tool.operation !== "read" ? "Readonly mode: mutation not available"
-      : domain !== "_system" && profileDomains && !profileDomains.includes(domain) ? "Excluded by tool profile"
-      : domain !== "_system" && this.config.enabledTools && !this.config.enabledTools.includes(tool.name) ? "Excluded by tool allowlist"
-      : null;
-    if (reason) {
-      this.unavailableTools[tool.name] = reason;
-      this.skipped += 1;
-      return;
+    const entry = this.catalog.add(tool);
+    if (this.server && !entry.exclusionReason) {
+      this.registerSelected(this.server, { ...tool, domain: entry.tool.domain });
     }
+  }
 
-    if (
-      domain !== "_system" &&
-      this.config.enabledDomains !== null &&
-      !this.config.enabledDomains.includes(domain)
-    ) {
-      this.skipped += 1;
-      this.domainFiltered += 1;
-      this.logger.debug("Skipped tool due to domain filter", {
-        tool: tool.name,
-        domain,
-      });
-      return;
+  registerCatalog(handlers: Readonly<Record<string, ToolDefinition["handler"]>>): void {
+    if (!this.server) throw new Error("Tool registration requires an MCP server");
+    for (const tool of this.catalog.getSelectedTools()) {
+      const handler = tool.handler ?? handlers[tool.name];
+      if (!handler) throw new Error(`Missing handler for "${tool.name}"`);
+      this.registerSelected(this.server, { ...tool, handler });
     }
+  }
 
+  private registerSelected(server: McpServer, tool: ToolDefinition): void {
     const wrappedTool = this.wrapTool({
       ...tool,
-      domain,
       description: tool.operation === "read" ? tool.description : EXPERIMENTAL_MUTATION_NOTICE + tool.description,
     });
 
-    if (this.registeredToolNames.has(wrappedTool.name)) {
-      throw new Error(`Tool "${wrappedTool.name}" is already registered`);
-    }
-
     const defaultAnnotations = DEFAULT_ANNOTATIONS[wrappedTool.operation];
 
-    this.server.registerTool(
+    server.registerTool(
       wrappedTool.name,
       {
         description: wrappedTool.description,
@@ -189,9 +179,6 @@ export class ToolRegistry {
       wrappedTool.handler,
     );
 
-    this.registered += 1;
-    this.byDomain[domain] = (this.byDomain[domain] ?? 0) + 1;
-    this.registeredToolNames.add(wrappedTool.name);
     this.registeredTools.push(wrappedTool);
   }
 
@@ -216,11 +203,7 @@ export class ToolRegistry {
   }
 
   getStats(): { registered: number; skipped: number; byDomain: Record<string, number> } {
-    return {
-      registered: this.registered,
-      skipped: this.skipped,
-      byDomain: { ...this.byDomain },
-    };
+    return this.catalog.getStats();
   }
 
   getRegisteredTools(): ToolDefinition[] {
@@ -228,14 +211,11 @@ export class ToolRegistry {
   }
 
   logSummary(): void {
+    const { registered, skipped } = this.catalog.getStats();
+    const domainFiltered = this.catalog.getInventory().filter(entry => entry.exclusionReason === DOMAIN_FILTER_REASON).length;
     this.logger.info(
-      `Registered ${this.registered} tools (${this.skipped} skipped, ${this.domainFiltered} domain-filtered)`,
-      {
-        registered: this.registered,
-        skipped: this.skipped,
-        
-        domainFiltered: this.domainFiltered,
-      },
+      `Registered ${registered} tools (${skipped} skipped, ${domainFiltered} domain-filtered)`,
+      { registered, skipped, domainFiltered },
     );
   }
 
@@ -244,6 +224,7 @@ export class ToolRegistry {
     const requiresDeleteConfirmation = tool.operation === "delete";
     const isMutating = tool.operation === "write" || tool.operation === "delete";
     const shouldAudit = isMutating;
+    const isLocalResultRead = tool.domain === "_system" && tool.operation === "read" && tool.name === "st_result_read";
 
     const schema: Record<string, ZodType> = requiresDeleteConfirmation
       ? {
@@ -333,11 +314,14 @@ export class ToolRegistry {
       timer.unref();
       const signal = extra?.signal ? AbortSignal.any([extra.signal, deadline.signal]) : deadline.signal;
       try {
-        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, storeOversized: payload => this.resultStore.put(payload) }, async () => {
+        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, resultDelivery: this.resultDelivery }, async () => {
           if (signal.aborted) return toolError("Tool execution cancelled");
+          const handlerExtra = { ...extra, signal };
+          // Local reads can finish while an admitted call occupies the upstream slot.
+          if (isLocalResultRead && getRequestContext().drainingHttpSession) return executeHandler(params, handlerExtra);
           if (this.activeCalls >= (this.config.maxConcurrentToolCalls ?? 16)) return toolError("Server is busy; retry after active tool calls complete");
           this.activeCalls += 1;
-          try { return await executeHandler(params, { ...extra, signal }); }
+          try { return await executeHandler(params, handlerExtra); }
           finally { this.activeCalls -= 1; }
         });
       } finally { clearTimeout(timer); }

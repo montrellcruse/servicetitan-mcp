@@ -70,6 +70,7 @@
     "test:wire": "npm run build && node --test tests/wire/*.test.mjs",
     "test:packaging": "node --test tests/packaging/*.test.mjs",
     "test:coverage": "vitest run --coverage",
+    "candidate:check": "node scripts/check-release.mjs --candidate",
     "release:check": "node scripts/check-release.mjs",
     "discovery:check": "node scripts/discovery-audit.mjs"
   },

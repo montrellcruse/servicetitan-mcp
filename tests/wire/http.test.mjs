@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
+import { once } from "node:events";
+import { resolve } from "node:path";
 import test from "node:test";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { API_KEY, allTools, assertCatalog, assertSafeError, launchHttp, malformedHost, rawMcp } from "./helpers.mjs";
+import { API_KEY, ROOT, allTools, assertCatalog, assertSafeError, launchHttp, malformedHost, rawMcp } from "./helpers.mjs";
 
 async function sdkClient(url, headers = {}) {
   const transport = new StreamableHTTPClientTransport(new URL(`${url}/mcp`), { requestInit: { headers: { authorization: `bEaReR ${API_KEY}`, ...headers } }, reconnectionOptions: { maxRetries: 0 } });
@@ -13,9 +15,21 @@ async function sdkClient(url, headers = {}) {
   return { client, transport, close: async () => { try { await transport.terminateSession(); } finally { await client.close(); } } };
 }
 
+test("built HTTP rejects a tool selection outside its domain filter before listening", { timeout: 20000 }, async () => {
+  await assert.rejects(async () => {
+    const runtime = await launchHttp({
+      ST_DOMAINS: "inventory",
+      ST_TOOLS: "crm_customers_get",
+    });
+    await runtime.stop();
+  }, /crm_customers_get.*Excluded by domain filter/);
+});
+
 test("built HTTP rejects invalid boundaries and supports SDK session deletion/reconnection", { timeout: 30000 }, async () => {
   const runtime = await launchHttp({ ST_CORS_ORIGIN: "https://operator.example" });
   try {
+    const health = await fetch(`${runtime.url}/health`, { signal: AbortSignal.timeout(5000) });
+    assert.equal((await health.json()).tools, 33);
     assert.equal((await rawMcp(runtime.url, { headers: { "x-api-key": "wrong" } })).status, 401);
     assert.equal((await rawMcp(runtime.url, { headers: { origin: "https://malicious.example" } })).status, 403);
     assert.equal(await malformedHost(runtime.port), 400);
@@ -67,5 +81,193 @@ test("built HTTP derives caller identity from its credential and rejects self-as
   } finally {
     try { if (connection) await connection.close(); }
     finally { await runtime.stop(); }
+  }
+});
+
+function toolCall(id, name, args) {
+  return { jsonrpc: "2.0", id, method: "tools/call", params: { name, arguments: args } };
+}
+
+function toolResult(response) {
+  assert.equal(response.status, 200);
+  const line = response.text.split("\n").find(value => value.startsWith("data: "));
+  assert(line, "Expected a tool result on the response stream");
+  const result = JSON.parse(line.slice("data: ".length)).result;
+  assert(result && !result.isError, line);
+  return result.structuredContent;
+}
+
+const drainFixture = resolve(ROOT, "tests/fixtures/wire-http-drain.mjs");
+
+function idleStream(url, headers) {
+  return fetch(`${url}/mcp`, {
+    headers: { ...headers, "x-api-key": API_KEY, accept: "text/event-stream" },
+    signal: AbortSignal.timeout(5000),
+  });
+}
+
+test("built HTTP drains admitted work and keeps both existing and newly published handles readable", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000", ST_MAX_CONCURRENT_TOOLS: "1" }, "streamable-http.js", drainFixture);
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const headers = { "mcp-session-id": sessionId };
+    const call = body => rawMcp(runtime.url, { headers, body });
+    const earlier = toolResult(await call(toolCall(2, "crm_customers_get", { id: 7 })));
+    assert.equal(earlier.delivery, "stored");
+
+    const idle = await idleStream(runtime.url, headers);
+    assert.equal(idle.status, 200);
+
+    const started = once(runtime.child, "message", { signal: AbortSignal.timeout(5000) });
+    const admitted = call(toolCall(3, "crm_customers_get", { id: 8 }));
+    void admitted.catch(() => {});
+    const [upstream] = await started;
+    assert.deepEqual(upstream, { upstreamStarted: 8 });
+    const busy = await call(toolCall(4, "crm_customers_get", { id: 9 }));
+    assert.match(busy.text, /Server is busy/);
+    runtime.child.kill("SIGTERM");
+    await idle.text();
+
+    assert.equal((await rawMcp(runtime.url)).status, 503);
+    assert.equal((await call(toolCall(5, "crm_customers_get", { id: 9 }))).status, 503);
+    assert.equal((await rawMcp(runtime.url, { method: "GET", headers })).status, 503);
+
+    let requestId = 6;
+    async function readCustomer(handle, customerId) {
+      let text = "";
+      let offset = 0;
+      do {
+        const chunk = toolResult(await call(toolCall(requestId++, "st_result_read", { resultId: handle.resultId, offset })));
+        assert(chunk.nextOffset === null || chunk.nextOffset > offset);
+        text += chunk.text;
+        offset = chunk.nextOffset;
+      } while (offset !== null);
+      assert.deepEqual(JSON.parse(text), { id: customerId, name: "x".repeat(2000) });
+    }
+    await readCustomer(earlier, 7);
+    if (runtime.child.connected) runtime.child.send("release-customer", () => {});
+    const finished = toolResult(await admitted);
+    assert.equal(finished.delivery, "stored");
+    await readCustomer(finished, 8);
+    assert.equal((await rawMcp(runtime.url, { method: "DELETE", headers })).status, 200);
+  } finally {
+    await runtime.stop();
+  }
+});
+
+test("built HTTP aborts unfinished work at the first signal's ten-second deadline", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000" }, "streamable-http.js", drainFixture);
+  const { child } = runtime;
+  const message = () => once(child, "message", { signal: AbortSignal.timeout(5000) });
+  async function command(value) {
+    const reply = message();
+    child.send(value);
+    return (await reply)[0];
+  }
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const headers = { "mcp-session-id": sessionId };
+    const idle = await idleStream(runtime.url, headers);
+    assert.equal(idle.status, 200);
+
+    const started = message();
+    const admitted = rawMcp(runtime.url, { headers, body: toolCall(2, "crm_customers_get", { id: 8 }) });
+    const completion = admitted.then(response => response.text, () => "");
+    assert.deepEqual((await started)[0], { upstreamStarted: 8 });
+    assert.equal(await command("freeze-clock"), "clock-frozen");
+    child.kill("SIGTERM");
+    await idle.text();
+
+    assert.equal(await command(5000), "clock-advanced");
+    const interrupted = message();
+    child.kill("SIGINT");
+    assert.equal((await interrupted)[0], "interrupt-seen");
+
+    assert.equal(await command(4999), "clock-advanced");
+    assert.equal((await rawMcp(runtime.url)).status, 503);
+    const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
+    assert.deepEqual(await command(1), { upstreamAborted: 8 });
+    assert.deepEqual(await exited, [1, null]);
+    assert.equal(await completion, "");
+    await assert.rejects(fetch(`${runtime.url}/health`, { signal: AbortSignal.timeout(1000) }));
+  } finally {
+    await runtime.stop(1);
+  }
+});
+
+test("built HTTP reports a cutoff when a disconnected client still has admitted work", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000" }, "streamable-http.js", drainFixture);
+  const { child } = runtime;
+  const nextMessage = () => once(child, "message", { signal: AbortSignal.timeout(5000) });
+  const controller = new AbortController();
+
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const headers = { "mcp-session-id": sessionId };
+    const idle = await idleStream(runtime.url, headers);
+    assert.equal(idle.status, 200);
+
+    const started = nextMessage();
+    const request = fetch(`${runtime.url}/mcp`, {
+      method: "POST",
+      headers: {
+        ...headers,
+        "x-api-key": API_KEY,
+        "x-fixture-watch-close": "true",
+        "content-type": "application/json",
+        accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify(toolCall(2, "crm_customers_get", { id: 8 })),
+      signal: controller.signal,
+    }).then(response => response.text());
+    const disconnected = assert.rejects(request, { name: "AbortError" });
+    // Keep a failing initialization from leaving a rejected promise unobserved.
+    void disconnected.catch(() => {});
+    assert.deepEqual((await started)[0], { upstreamStarted: 8 });
+    const responseClosed = nextMessage();
+    controller.abort();
+    await disconnected;
+    assert.deepEqual((await responseClosed)[0], { clientDisconnected: true });
+
+    const frozen = nextMessage();
+    child.send("freeze-clock");
+    assert.equal((await frozen)[0], "clock-frozen");
+    child.kill("SIGTERM");
+    await idle.text();
+
+    const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
+    const aborted = nextMessage();
+    child.send(10_000);
+    assert.deepEqual((await aborted)[0], { upstreamAborted: 8 });
+    assert.deepEqual(await exited, [1, null]);
+  } finally {
+    controller.abort();
+    await runtime.stop(1);
+  }
+});
+
+test("built HTTP exits cleanly at the drain deadline when no work remains", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({}, "streamable-http.js", drainFixture);
+  const { child } = runtime;
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const idle = await idleStream(runtime.url, { "mcp-session-id": sessionId });
+    assert.equal(idle.status, 200);
+
+    const frozen = once(child, "message", { signal: AbortSignal.timeout(5000) });
+    child.send("freeze-clock");
+    assert.equal((await frozen)[0], "clock-frozen");
+    child.kill("SIGTERM");
+    await idle.text();
+
+    const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
+    child.send(10000);
+    assert.deepEqual(await exited, [0, null]);
+  } finally {
+    await runtime.stop();
   }
 });

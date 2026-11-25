@@ -12,6 +12,7 @@ import {
 import { ToolRegistry } from "../../src/registry.js";
 import { getReportContract } from "../../src/domains/intelligence/report-executor.js";
 import { awaitWithSignal, withRequestContext } from "../../src/request-context.js";
+import { ResultDelivery } from "../../src/result-delivery.js";
 import type { ToolResponse } from "../../src/types.js";
 
 const ORIGINAL_ST_RESPONSE_SHAPING = process.env.ST_RESPONSE_SHAPING;
@@ -326,9 +327,9 @@ describe("intelligence domain", () => {
   it("never caches or shares session-owned large-result handles", async () => {
     let calls=0;
     const load=async()=>({content:[{type:"text",text:JSON.stringify({retrievalTool:"st_result_read",resultId:`id-${++calls}`})}],structuredContent:{retrievalTool:"st_result_read",resultId:`id-${calls}`}});
-    const store=()=>({resultId:"stored",retrievalTool:"st_result_read"});
-    await withRequestContext({storeOversized:store},()=>withIntelCache("intel_handle",{},load,60_000));
-    await withRequestContext({storeOversized:store},()=>withIntelCache("intel_handle",{},load,60_000));
+    const resultDelivery = new ResultDelivery();
+    await withRequestContext({resultDelivery},()=>withIntelCache("intel_handle",{},load,60_000));
+    await withRequestContext({resultDelivery},()=>withIntelCache("intel_handle",{},load,60_000));
     expect(calls).toBe(2);
   });
 

@@ -125,7 +125,7 @@ try {
   const isolatedParams = parameters("2026-05-01");
   const resultA = await executeReport(clientA.client, "166", isolatedParams, undefined, { cooldownMs: 60_000, now: () => 30_000, sleep: async () => {} });
   const resultB = await executeReport(clientB.client, "166", isolatedParams, undefined, { cooldownMs: 60_000, now: () => 30_000, sleep: async () => {} });
-  if (clientA.calls() !== 1 || clientB.calls() !== 1 || resultA.data[0]?.[0] !== "Tenant A 1" || resultB.data[0]?.[0] !== "Tenant B 1") throw new Error("Per-client report isolation invariant failed");
+  if (clientA.calls() !== 1 || clientB.calls() !== 1 || resultA.data[0]?.EmployeeName !== "Tenant A 1" || resultB.data[0]?.EmployeeName !== "Tenant B 1") throw new Error("Per-client report isolation invariant failed");
 
   const modeledSamples = 10;
   const modeledOnePageTimes = [], modeledColdTimes = [];
@@ -162,7 +162,7 @@ try {
       productionCooldownMeasured: false,
       note: "Local distributions measure executor/cache overhead. modeledUpstreamLatency uses an explicit per-page timer and is synthetic, not production ServiceTitan latency.",
     },
-    report: { coldCompleteThreePage: { latency: distribution(coldTimes), upstreamCalls: cold.calls(), expectedCalls: samples * 3, rowsPerResult: 3 }, warmCompleteThreePage: { latency: distribution(warmTimes), upstreamCallsAfterSeed: warm.calls() - callsAfterSeed, rowsPerResult: 3 }, duplicateFanIn: { callers: 20, upstreamCalls: fan.calls(), returnedRows: fanResults.reduce((sum, value) => sum + value.data.length, 0) }, perClientIsolation: { clientACalls: clientA.calls(), clientBCalls: clientB.calls(), clientAFirstValue: resultA.data[0]?.[0], clientBFirstValue: resultB.data[0]?.[0] } },
+    report: { coldCompleteThreePage: { latency: distribution(coldTimes), upstreamCalls: cold.calls(), expectedCalls: samples * 3, rowsPerResult: 3 }, warmCompleteThreePage: { latency: distribution(warmTimes), upstreamCallsAfterSeed: warm.calls() - callsAfterSeed, rowsPerResult: 3 }, duplicateFanIn: { callers: 20, upstreamCalls: fan.calls(), returnedRows: fanResults.reduce((sum, value) => sum + value.data.length, 0) }, perClientIsolation: { clientACalls: clientA.calls(), clientBCalls: clientB.calls(), clientAFirstValue: resultA.data[0]?.EmployeeName, clientBFirstValue: resultB.data[0]?.EmployeeName } },
     lookup: { coldLatency: distribution(lookupColdTimes), warmLatency: distribution(lookupWarmTimes), upstreamCalls: lookupCalls, expectedUpstreamCalls: samples + 1, returnedRows: 1 },
     responseCache: { coldLatency: distribution(responseColdTimes), warmLatency: distribution(responseWarmTimes), coldLoaderCalls: responseColdLoads, warmLoaderCalls: responseWarmLoads, returnedRows: 50, ttlInvalidationLoads: ttlLoads },
     modeledUpstreamLatency: { samples: modeledSamples, delayPerPageMs: modeledDelayMs, onePageCold: { latency: distribution(modeledOnePageTimes), calls: modeledOnePageCalls, rowsPerResult: 1 }, completeThreePageCold: { latency: distribution(modeledColdTimes), calls: modeledColdCalls, rowsPerResult: 3 }, completeThreePageWarm: { latency: distribution(modeledWarmTimes), upstreamCallsAfterSeed: modeledWarm.calls() - modeledWarmCallsAfterSeed, rowsPerResult: 3 }, tradeoff: "Complete cold pagination adds one modeled upstream round trip per additional page while preventing first-page undercounting; a valid warm cache avoids those upstream calls." },

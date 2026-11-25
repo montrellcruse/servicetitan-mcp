@@ -1,8 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { ServiceTitanApiError, type ServiceTitanClient } from "../src/client.js";
 import { loadConfig } from "../src/config.js";
 import { checkReadiness } from "../src/readiness.js";
 import { withRequestContext } from "../src/request-context.js";
+import { createMcpServer } from "../src/server.js";
 
 // Minimal synthetic definitions, explicitly maintained apart from the production
 // contract table so a changed requirement cannot silently change its fixture.
@@ -47,7 +50,147 @@ function fakeClient(overrides:Record<string,unknown>={},alternate=false) {
   })} as unknown as ServiceTitanClient;
 }
 
+async function mcpReadiness(client: ServiceTitanClient, tool: string, reports?: boolean) {
+  const config = loadConfig({ ...base, ST_TOOLS: tool });
+  const runtime = await createMcpServer(config, { client });
+  const sdk = new Client({ name: "readiness-fixture", version: "1" });
+  const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+  try {
+    await runtime.server.connect(serverTransport);
+    await sdk.connect(clientTransport);
+    const result = await sdk.callTool({ name: "st_readiness_check", arguments: reports === undefined ? {} : { reports } });
+    expect(result.isError).toBeFalsy();
+    return result.structuredContent;
+  } finally {
+    await sdk.close();
+    await runtime.server.close();
+  }
+}
+
 describe("readiness compatibility manifests",()=>{
+  it("checks only the required labor report in a labor-cost-only MCP catalog", async () => {
+    const client = fakeClient();
+    const result = await mcpReadiness(client, "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      reports: [{ key: "166", status: "available", required: true, grossPayAvailable: false }],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith("/tenant/{tenant}/report-category/accounting/reports/166");
+  });
+  it("checks reports required by tools added to an embedded server", async () => {
+    const client = fakeClient({ 166: new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
+    const config = loadConfig({ ...base, ST_DOMAINS: "reporting" });
+    const { server, registry } = await createMcpServer(config, { client });
+    registry.register({
+      name: "fixture_labor_report",
+      domain: "reporting",
+      operation: "read",
+      description: "Fixture report dependency",
+      reports: { required: ["166"] },
+      schema: {},
+      handler: async () => ({ content: [] }),
+    });
+    const sdk = new Client({ name: "embedded-readiness-fixture", version: "1" });
+    const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+    try {
+      await server.connect(serverTransport);
+      await sdk.connect(clientTransport);
+      expect((await sdk.listTools()).tools.map(tool => tool.name)).toContain("fixture_labor_report");
+      const result = await sdk.callTool({ name: "st_readiness_check", arguments: {} });
+      expect(result.structuredContent).toMatchObject({
+        status: "partial",
+        reports: [{ key: "166", required: true, status: "unavailable" }],
+      });
+    } finally {
+      await sdk.close();
+      await server.close();
+    }
+  });
+
+  it.each([
+    ["unavailable", new ServiceTitanApiError(404, "Missing fixture definition", "/report")],
+    ["incompatible", { parameters: [], fields: [] }],
+  ])("is partial when its required definition is %s", async (reportStatus, definition) => {
+    const result = await mcpReadiness(fakeClient({ "166": definition }), "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      reports: [{ key: "166", status: reportStatus, required: true }],
+    });
+  });
+  const laborDefinition = definitions.get("166")!;
+  it.each([
+    ["duplicate field names", { fields: [...laborDefinition.fields, laborDefinition.fields[0]] }],
+    ["invalid field metadata", { fields: [...laborDefinition.fields, { name: " " }] }],
+    ["parameter From", {
+      parameters: laborDefinition.parameters.map(parameter => ({
+        ...parameter,
+        isArray: parameter.name === "From",
+      })),
+    }],
+    ["unsupported required parameter PayrollCode", {
+      parameters: [...laborDefinition.parameters, { name: "PayrollCode", isRequired: true }],
+    }],
+  ])("is partial when the required labor definition has %s", async (reason, override) => {
+    const result = await mcpReadiness(fakeClient({ "166": { ...laborDefinition, ...override } }), "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      reports: [{
+        key: "166", status: "incompatible", required: true,
+        errors: expect.arrayContaining([expect.stringContaining(reason)]),
+      }],
+    });
+  });
+  it.each([
+    { estimatesAvailable: true, moduleStatus: "available", status: "ready" },
+    { estimatesAvailable: false, moduleStatus: "unavailable", status: "partial" },
+  ])("checks estimate access when only pipeline is selected: $status", async ({ estimatesAvailable, moduleStatus, status }) => {
+    const path = "/sales/v2/tenant/{tenant}/estimates";
+    const denied = new ServiceTitanApiError(403, "Fixture access denied", path);
+    const client = fakeClient({ 172: denied });
+    if (!estimatesAvailable) vi.mocked(client.get).mockRejectedValueOnce(denied);
+
+    const result = await mcpReadiness(client, "intel_estimate_pipeline");
+
+    expect(result).toMatchObject({
+      status,
+      modules: [{ domain: "estimates", path, status: moduleStatus }],
+      reports: [{ key: "172", status: "unavailable", required: false }],
+    });
+    expect(client.get).toHaveBeenCalledWith(path, { page: 1, pageSize: 1 });
+  });
+
+  it("reports unavailable extended metrics while default scorecard readiness stays ready", async () => {
+    const client = fakeClient({ "171": new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
+    const result = await mcpReadiness(client, "intel_technician_scorecard");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      reports: [
+        { key: "168", required: true, status: "available" },
+        { key: "169", required: true, status: "available" },
+        { key: "170", required: true, status: "available" },
+        { key: "171", required: false, status: "unavailable", httpStatus: 404 },
+        { key: "173", required: false, status: "available" },
+        { key: "174", required: false, status: "available" },
+      ],
+      limitations: expect.arrayContaining(["Optional report 171 is unavailable"]),
+    });
+  });
+  it("explicitly checks definitions beyond the catalog or skips report checks", async () => {
+    const client = fakeClient();
+    const expanded = await mcpReadiness(client, "intel_labor_cost", true);
+    expect(expanded).toMatchObject({ status: "ready" });
+    expect(expanded?.reports).toHaveLength(18);
+    expect(expanded?.reports).toContainEqual(expect.objectContaining({ key: "2282" }));
+
+    const skipClient = fakeClient();
+    const skipped = await mcpReadiness(skipClient, "intel_labor_cost", false);
+    expect(skipped).toMatchObject({ status: "ready", reports: [] });
+    expect(skipClient.get).not.toHaveBeenCalled();
+  });
   it("validates synthetic definitions without reading report rows",async()=>{
     const client=fakeClient();const result=await checkReadiness(client,loadConfig(base),{domains:["crm"]});
     expect(result.authentication).toBe("ok");expect(result.status).toBe("ready");
@@ -103,6 +246,58 @@ describe("readiness compatibility manifests",()=>{
     });
     await expect(withRequestContext({signal:controller.signal},()=>checkReadiness(client,loadConfig(base),{domains:[]}))).rejects.toMatchObject({name:"AbortError"});
     expect(originalGet.mock.calls.at(-1)?.[0]).toMatch(/\/reports\/2282$/);
+  });
+  it.each([
+    ["export_customers", "/crm/v2/tenant/{tenant}/customers"],
+    ["export_payments", "/accounting/v2/tenant/{tenant}/payments"],
+  ])("probes a bounded read with the scope used by %s", async (tool, path) => {
+    const client = fakeClient();
+    const result = await mcpReadiness(client, tool);
+
+    expect(result).toMatchObject({
+      status: "ready",
+      modules: [{ domain: "export", path, status: "available" }],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith(path, { page: 1, pageSize: 1 });
+  });
+  it("reports a denied export scope without disclosing the upstream error", async () => {
+    const client = fakeClient();
+    const path = "/crm/v2/tenant/{tenant}/customers";
+    vi.mocked(client.get).mockRejectedValueOnce(new ServiceTitanApiError(403, "Sensitive fixture value", path));
+
+    const result = await mcpReadiness(client, "export_customers");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      modules: [{ domain: "export", path, status: "unavailable", httpStatus: 403 }],
+    });
+    expect(JSON.stringify(result)).not.toContain("Sensitive fixture value");
+  });
+  it("reports partial when the only selected export has no bounded scope probe", async () => {
+    const client = fakeClient();
+
+    const result = await mcpReadiness(client, "export_invoice_items");
+
+    expect(result).toMatchObject({
+      authentication: "ok",
+      status: "partial",
+      modules: [{ domain: "export", status: "unverified" }],
+    });
+    expect(client.get).not.toHaveBeenCalled();
+  });
+  it("shares a matching scope probe with an exposed list domain", async () => {
+    const client = fakeClient();
+    const path = "/crm/v2/tenant/{tenant}/customers";
+    const result = await mcpReadiness(client, "export_customers,crm_customers_list");
+
+    expect(result).toMatchObject({
+      status: "ready",
+      modules: [
+        { domain: "crm", path, status: "available" },
+        { domain: "export", path, status: "available" },
+      ],
+    });
+    expect(client.get).toHaveBeenCalledExactlyOnceWith(path, { page: 1, pageSize: 1 });
   });
   it("limits probes to the selected profile and explicit tool allowlist",async()=>{
     const profileClient=fakeClient();

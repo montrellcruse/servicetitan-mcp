@@ -6,7 +6,6 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { allowedOrigin, authenticated, requestUrl, safeCompare } from "../src/http-policy.js";
 import { loadConfig } from "../src/config.js";
 import { ToolRegistry } from "../src/registry.js";
-import { ResultStore } from "../src/result-store.js";
 import { toolResult } from "../src/utils.js";
 import { getRequestContext } from "../src/request-context.js";
 
@@ -98,20 +97,6 @@ describe("v3 configuration and discovery", () => {
 });
 
 describe("v3 large-result retrieval", () => {
-  it("reassembles exact Unicode/escaped JSON without leaking results across stores", () => {
-    const a=new ResultStore(), b=new ResultStore();const payload={text:'a"\\\n😀'.repeat(1000),data:[1,2,3]};
-    const meta=a.put(payload);let offset=0,text="";
-    do {const page=a.read(String(meta.resultId),offset,37);text+=page.text;if(page.nextOffset===null)break;offset=Number(page.nextOffset);}while(true);
-    expect(JSON.parse(text)).toEqual(payload);
-    expect(()=>b.read(String(meta.resultId),0,37)).toThrow(/unavailable/);
-  });
-  it("expires and bounds memory; rejects invalid offsets", () => {
-    let now=0;const store=new ResultStore(80,100,()=>now);const first=store.put({value:"x".repeat(30)});
-    store.put({value:"y".repeat(30)});expect(()=>store.read(String(first.resultId),0,10)).toThrow(/unavailable/);
-    const current=store.put({value:"z"});expect(()=>store.read(String(current.resultId),-1,10)).toThrow(/offset/);
-    now=101;expect(()=>store.read(String(current.resultId),0,10)).toThrow(/expired/);
-    expect(()=>store.put("x".repeat(100))).toThrow(/storage limit/);
-  });
   it("returns retrievable handles within the actual response budget", async () => {
     const registry=new ToolRegistry({registerTool:vi.fn()} as any,loadConfig({...env,ST_MAX_RESPONSE_CHARS:"1024"}),logger as any);
     const payload={_warnings:["partial fixture"],data:[{note:'"\\😀'.repeat(1000)}]};
