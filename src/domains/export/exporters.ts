@@ -1,4 +1,5 @@
 import { z } from "../../schema.js";
+import { isInvoiceCalendarTimestamp } from "../accounting/invoice-dates.js";
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
 import { toolResult, toolError, buildParams } from "../../utils.js";
@@ -29,7 +30,9 @@ function registerExportTool(
     handler: async (params: unknown) => {
       try {
         const data = await client.get(path, buildParams(z.object(schema).parse(params)));
-        return toolResult(data);
+        return toolResult(data, operationId === "Export_Invoices"
+          ? { preserveTimestamp: isInvoiceCalendarTimestamp }
+          : undefined);
       } catch (error: unknown) {
         return toolError(error);
       }

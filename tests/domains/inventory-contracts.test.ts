@@ -18,6 +18,15 @@ const address={street:"1 Main",unit:"",city:"Phoenix",state:"AZ",zip:"85001",cou
 const alertSettings={sendEmailToTechnicianWhenPoMovedToSend:true,sendEmailToTechnicianWhenPoMovedToReceived:false,sendEmailToPmWhenPoMovedToSend:true,sendEmailToPmWhenPoMovedToReceived:false};
 
 describe("inventory official request contracts",()=>{
+  it("always sends the required activeOnly return-type filter", async () => {
+    const { client, invoke } = setup();
+    client.get.mockResolvedValue({ data: [] });
+    for (const activeOnly of [undefined, false, true]) {
+      await invoke("inventory_return_types_list", { activeOnly });
+      expect(client.get).toHaveBeenLastCalledWith("/tenant/{tenant}/return-types", { activeOnly: activeOnly ?? false });
+    }
+  });
+
   it("sends every required purchase-order create field with exact nested item names",async()=>{
     const {client,invoke}=setup();
     const body={vendorId:1,typeId:2,businessUnitId:3,inventoryLocationId:4,shipTo:{description:"Main",address},impactsTechnicianPayroll:true,date:"2026-09-01T00:00:00Z",requiredOn:"2026-09-02T00:00:00Z",tax:1.25,shipping:5,items:[{skuId:8,description:"Filter",vendorPartNumber:"VP-8",quantity:2,cost:9.5}]};

@@ -1,4 +1,5 @@
 import { z } from "../../schema.js";
+import { isInvoiceCalendarTimestamp } from "./invoice-dates.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
@@ -69,14 +70,16 @@ const invoicesListSchema = paginationParams(
       jobNumber: z.string().optional().describe("Job number"),
       businessUnitId: z.number().int().optional().describe("Business unit ID"),
       customerId: z.number().int().optional().describe("Customer ID"),
+      activeState: z.enum(["ActiveOnly", "InactiveOnly", "All"])
+        .optional().describe("Invoice activity status; omit to use the ServiceTitan default"),
       invoicedOnOrAfter: z
         .string()
         .optional()
-        .describe("Invoiced on or after RFC3339 date-time"),
+        .describe("Invoiced on or after an RFC3339 boundary; use UTC midnight for the provider calendar day"),
       invoicedOnBefore: z
         .string()
         .optional()
-        .describe("Invoiced on or before RFC3339 date-time"),
+        .describe("Upper invoice date bound (RFC3339) in the provider calendar, not the tenant display timezone"),
       adjustmentToId: z.number().int().optional().describe("Adjusted invoice ID"),
       number: z.string().optional().describe("Invoice number"),
       totalGreater: z.number().optional().describe("Minimum invoice total"),
@@ -233,7 +236,7 @@ export function registerInvoiceTools(
     name: "accounting_invoices_list",
     domain: "accounting",
     operation: "read",
-    description: "List one requested page of customer invoice headers using customer, job, business-unit, invoice, date, amount, balance, review, and assignment filters. Use this for filtered invoice search; use estimates or invoice-item tools when the required grain is an estimate or individual line item.",
+    description: "List one requested page of customer invoice headers using customer, job, business-unit, invoice, date, amount, balance, review, and assignment filters. Use this for filtered invoice search. The provider calendar date is preserved when invoiceDate is encoded at UTC midnight. Use estimates or invoice-item tools when the required grain is an estimate or individual line item.",
     schema: invoicesListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof invoicesListSchema>;
@@ -257,6 +260,7 @@ export function registerInvoiceTools(
             jobNumber: input.jobNumber,
             businessUnitId: input.businessUnitId,
             customerId: input.customerId,
+            activeState: input.activeState,
             invoicedOnOrAfter: input.invoicedOnOrAfter,
             invoicedOnBefore: input.invoicedOnBefore,
             adjustmentToId: input.adjustmentToId,
@@ -277,7 +281,7 @@ export function registerInvoiceTools(
           }),
         );
 
-        return toolResult(data);
+        return toolResult(data, { preserveTimestamp: isInvoiceCalendarTimestamp });
       } catch (error: unknown) {
         return toolError(error);
       }

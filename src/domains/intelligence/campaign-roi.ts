@@ -139,8 +139,8 @@ export function registerIntelligenceCampaignPerformanceTool(
     operation: "read",
     reports: { required: ["175", "176"] },
     description:
-      "Compare marketing campaigns over the selected date range by combining all fetched call, booking, job, and invoice pages. Returns calls, bookings, booked-call conversion, attributed revenue, and revenue per call; campaignId narrows the analysis to one known campaign. The metrics reflect the wrapper's cross-source attribution logic, and partial source failures are returned in _warnings." +
-      '\n\nExamples:\n- "Which marketing campaigns are working?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "How many calls are we getting from Google Ads?" -> startDate="2026-01-01", endDate="2026-03-10", campaignId=<Google Ads ID>\n- "What\'s our call-to-booking rate?" -> startDate="2026-01-01", endDate="2026-03-10"',
+      "Compare campaign-attributed call and booking volumes over the selected dates. Bookings per call is a ratio of independently attributed totals, not a call-to-booking funnel. Report 175 revenue is tenant-wide; per-campaign revenue and ROAS are unavailable. Use campaignId to narrow the campaign rows. Source failures appear in _warnings." +
+      '\n\nExamples:\n- "Which marketing campaigns are working?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "How many calls are we getting from Google Ads?" -> startDate="2026-01-01", endDate="2026-03-10", campaignId=<Google Ads ID>\n- "Which campaigns have the most calls and bookings?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: campaignPerformanceSchema.shape,
     handler: async (params) => {
       try {

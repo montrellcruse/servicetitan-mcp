@@ -106,6 +106,23 @@ function parsePayload(result: ToolResponse): Record<string, unknown> {
 // ---------------------------------------------------------------------------
 
 describe("crm domain", () => {
+  it.each(["customers", "locations"] as const)("requires a modified date bound for %s contacts", async (resource) => {
+    const { handlers, getMock } = createContext();
+    const handle = getHandler(handlers, `crm_${resource}_contacts_modified_list`);
+    const timestamp = "2026-11-24T00:00:00Z";
+    const invalid = await handle({ createdOnOrAfter: timestamp });
+    expect(invalid.isError).toBe(true);
+    expect(invalid.content[0]?.text).toContain("modifiedBefore or modifiedOnOrAfter");
+    expect(getMock).not.toHaveBeenCalled();
+
+    getMock.mockResolvedValue({ data: [] });
+    for (const bound of ["modifiedBefore", "modifiedOnOrAfter"]) {
+      const result = await handle({ [bound]: timestamp });
+      expect(result.isError).not.toBe(true);
+      expect(getMock).toHaveBeenLastCalledWith(`/tenant/{tenant}/${resource}/contacts`, { [bound]: timestamp });
+    }
+  });
+
   beforeEach(() => {
     // Disable response shaping so tests see raw API responses
     process.env.ST_RESPONSE_SHAPING = "false";

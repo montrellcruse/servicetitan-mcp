@@ -17,6 +17,7 @@ import {
   toText,
   toSingleDayRange,
 } from "./helpers.js";
+import { readDailyCallActivity } from "./call-activity.js";
 import { executeReport, type ReportExecution } from "./report-executor.js";
 
 const dailySnapshotSchema = z.object({
@@ -50,42 +51,6 @@ function amountFromEstimate(estimate: GenericRecord): number {
 
 function statusIn(status: string, values: string[]): boolean {
   return values.some((value) => status.includes(value));
-}
-
-function normalizedLeadCallType(call: GenericRecord): string {
-  const callType = firstValue(call, ["leadCall.callType"]);
-  return typeof callType === "string" ? callType.trim().toLowerCase() : "";
-}
-
-function isBookedCall(call: GenericRecord): boolean {
-  if (normalizedLeadCallType(call) === "booked") {
-    return true;
-  }
-
-  if (firstValue(call, ["booked", "isBooked", "bookingCreated"]) === true) {
-    return true;
-  }
-
-  return firstValue(call, ["bookingId", "jobId"]) !== undefined;
-}
-
-function isMissedCall(call: GenericRecord): boolean {
-  const callType = normalizedLeadCallType(call);
-  if (callType === "missed" || callType === "abandoned") {
-    return true;
-  }
-
-  if (firstValue(call, ["missed", "isMissed", "unanswered"]) === true) {
-    return true;
-  }
-
-  const status = normalizeStatus(call, ["statusValue"]);
-  return (
-    status.includes("missed") ||
-    status.includes("noanswer") ||
-    status.includes("unanswered") ||
-    status.includes("abandoned")
-  );
 }
 
 function parseUpcomingJobsReport(report: ReportExecution | null): UpcomingJob[] {
@@ -139,7 +104,7 @@ export function registerIntelligenceDailySnapshotTool(
       };
     },
     description:
-      "Build a one-day operational snapshot in the configured tenant timezone from all fetched appointment, job, invoice, payment, estimate, and call pages plus Report 163 for the next day. Returns appointment progress, daily invoiced revenue and collections, sold-estimate value, call outcomes, highlights, and at most 20 upcoming jobs; truncation and partial source failures appear in _warnings. Results are cached for 60 seconds." +
+      "Build a one-day operational snapshot in the configured tenant timezone from all fetched appointment, job, invoice, payment, estimate, and call pages plus Report 163 for the next day. Returns appointment progress, daily invoiced revenue and collections, sold-estimate value, all-call activity, active inbound leads, distinct canonically credited inbound jobs, highlights, and at most 20 upcoming jobs; truncation and partial source failures appear in _warnings. Results are cached for 60 seconds." +
       '\n\nExamples:\n- "How did today go?" -> date="2026-03-10"\n- "Give me yesterday\'s numbers" -> date="2026-03-09"\n- "What happened on Monday?" -> date="2026-03-09"',
     schema: dailySnapshotSchema.shape,
     handler: async (params) => {
@@ -180,8 +145,8 @@ export function registerIntelligenceDailySnapshotTool(
           "Invoice data",
           () =>
             fetchAllPages<GenericRecord>(client, "/tenant/{tenant}/invoices", {
-              invoicedOnOrAfter: startIso,
-              invoicedOnBefore: endIso,
+              invoicedOnOrAfter: date + "T00:00:00.000Z",
+              invoicedOnBefore: date + "T23:59:59.999Z",
             }),
           [],
         );
@@ -209,17 +174,7 @@ export function registerIntelligenceDailySnapshotTool(
           [],
         );
 
-        const calls = await fetchWithWarning(
-          warnings,
-          "Call data",
-          () =>
-            fetchAllPages<GenericRecord>(client, "/v3/tenant/{tenant}/calls", {
-              createdOnOrAfter: startIso,
-              createdBefore: endIso,
-              active: "Any",
-            }),
-          [],
-        );
+        const calls = await readDailyCallActivity(client, startIso, nextDayStartIso, warnings);
 
         const upcomingJobsReport = await fetchWithWarning(
           warnings,
@@ -270,9 +225,6 @@ export function registerIntelligenceDailySnapshotTool(
         const collectedRevenue = round(sumBy(payments, amountFromPayment), 2);
         const estimatesSoldValue = round(sumBy(soldEstimates, amountFromEstimate), 2);
 
-        const callsTotal = calls.length;
-        const callsBooked = calls.filter(isBookedCall).length;
-        const callsMissed = calls.filter(isMissedCall).length;
         const allUpcomingJobs = parseUpcomingJobsReport(upcomingJobsReport);
         const upcomingJobs = allUpcomingJobs.slice(0, MAX_UPCOMING_JOBS);
         const upcomingJobsByType = summarizeUpcomingJobsByType(allUpcomingJobs);
@@ -287,9 +239,11 @@ export function registerIntelligenceDailySnapshotTool(
 
         const highlights = [
           `${appointmentsCompleted} of ${appointmentTotal} appointments completed (${completionRate}%)`,
-          callsMissed > 0
-            ? `${callsMissed} missed calls today may need follow-up`
-            : "No missed calls recorded today",
+          calls.missed === null
+            ? "Call activity is unavailable"
+            : calls.missed > 0
+              ? `${calls.missed} missed calls today may need follow-up`
+              : "No missed calls recorded today",
           `${allUpcomingJobs.length} ${allUpcomingJobs.length === 1 ? "job" : "jobs"} scheduled for tomorrow`,
           `$${formatCurrency(estimatesSoldValue)} in estimates sold`,
         ];
@@ -313,10 +267,16 @@ export function registerIntelligenceDailySnapshotTool(
             collected: collectedRevenue,
             estimatesSold: estimatesSoldValue,
           },
-          calls: {
-            total: callsTotal,
-            booked: callsBooked,
-            missed: callsMissed,
+          calls,
+          metricDefinitions: {
+            "calls.total": "All-directions call records in the creation window, identified by canonical call ID.",
+            "calls.booked": "Call records marked Booked, including repeated bookings and all directions.",
+            "calls.missed": "Call records marked missed or abandoned, across all directions.",
+            "calls.inbound": "Active inbound calls received that day within the fetched creation window; uses created time when received time is absent.",
+            "calls.inbound.eligibleLeads": "Booked or Unbooked inbound calls, plus abandoned inbound calls of at least 60 seconds.",
+            "calls.inbound.creditedJobs": "Distinct jobs matched to a Booked inbound call by the job's canonical source-call pointer. Null when links cannot be verified.",
+            "calls.inbound.bookingRate": "Credited jobs divided by eligible inbound leads, as a percentage. Null if unavailable or there are no leads.",
+            "revenue.invoiced": "Invoice header totals by provider invoice calendar day.",
           },
           upcomingJobs: {
             total: allUpcomingJobs.length,

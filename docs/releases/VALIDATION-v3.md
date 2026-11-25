@@ -1,5 +1,11 @@
 # V3 stable read-only validation
 
+## Production read corrections
+
+The production audit exposed incorrect scorecard top-N ordering, timezone shifts on provider calendar invoice dates, and conflation of call counts with booking credit. The follow-up ranks the full scorecard before applying its limit, preserves invoice calendar dates, and separates assessed inbound leads from canonically matched job bookings. Completed-job counts remain unavailable in the selected technician reports. Tests cover scoped activity filters, duplicate call IDs, missing booking links, and the distinction between provider calendar days and real instants.
+
+The only intended input-schema addition is the optional accounting invoice list `activeState` filter. Other discovery schemas, profile memberships, and read/write annotations remain pinned. The production acceptance record identifies the candidate and the scope actually rechecked. It does not certify dashboard parity, Claude's interactive UI, or tenant-specific CRM and scheduling permissions.
+
 ## Architecture integration candidate for #32
 
 The PR #38 candidate passed the following local checks on darwin-arm64. Both runtimes built the JavaScript and public declarations and exercised the wire and installed package interfaces.

@@ -90,7 +90,7 @@ const returnTypesListSchema = dateFilterParams(
         activeOnly: z
           .boolean()
           .optional()
-          .describe("When true, return only active return types"),
+          .describe("When true, return only active return types (default false)"),
         name: z.string().optional().describe("Return type name filter"),
       })
       .extend(sortParam(["Id", "ModifiedOn", "CreatedOn"])),
@@ -274,7 +274,7 @@ export function registerReturnTools(client: ServiceTitanClient, registry: ToolRe
         const data = await client.get(
           "/tenant/{tenant}/return-types",
           buildParams({
-            activeOnly: input.activeOnly,
+            activeOnly: input.activeOnly ?? false,
             name: input.name,
             createdBefore: input.createdBefore,
             createdOnOrAfter: input.createdOnOrAfter,
