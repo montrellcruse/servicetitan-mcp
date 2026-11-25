@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "df91c188480ddf1cc5c6b2e812ad8761d379348708ae2904ac4c3668b0c01c3c",
+  "sourceFingerprint": "692baf5f3e4cc12013a1bd33c29aa3697e427cb9d9ccc37c689051d81fa0f101",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -192,5 +192,38 @@
     "published": false,
     "policyAndGateImplementationUnchanged": true,
     "summary": "VALIDATION-v3.md"
+  },
+  "architectureCandidate": {
+    "issue": 32,
+    "implementationRevision": "67f4009988d396aaff93aed28b16f3d3e8f22afa",
+    "scope": "Local synthetic compatibility, lifecycle, and packed consumer verification",
+    "runtimes": [
+      {
+        "node": "v22.20.0",
+        "platform": "darwin-arm64",
+        "testFiles": 48,
+        "tests": 627,
+        "wireTests": 24,
+        "packagingTests": 2,
+        "packedConsumerProfiles": 5,
+        "loadScenarios": 10,
+        "faultScenarios": 9
+      },
+      {
+        "node": "v24.22.1",
+        "platform": "darwin-arm64",
+        "testFiles": 48,
+        "tests": 627,
+        "wireTests": 24,
+        "packagingTests": 2,
+        "packedConsumerProfiles": 5,
+        "loadScenarios": 10,
+        "faultScenarios": 9
+      }
+    ],
+    "javascriptBuildSha256": "c15925d726d072371ad799f9b23f71ca093bd0ab9631b38cc160d650cb68521c",
+    "verifiedExportOperations": 44,
+    "documentedExportExclusions": 5,
+    "liveProductionEvidence": "Historical evidence recorded for the earlier release"
   }
 }

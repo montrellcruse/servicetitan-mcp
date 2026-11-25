@@ -1,5 +1,18 @@
 # V3 stable read-only validation
 
+## Architecture integration candidate for #32
+
+The candidate at `67f4009988d3` passed the local checks below on darwin-arm64. The Node 22 build generated the JavaScript bundle and public declarations. Both runtimes exercised the bundled wire and packed consumer interfaces.
+
+| Node | Tests | Built wire | Packaging | Installed profiles | Synthetic client scenarios |
+| --- | --- | --- | --- | --- | --- |
+| v22.20.0 | 627 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
+| v24.22.1 | 627 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
+
+Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The packed consumer exercised package imports and stdio with synthetic inputs.
+
+These results describe local compatibility for the architecture candidate. The live-company and broader performance evidence below refers to the historical runs recorded for previous revisions. Revalidation for publication follows the release policy.
+
 ## November 15, 2026 dependency-security continuity refresh (unpublished)
 
 Based on current GitHub main, this candidate patches runtime lockfile resolutions:
