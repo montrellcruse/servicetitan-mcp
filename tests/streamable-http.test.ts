@@ -21,7 +21,6 @@ import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 const TEST_API_KEY = "test-secret-key-abc123";
-const MOCK_TOOL_COUNT = 505;
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
 
@@ -225,6 +224,7 @@ beforeAll(async () => {
 
   vi.doMock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
     McpServer: class MockMcpServer {
+      readonly server = {};
       registerTool(): void {}
       async connect(): Promise<void> {}
       async close(): Promise<void> {}
@@ -275,20 +275,6 @@ beforeAll(async () => {
     },
   }));
 
-  vi.doMock("../src/registry.js", () => ({
-    ToolRegistry: class MockToolRegistry {
-      attachClient(): void {}
-      register(): void {}
-      registerDomain(): void {}
-      getStats(): { registered: number } {
-        return { registered: MOCK_TOOL_COUNT };
-      }
-      logSummary(): void {}
-      validateSelection(): void {}
-      clearResults(): void {}
-    },
-  }));
-
   vi.doMock("../src/utils.js", () => ({
     setDisplayTimezone: vi.fn(),
     setMaxResponseChars: vi.fn(),
@@ -335,7 +321,7 @@ describe("Streamable HTTP transport HTTP handler", () => {
     expect(res.json<Record<string, unknown>>()).toMatchObject({
       status: "ok",
       transport: "streamable-http",
-      tools: MOCK_TOOL_COUNT,
+      tools: 3,
     });
   });
 

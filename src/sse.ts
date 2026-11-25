@@ -23,6 +23,7 @@ import { SSEServerTransport } from "@modelcontextprotocol/sdk/server/sse.js";
 import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
 import { createMcpServer, VERSION } from "./server.js";
+import { ToolSelectionError } from "./tool-catalog.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
 
 const PORT = Number(process.env.PORT ?? process.env.ST_MCP_PORT ?? 3100);
@@ -287,7 +288,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof ExperimentalWritesDisabledError
+  const message = error instanceof ExperimentalWritesDisabledError || error instanceof ToolSelectionError
     ? error.message : "Check required ServiceTitan and transport configuration.";
   process.stderr.write(
     `${JSON.stringify({

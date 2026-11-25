@@ -4,7 +4,6 @@ import type { IncomingMessage, ServerResponse } from "node:http";
 import { beforeAll, afterEach, describe, expect, it, vi } from "vitest";
 
 const TEST_API_KEY = "test-secret-key-abc123";
-const MOCK_TOOL_COUNT = 505;
 
 type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | void;
 type MockRequest = IncomingMessage & {
@@ -24,6 +23,7 @@ const serverInstances: MockMcpServer[] = [];
 const loggerInstances: MockLogger[] = [];
 
 class MockMcpServer {
+  readonly server = {};
   connect = vi.fn(async () => {
     if (connectError) {
       throw connectError;
@@ -259,20 +259,6 @@ beforeAll(async () => {
 
   vi.doMock("../src/logger.js", () => ({
     Logger: MockLogger,
-  }));
-
-  vi.doMock("../src/registry.js", () => ({
-    ToolRegistry: class MockToolRegistry {
-      attachClient(): void {}
-      register(): void {}
-      registerDomain(): void {}
-      getStats(): { registered: number } {
-        return { registered: MOCK_TOOL_COUNT };
-      }
-      logSummary(): void {}
-      validateSelection(): void {}
-      clearResults(): void {}
-    },
   }));
 
   vi.doMock("../src/utils.js", () => ({

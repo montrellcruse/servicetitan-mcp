@@ -76,6 +76,29 @@ test("built entrypoints reject writes without explicit experimental opt-in befor
   }
 });
 
+test("built entrypoints diagnose invalid explicit tool selections", { timeout: 30000 }, async () => {
+  await assertBuild();
+  const cases = [
+    [{ ST_TOOLS: "wire-fixture-secret" }, /ST_TOOLS includes unknown tools/],
+    [{ ST_TOOLS: "crm_customers_get", ST_DOMAINS: "inventory" }, /crm_customers_get.*Excluded by domain filter/],
+    [{ ST_TOOLS: "inventory_warehouses_list" }, /inventory_warehouses_list.*Excluded by tool profile/],
+    [{ ST_TOOLS: "crm_customers_create" }, /crm_customers_create.*Readonly mode/],
+    [{ ST_TOOLS: "export_contacts", ST_TOOL_PROFILE: "full" }, /export_contacts.*undocumented/],
+  ];
+  for (const entry of ["index.js", "streamable-http.js", "sse.js", "readiness-cli.js"]) {
+    for (const [overrides, diagnosis] of cases) {
+      const result = spawnSync(process.execPath, [resolve(ROOT, "build", entry)], {
+        cwd: ROOT, env: childEnvironment(overrides), encoding: "utf8", timeout: 5000,
+      });
+      assert.equal(result.status, 1, `${entry}: ${result.stderr}`);
+      assert.equal(result.signal, null);
+      assert.equal(result.stdout, "");
+      assert.match(result.stderr, diagnosis);
+      assert.doesNotMatch(result.stderr, /wire-fixture-secret|wire-fixture-app-key/);
+    }
+  }
+});
+
 test("all built entrypoints suppress untrusted configuration values in generic startup errors", { timeout: 30000 }, async () => {
   await assertBuild();
   for (const entry of ["index.js", "streamable-http.js", "sse.js", "readiness-cli.js"]) {

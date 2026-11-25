@@ -13,9 +13,21 @@ async function sdkClient(url, headers = {}) {
   return { client, transport, close: async () => { try { await transport.terminateSession(); } finally { await client.close(); } } };
 }
 
+test("built HTTP rejects a tool selection outside its domain filter before listening", { timeout: 20000 }, async () => {
+  await assert.rejects(async () => {
+    const runtime = await launchHttp({
+      ST_DOMAINS: "inventory",
+      ST_TOOLS: "crm_customers_get",
+    });
+    await runtime.stop();
+  }, /crm_customers_get.*Excluded by domain filter/);
+});
+
 test("built HTTP rejects invalid boundaries and supports SDK session deletion/reconnection", { timeout: 30000 }, async () => {
   const runtime = await launchHttp({ ST_CORS_ORIGIN: "https://operator.example" });
   try {
+    const health = await fetch(`${runtime.url}/health`, { signal: AbortSignal.timeout(5000) });
+    assert.equal((await health.json()).tools, 33);
     assert.equal((await rawMcp(runtime.url, { headers: { "x-api-key": "wrong" } })).status, 401);
     assert.equal((await rawMcp(runtime.url, { headers: { origin: "https://malicious.example" } })).status, 403);
     assert.equal(await malformedHost(runtime.port), 400);

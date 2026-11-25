@@ -366,6 +366,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     name: "intel_technician_scorecard",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["168", "169", "170"], optional: ["171", "173", "174"] },
     description:
       "Build a technician scorecard for the selected date range from ServiceTitan technician reports. Returns revenue, converted jobs, opportunities, conversion, productivity, recalls, upsells, and lead-generation metrics; includeExtendedMetrics adds membership and tech/marketing-lead sales reports. Filter by technician or business unit when comparing a subset, and use limit to bound ranked results. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',

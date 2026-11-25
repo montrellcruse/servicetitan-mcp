@@ -125,6 +125,7 @@ export function registerIntelligenceMembershipHealthTool(
     name: "intel_membership_health",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["178", "182"] },
     description:
       "Summarize membership activity from Report 182 and business-unit membership opportunities and conversions from Report 178 for the selected date range. Returns active-at-end counts, sales, cancellations, expirations, renewals, other status movements, and conversion metrics; it does not calculate a cohort retention rate. includeServiceRevenue adds tenant-wide invoice service revenue for the period, which is not membership-attributed. Partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "How are memberships doing this year?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show membership status movements last quarter" -> startDate="2025-10-01", endDate="2026-01-01"\n- "How many new signups vs cancellations?" -> startDate="2026-01-01", endDate="2026-03-10"',

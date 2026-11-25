@@ -21,13 +21,13 @@ import { randomUUID } from "node:crypto";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 
 
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 
-import { ServiceTitanClient } from "./client.js";
 import { ExperimentalWritesDisabledError, loadConfig } from "./config.js";
 import { Logger } from "./logger.js";
-import { createMcpServer, VERSION } from "./server.js";
+import { prepareMcpDeployment, VERSION } from "./server.js";
+import { ToolSelectionError } from "./tool-catalog.js";
 import { authenticated, allowedOrigin, requestUrl, attachAuthenticatedPrincipal } from "./http-policy.js";
 
 const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
@@ -74,14 +74,9 @@ async function main(): Promise<void> {
   const config = loadConfig();
   const version = VERSION;
   const logger = new Logger(config.logLevel, [config.clientSecret, config.appKey, API_KEY]);
-  const client = new ServiceTitanClient(config);
-  let stats = { registered: 0 };
+  const deployment = await prepareMcpDeployment(config, { logger });
+  const stats = deployment.catalog.getStats();
   let pendingInitializations = 0;
-  async function createSessionServer(): Promise<McpServer> {
-    const runtime = await createMcpServer(config, { client, logger });
-    stats = runtime.registry.getStats();
-    return runtime.server;
-  }
 
   type Session = {
     transport: StreamableHTTPServerTransport;
@@ -273,7 +268,7 @@ async function main(): Promise<void> {
         let sessionServer: McpServer | undefined;
         let newTransport: StreamableHTTPServerTransport | undefined;
         try {
-        sessionServer = await createSessionServer();
+        sessionServer = deployment.createServer().server;
         const transport = new StreamableHTTPServerTransport({
           sessionIdGenerator: () => randomUUID(),
           onsessioninitialized: (newSessionId: string) => {
@@ -375,7 +370,7 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  const message = error instanceof ExperimentalWritesDisabledError
+  const message = error instanceof ExperimentalWritesDisabledError || error instanceof ToolSelectionError
     ? error.message : "Check required ServiceTitan and transport configuration.";
   process.stderr.write(
     `${JSON.stringify({

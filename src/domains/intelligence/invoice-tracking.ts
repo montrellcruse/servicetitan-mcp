@@ -106,6 +106,7 @@ export function registerIntelligenceInvoiceTrackingTool(
     name: "intel_invoice_tracking",
     domain: "intelligence",
     operation: "read",
+    reports: { required: ["2281", "2282"] },
     description:
       "Track invoice email delivery for the selected date range by combining and deduplicating Reports 2281 and 2282. Returns sent and not-sent counts, send rate, invoice amount and balance impact, and unsent breakdowns by business unit and technician; an optional business-unit filter applies to both reports. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "What percent of invoices were sent this week?" -> startDate="2026-03-02", endDate="2026-03-09"\n- "Which techs are not sending invoices?" -> startDate="2026-01-01", endDate="2026-03-10"\n- "Show invoice send rate for plumbing last month" -> startDate="2026-02-01", endDate="2026-03-01", businessUnitName="Plumbing"',
