@@ -147,7 +147,9 @@ Requests with a browser Origin require an exact `ST_CORS_ORIGIN` match. Without 
 
 `ST_ALLOWED_CALLERS` uses authenticated SDK identity. Request `_meta` and arbitrary forwarded identity headers are ignored. With the built-in shared API key, the authenticated principal is `ST_MCP_CLIENT_ID` (default `api-key`); this is one credential identity, not per-user identity. Embedders needing user identities must provide validated SDK `authInfo` through an authenticated transport.
 
-HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
+HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. During Streamable HTTP shutdown, new sessions and upstream tool calls are rejected. Pending handshakes and idle streams close. Admitted calls and existing-session result retrieval have up to ten seconds from the shutdown signal.
+
+Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
 
 Mutation audit events are emitted even when diagnostic log level is `error`; contact values, credentials, and free text are redacted. Configure durable stderr collection if durable audit retention is required.
 

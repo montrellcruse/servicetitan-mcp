@@ -56,7 +56,7 @@ ServiceTitan paths are resolved by `src/contracts/resolve-route.ts` against the 
 
 Resolution validates both method and final path and fails closed for unknown or ambiguous operations. Explicit module-qualified paths are also checked against the pinned contracts. `src/contracts/request-schema.ts` converts official request JSON Schema into Zod schemas for operation-bound mutation bodies. `src/contracts/unsupported-tools.ts` records legacy tool names without an operation in the pinned public documents; the registry does not expose them.
 
-Run `npm run contracts:generate` only after deliberately replacing the pinned inputs, then run `npm run contracts:check`.
+The contract check verifies registered export operations against the pinned snapshot and their resolved requests using a synthetic adapter. It checks the other domains through the existing inventory during the export pilot. Run `npm run contracts:generate` only after deliberately replacing the pinned inputs, then run `npm run contracts:check`.
 
 ## Domains and registration
 
