@@ -23,12 +23,14 @@ const serverInstances: MockMcpServer[] = [];
 const loggerInstances: MockLogger[] = [];
 
 class MockMcpServer {
-  readonly server = {};
-  connect = vi.fn(async () => {
-    if (connectError) {
-      throw connectError;
-    }
-  });
+  readonly server = {
+    async connect(_transport: MockSSEServerTransport): Promise<void> {
+      if (connectError) {
+        throw connectError;
+      }
+    },
+  };
+  connect = vi.fn((transport: MockSSEServerTransport) => this.server.connect(transport));
 
   close = vi.fn(async () => {});
 
