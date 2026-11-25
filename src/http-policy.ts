@@ -1,5 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
-import type { IncomingMessage } from "node:http";
+import type { IncomingMessage, ServerResponse } from "node:http";
+
+export function sendJson(response: ServerResponse, status: number, body: unknown): void {
+  const json = JSON.stringify(body);
+  response.writeHead(status, { "Content-Type": "application/json" });
+  response.end(json);
+}
 
 export function safeCompare(a: string, b: string): boolean {
   const left = Buffer.from(a), right = Buffer.from(b);

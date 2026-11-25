@@ -15,10 +15,11 @@
  *  - Invalid session IDs return 404
  */
 
+import { EventEmitter } from "node:events";
 import type { IncomingMessage, ServerResponse } from "node:http";
 
 import { LATEST_PROTOCOL_VERSION } from "@modelcontextprotocol/sdk/types.js";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 const TEST_API_KEY = "test-secret-key-abc123";
 
@@ -26,11 +27,14 @@ type Handler = (req: IncomingMessage, res: ServerResponse) => Promise<void> | vo
 
 let capturedHandler: Handler | undefined;
 let initializeRequestError: Error | undefined;
+let pauseInitialization: (() => Promise<void>) | undefined;
+let shutdown: (() => void) | undefined;
 
 class MockStreamableHTTPServerTransport {
   sessionId: string | undefined;
   onclose: (() => void) | undefined;
-  close = vi.fn(async () => {});
+  close = vi.fn(async () => { this.emitClose(); });
+  closeStandaloneSSEStream = vi.fn();
 
   constructor(
     private readonly options: {
@@ -41,17 +45,21 @@ class MockStreamableHTTPServerTransport {
     transportInstances.push(this);
   }
 
+  async start(): Promise<void> {}
+
   async handleRequest(
     _req: IncomingMessage,
     res: ServerResponse,
     parsedBody?: { id?: number | string; method?: string; params?: { protocolVersion?: string } },
   ): Promise<void> {
     if (parsedBody?.method === "initialize") {
+      await pauseInitialization?.();
       this.sessionId = this.options.sessionIdGenerator?.();
       if (this.sessionId) {
         this.options.onsessioninitialized?.(this.sessionId);
       }
 
+      if (res.writableEnded) return;
       if (initializeRequestError) {
         throw initializeRequestError;
       }
@@ -89,10 +97,12 @@ class MockStreamableHTTPServerTransport {
 
 const transportInstances: MockStreamableHTTPServerTransport[] = [];
 
-class MockResponse {
+class MockResponse extends EventEmitter {
   statusCode = 200;
   headers: Record<string, string | string[] | number | undefined> = {};
   body = "";
+  headersSent = false;
+  writableEnded = false;
 
   setHeader(name: string, value: string | string[] | number): void {
     this.headers[name.toLowerCase()] = value;
@@ -103,6 +113,7 @@ class MockResponse {
     headers?: Record<string, string | string[] | number>,
   ): MockResponse {
     this.statusCode = statusCode;
+    this.headersSent = true;
     for (const [name, value] of Object.entries(headers ?? {})) {
       this.setHeader(name, value);
     }
@@ -120,6 +131,8 @@ class MockResponse {
     if (chunk !== undefined) {
       this.body += chunk.toString();
     }
+    this.writableEnded = true;
+    this.emit("finish");
     return this;
   }
 
@@ -180,10 +193,9 @@ async function dispatch(options: {
   url: string;
   headers?: Record<string, string>;
   body?: string | Buffer;
-}): Promise<MockResponse> {
+}, res = new MockResponse()): Promise<MockResponse> {
   const handler = await waitForHandler();
   const req = createRequest(options);
-  const res = new MockResponse();
   await handler(req, res as unknown as ServerResponse);
   return res;
 }
@@ -217,19 +229,11 @@ beforeAll(async () => {
           close: vi.fn((cb?: () => void) => {
             cb?.();
           }),
+          closeAllConnections: vi.fn(),
         };
       }),
     };
   });
-
-  vi.doMock("@modelcontextprotocol/sdk/server/mcp.js", () => ({
-    McpServer: class MockMcpServer {
-      readonly server = {};
-      registerTool(): void {}
-      async connect(): Promise<void> {}
-      async close(): Promise<void> {}
-    },
-  }));
 
   vi.doMock("@modelcontextprotocol/sdk/server/streamableHttp.js", () => ({
     StreamableHTTPServerTransport: MockStreamableHTTPServerTransport,
@@ -281,8 +285,19 @@ beforeAll(async () => {
     toolResult: (value: unknown) => value,
   }));
 
+  const existingListeners = new Set(process.listeners("SIGTERM"));
   await import("../src/streamable-http.ts");
   await waitForHandler();
+  shutdown = process.listeners("SIGTERM").find(listener => !existingListeners.has(listener)) as (() => void) | undefined;
+}, 60_000);
+
+afterAll(() => {
+  if (shutdown) {
+    process.off("SIGTERM", shutdown);
+    process.off("SIGINT", shutdown);
+  }
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
 });
 
 describe("Streamable HTTP transport HTTP handler", () => {
@@ -485,5 +500,55 @@ describe("Streamable HTTP transport HTTP handler", () => {
 
     expect(followUp.statusCode).toBe(404);
     expect(followUp.json<{ error: string }>().error).toContain("Session not found");
+  });
+
+  it("cancels a pending handshake once and discards its late session ID", async () => {
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
+    vi.mocked(process.exit).mockReturnValue(undefined as never);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    pauseInitialization = () => {
+      entered.resolve();
+      return release.promise;
+    };
+    const response = new MockResponse();
+    const initialization = dispatch({
+      method: "POST",
+      url: "/mcp",
+      headers: { "content-type": "application/json", "x-api-key": TEST_API_KEY },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: 7,
+        method: "initialize",
+        params: { protocolVersion: LATEST_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: "vitest", version: "1" } },
+      }),
+    }, response);
+
+    try {
+      await entered.promise;
+      const transport = transportInstances.at(-1)!;
+      expect(shutdown).toBeDefined();
+      shutdown!();
+      expect(response.statusCode).toBe(503);
+      expect(response.writableEnded).toBe(true);
+      expect(response.headers["mcp-session-id"]).toBeUndefined();
+
+      release.resolve();
+      await initialization;
+      expect(transport.sessionId).toBeDefined();
+      expect(transport.close).toHaveBeenCalledTimes(1);
+      const followUp = await dispatch({
+        method: "DELETE",
+        url: "/mcp",
+        headers: { "x-api-key": TEST_API_KEY, "mcp-session-id": transport.sessionId! },
+      });
+      expect(followUp.statusCode).toBe(404);
+    } finally {
+      pauseInitialization = undefined;
+      release.resolve();
+      await initialization;
+      try { await vi.advanceTimersByTimeAsync(10_000); }
+      finally { vi.useRealTimers(); }
+    }
   });
 });
