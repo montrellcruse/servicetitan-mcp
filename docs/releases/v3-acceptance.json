@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "6b3e155181e7c7c0d823674f82a9ce568862b1601f33aaf8139999027376630e",
+  "sourceFingerprint": "dabde9827f280ee5cbe7ead50c1defa29903732df0333eed7699d44c022b126f",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -27,7 +27,7 @@
     },
     "analytics": {
       "status": "passed",
-      "boundary": "Coverage and synthetic analytics checks passed on both candidate runtimes, including required numeric report fields, source isolation, and retry after malformed feeds. No live KPI reconciliation.",
+      "boundary": "Synthetic coverage passed on both runtimes, including Report 166 rows with no recorded hours, malformed-numeric rejection, and retry after incomplete feeds. The production gate records the limited live reconciliation.",
       "summary": "VALIDATION-v3.md"
     },
     "interface": {
@@ -43,7 +43,7 @@
       ],
       "platform": "darwin-arm64",
       "testFiles": 48,
-      "testsPerRuntime": 660,
+      "testsPerRuntime": 662,
       "wireTestsPerRuntime": 26,
       "packagingTestsPerRuntime": 2,
       "summary": "VALIDATION-v3.md",
@@ -54,8 +54,8 @@
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Fresh packed consumers passed imports, Node ambient types, public declarations, discovery, and installed stdio on both candidate runtimes. No tenant calls or npm publication.",
-      "javascriptBuildSha256": "833563d936813336cbacfe872ccc29e390346aff9d34947644e7cacfaf51f4f3",
+      "boundary": "Fresh packed installs passed imports, five discovery profiles, and stdio on both runtimes. JavaScript and public declarations matched. The smoke tests made no tenant calls.",
+      "javascriptBuildSha256": "d9486c8f50ca6c49d7a1c85b199b83a1fef66a3d3f186b8f8f8b19f714dafe73",
       "typescriptDeclarationsSha256": "df7ce1df03eb9b658c99017fa4dae1092b5b3fad9b6c3342eccb756040c62eb7",
       "runtimes": [
         "22.20.0",
@@ -66,10 +66,37 @@
       "digestAlgorithm": "SHA256 of sorted build-relative paths + NUL + exact bytes + NUL, calculated separately for JavaScript and declarations"
     },
     "liveProduction": {
-      "status": "pending",
-      "boundary": "The architecture candidate requires bounded read-only production validation of the final release source.",
+      "status": "passed",
+      "boundary": "One production company, forcibly read-only. Representative module access and report definitions, plus a bounded sample of labor hours and invoice counts and amounts reconciled to API source rows. No dashboard parity, live business mutations, second-company certification, or deployment verification.",
       "summary": "VALIDATION-v3.md",
-      "freshTenantCalls": 0
+      "sourceFingerprint": "dabde9827f280ee5cbe7ead50c1defa29903732df0333eed7699d44c022b126f",
+      "sourceRevision": "8642baab514d1738de51250675306ef11c5ba2b6",
+      "javascriptBuildSha256": "d9486c8f50ca6c49d7a1c85b199b83a1fef66a3d3f186b8f8f8b19f714dafe73",
+      "testedArchiveSha256": "e72a8f56feb52b5b054e9aacf6a3ab261461ed865c30612ce32a850ff56f6f56",
+      "runtime": "v24.22.1",
+      "checkedAt": "2026-11-25T18:49:02.617Z",
+      "freshTenantCalls": 37,
+      "readCallsByKind": {
+        "module-read": 15,
+        "definition": 19,
+        "report-data": 3
+      },
+      "authenticated": true,
+      "readOnlyTools": 264,
+      "readiness": {
+        "fullProfile": "ready",
+        "namedModuleChecks": 14,
+        "reportDefinitions": 18,
+        "pipelineOnly": "ready",
+        "pipelineEstimateAccess": true
+      },
+      "sampleWindow": {
+        "startDate": "2026-11-23",
+        "endDate": "2026-11-24"
+      },
+      "laborHoursReconciled": true,
+      "grossPayAvailable": false,
+      "invoiceCountsAndAmountsReconciled": true
     },
     "liveIntegration": {
       "status": "scoped_out",
@@ -253,6 +280,34 @@
   "architectureCandidate": {
     "issue": 32,
     "auditedPrHead": "79ebadea197553420785b668f8338c5b89753b45",
-    "scope": "Synthetic runtime, compatibility, controlled-load, and packed consumer verification. No live tenant calls."
+    "scope": "Synthetic runtime, compatibility, controlled-load, and packed consumer verification. No live tenant calls.",
+    "mergeRevision": "1cd18bd12f66625ec49926f19b2b1b39bd0b3f8f",
+    "sourceFingerprint": "6b3e155181e7c7c0d823674f82a9ce568862b1601f33aaf8139999027376630e",
+    "runtimeMatrix": {
+      "status": "passed",
+      "runtimes": [
+        "22.20.0",
+        "24.22.1"
+      ],
+      "platform": "darwin-arm64",
+      "testFiles": 48,
+      "testsPerRuntime": 660,
+      "wireTestsPerRuntime": 26,
+      "packagingTestsPerRuntime": 2,
+      "summary": "VALIDATION-v3.md",
+      "packagingPassedPerRuntime": 2,
+      "packagingSkippedPerRuntime": 0,
+      "boundary": "Clean locked installs, pinned contracts, types, lint, coverage, built wire, discovery, and packaging passed per runtime. Docker context is tested without building an image. GitHub Linux CI is tracked separately."
+    },
+    "javascriptBuildSha256": "833563d936813336cbacfe872ccc29e390346aff9d34947644e7cacfaf51f4f3",
+    "productionCheck": {
+      "status": "partial",
+      "checkedAt": "2026-11-25T18:41:42.002Z",
+      "freshTenantCalls": 37,
+      "readiness": "ready",
+      "invoiceReconciliation": "passed",
+      "laborReconciliation": "failed",
+      "reason": "Report 166 returned rows with no recorded time in any hour bucket. The merged validator rejected the feed."
+    }
   }
 }
