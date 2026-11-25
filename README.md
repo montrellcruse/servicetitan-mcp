@@ -4,7 +4,7 @@
 [![npm](https://img.shields.io/npm/v/@rowvyn/servicetitan-mcp.svg)](https://www.npmjs.com/package/@rowvyn/servicetitan-mcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
+A ServiceTitan MCP package for independently configured companies. The server uses pinned official API contracts, read-only discovery, configurable report bindings, and explicit data-completeness checks.
 
 Built by [Rowvyn](https://rowvyn.com). Version **4.0.0** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [upgrade guide](docs/MIGRATION-v3.md#upgrading-from-3x-to-4) before upgrading.
 
