@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "10313a40a71af47254dcbbe9cc1606aef58ebe675250e91347dc390e46293042",
+  "sourceFingerprint": "e0aa8731922a2c1d76b20c1d363b2ead59f2923732015e3fd1f19e14c6193075",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -72,7 +72,7 @@
     "liveProduction": {
       "status": "pending",
       "summary": "VALIDATION-v3.md",
-      "boundary": "The shipped v4.0.0 passed its production gate. This post-release README-only source has a new fingerprint and has not been released or freshly production-validated."
+      "boundary": "The shipped v4.0.0 passed its production gate. This post-release documentation source has a new fingerprint and has not been released or freshly production-validated."
     },
     "liveIntegration": {
       "status": "scoped_out",
