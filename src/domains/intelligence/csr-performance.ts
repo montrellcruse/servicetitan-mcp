@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
-  isRecord,
   round,
   safeDivide,
   toDateRange,
@@ -21,23 +20,6 @@ const csrPerformanceSchema = z.object({
   businessUnitId: z.number().int().optional().describe("Filter by business unit ID"),
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
 });
-
-const FIELD = {
-  BookedBy: 0,
-  JobNumber: 1,
-  InvoiceNumber: 2,
-  JobType: 3,
-  CustomerName: 4,
-  LocationAddress: 5,
-  CustomerPhone: 6,
-  JobSummary: 7,
-  FirstDispatch: 8,
-  JobStatus: 9,
-  Campaign: 10,
-  Total: 11,
-  CampaignCategory: 12,
-  IsPrevailingWageJob: 13,
-} as const;
 
 interface CampaignAggregate {
   name: string;
@@ -95,14 +77,6 @@ interface CsrPerformance {
   topCampaigns: CampaignSummary[];
   jobTypes: JobTypeSummary[];
   conversionMetrics: ConversionMetrics;
-}
-
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
 }
 
 function normalizeKey(value: string): string {
@@ -196,18 +170,18 @@ export function registerIntelligenceCsrPerformanceTool(
           null,
         );
 
-        const rows = reportResponse ? extractReportRows(reportResponse) : [];
+        const rows = reportResponse?.data ?? [];
         const csrMap = new Map<string, CsrAccumulator>();
 
         for (const row of rows) {
-          const csrName = toText(row[FIELD.BookedBy]) ?? "Unassigned";
+          const csrName = toText(row.BookedBy) ?? "Unassigned";
           const csrKey = normalizeKey(csrName);
-          const revenue = toNumber(row[FIELD.Total]);
-          const status = (toText(row[FIELD.JobStatus]) ?? "").toLowerCase();
-          const invoiceNumber = toText(row[FIELD.InvoiceNumber]);
-          const campaignName = toText(row[FIELD.Campaign]) ?? "Unattributed";
-          const campaignCategory = toText(row[FIELD.CampaignCategory]);
-          const jobTypeName = toText(row[FIELD.JobType]) ?? "Unknown";
+          const revenue = toNumber(row.Total);
+          const status = (toText(row.JobStatus) ?? "").toLowerCase();
+          const invoiceNumber = toText(row.InvoiceNumber);
+          const campaignName = toText(row.Campaign) ?? "Unattributed";
+          const campaignCategory = toText(row.CampaignCategory);
+          const jobTypeName = toText(row.JobType) ?? "Unknown";
 
           const csr =
             csrMap.get(csrKey) ??

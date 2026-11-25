@@ -23,6 +23,7 @@ const serverInstances: MockMcpServer[] = [];
 const loggerInstances: MockLogger[] = [];
 
 class MockMcpServer {
+  readonly server = {};
   connect = vi.fn(async () => {
     if (connectError) {
       throw connectError;

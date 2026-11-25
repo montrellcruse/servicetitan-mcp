@@ -37,9 +37,9 @@ describe("safety response truncation", () => {
 
   it("delivery error includes the full original envelope size when metadata fits", () => {
     const payload = { data: "x".repeat(5000) };
-    const originalLength = withRequestContext({ maxResponseChars: 100000, timezone: "UTC", storeOversized: undefined }, () => JSON.stringify(toolResult(payload)).length);
+    const originalLength = withRequestContext({ maxResponseChars: 100000, timezone: "UTC", resultDelivery: undefined }, () => JSON.stringify(toolResult(payload)).length);
 
-    const result = withRequestContext({ maxResponseChars: 2200, timezone: "UTC", storeOversized: undefined }, () => toolResult(payload));
+    const result = withRequestContext({ maxResponseChars: 2200, timezone: "UTC", resultDelivery: undefined }, () => toolResult(payload));
     const text = result.content[0]?.text ?? "";
     const parsed = JSON.parse(text);
 

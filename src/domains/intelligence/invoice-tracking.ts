@@ -2,12 +2,11 @@ import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
   formatCurrency,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -24,39 +23,6 @@ const invoiceTrackingSchema = z.object({
   businessUnitName: z.string().optional().describe("Filter by business unit name (resolved via cache, e.g. 'HVAC'). Alternative to businessUnitId."),
 });
 
-const SENT_FIELD = {
-  InvoiceNumber: 0,
-  Customer: 1,
-  EMail: 2,
-  Amount: 3,
-  InvoiceBalance: 4,
-  CustomerBalance: 5,
-  Project: 6,
-  ProjectEmailed: 7,
-  JobNumber: 8,
-  JobType: 9,
-  BusinessUnit: 10,
-  Technician: 11,
-  InvoicedOn: 12,
-  EmailedOn: 13,
-} as const;
-
-const NOT_SENT_FIELD = {
-  InvoiceNumber: 0,
-  Customer: 1,
-  EMail: 2,
-  Amount: 3,
-  InvoiceBalance: 4,
-  CustomerBalance: 5,
-  Project: 6,
-  ProjectEmailed: 7,
-  JobNumber: 8,
-  JobType: 9,
-  BusinessUnit: 10,
-  Technician: 11,
-  InvoicedOn: 12,
-} as const;
-
 interface InvoiceSummary {
   invoiceNumber: string;
   amount: number;
@@ -70,56 +36,21 @@ interface BreakdownSummary {
   amount: number;
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function normalizeKey(value: string): string {
   return value.trim().toLowerCase();
 }
 
-function parseSentInvoices(response: unknown): InvoiceSummary[] {
-  const rows = extractReportRows(response);
+function parseInvoices(report: ReportExecution | null): InvoiceSummary[] {
+  const rows = report?.data ?? [];
   const byInvoiceNumber = new Map<string, InvoiceSummary>();
   const withoutNumber: InvoiceSummary[] = [];
 
   for (const row of rows) {
     const invoice: InvoiceSummary = {
-      invoiceNumber: toText(row[SENT_FIELD.InvoiceNumber]) ?? "",
-      amount: round(toNumber(row[SENT_FIELD.Amount]), 2),
-      businessUnit: toText(row[SENT_FIELD.BusinessUnit]) ?? "Unknown",
-      technician: toText(row[SENT_FIELD.Technician]) ?? "Unassigned",
-    };
-
-    const key = normalizeKey(invoice.invoiceNumber);
-    if (key.length === 0) {
-      withoutNumber.push(invoice);
-      continue;
-    }
-
-    if (!byInvoiceNumber.has(key)) {
-      byInvoiceNumber.set(key, invoice);
-    }
-  }
-
-  return [...byInvoiceNumber.values(), ...withoutNumber];
-}
-
-function parseNotSentInvoices(response: unknown): InvoiceSummary[] {
-  const rows = extractReportRows(response);
-  const byInvoiceNumber = new Map<string, InvoiceSummary>();
-  const withoutNumber: InvoiceSummary[] = [];
-
-  for (const row of rows) {
-    const invoice: InvoiceSummary = {
-      invoiceNumber: toText(row[NOT_SENT_FIELD.InvoiceNumber]) ?? "",
-      amount: round(toNumber(row[NOT_SENT_FIELD.Amount]), 2),
-      businessUnit: toText(row[NOT_SENT_FIELD.BusinessUnit]) ?? "Unknown",
-      technician: toText(row[NOT_SENT_FIELD.Technician]) ?? "Unassigned",
+      invoiceNumber: toText(row.InvoiceNumber) ?? "",
+      amount: round(toNumber(row.Amount), 2),
+      businessUnit: toText(row.BusinessUnit) ?? "Unknown",
+      technician: toText(row.Technician) ?? "Unassigned",
     };
 
     const key = normalizeKey(invoice.invoiceNumber);
@@ -227,7 +158,7 @@ export function registerIntelligenceInvoiceTrackingTool(
           ),
         ]);
 
-        const sentInvoices = sentReport ? parseSentInvoices(sentReport) : [];
+        const sentInvoices = parseInvoices(sentReport);
         const sentInvoiceNumbers = new Set(
           sentInvoices
             .map((invoice) => invoice.invoiceNumber.trim().toLowerCase())
@@ -235,7 +166,7 @@ export function registerIntelligenceInvoiceTrackingTool(
         );
 
         // Deduplicate: remove from not-sent any invoice that also appears in sent (by invoice number)
-        const notSentRaw = notSentReportRaw ? parseNotSentInvoices(notSentReportRaw) : [];
+        const notSentRaw = parseInvoices(notSentReportRaw);
         const notSentInvoices = notSentRaw.filter((invoice) => {
           const key = invoice.invoiceNumber.trim().toLowerCase();
           return key.length === 0 || !sentInvoiceNumbers.has(key);

@@ -2,12 +2,11 @@ import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   countWeekdaysInclusive,
   fetchWithWarning,
-  isRecord,
   round,
   safeDivide,
   toDateRange,
@@ -32,93 +31,6 @@ const technicianScorecardSchema = z.object({
     .describe("Max technicians to analyze (default 25, max 50)"),
   includeExtendedMetrics: z.boolean().optional().default(false).describe("Include memberships sold and sales from technician and marketing leads by running Reports 171, 173, and 174. Default: false."),
 });
-
-const REVENUE_FIELD = {
-  Name: 0,
-  CompletedRevenue: 1,
-  OpportunityJobAverage: 2,
-  OpportunityConversionRate: 3,
-  Opportunity: 4,
-  ConvertedJobs: 5,
-  CustomerSatisfaction: 6,
-  TechnicianId: 7,
-} as const;
-
-const PRODUCTIVITY_FIELD = {
-  Name: 0,
-  RevenuePerHour: 1,
-  BillableEfficiency: 2,
-  Upsold: 3,
-  RecallsCaused: 6,
-  TechnicianId: 7,
-} as const;
-
-const LEAD_GENERATION_FIELD = {
-  Name: 0,
-  ReplacementOpportunity: 1,
-  LeadsSet: 2,
-  AverageLeadSale: 3,
-  ReplacementLeadConversionRate: 4,
-  ReplacementLeadsSold: 5,
-  TotalLeadSales: 6,
-  AverageReplacementLeadSale: 7,
-  TechnicianId: 8,
-} as const;
-
-const MEMBERSHIPS_FIELD = {
-  Name: 0,
-  MembershipOpportunities: 1,
-  MembershipsSold: 2,
-  MembershipConversionRate: 3,
-  TechnicianId: 4,
-  AdjustmentRevenue: 5,
-  CompletedRevenueWithAdjustments: 6,
-} as const;
-
-const SALES_FROM_TECH_LEADS_FIELD = {
-  Name: 0,
-  TechnicianBusinessUnit: 1,
-  TotalSalesFromTgl: 2,
-  ClosedAverageSaleFromTgl: 3,
-  CloseRateFromTgl: 4,
-  OptionsPerOpportunityFromTgl: 5,
-  TechnicianBusinessUnitId: 6,
-  TechnicianDivision: 7,
-  PaidTimeByBusinessUnit: 8,
-  AdjustmentRevenue: 9,
-  CompletedRevenueWithAdjustments: 10,
-  TechnicianId: 11,
-} as const;
-
-const SALES_FROM_MARKETING_LEADS_FIELD = {
-  Name: 0,
-  TotalSalesFromMarketingLeads: 1,
-  ClosedAverageSaleFromMarketingLeads: 2,
-  CloseRateFromMarketingLeads: 3,
-  OptionsPerOpportunityFromMarketingLeads: 4,
-  TechnicianId: 5,
-  AdjustmentRevenue: 6,
-  CompletedRevenueWithAdjustments: 7,
-} as const;
-
-const JOB_DETAIL_FIELD = {
-  AssignedTechnicians: 2,
-} as const;
-
-const REPORT_165_ASSIGNED_TECHNICIAN_ID_FIELDS = [
-  "AssignedTechnicianId",
-  "AssignedTechnicianIds",
-  "TechnicianId",
-  "TechnicianIds",
-] as const;
-
-const REPORT_165_ASSIGNED_TECHNICIAN_NAME_FIELDS = [
-  "AssignedTechnicians",
-  "AssignedTechnician",
-  "Assigned Technician(s)",
-  "Technician",
-  "Technicians",
-] as const;
 
 interface RevenueByTech {
   id: number;
@@ -192,21 +104,6 @@ interface TechnicianScorecard {
   salesFromMarketingLeads: LeadSalesMetrics;
 }
 
-interface CompletedJobAttribution {
-  countsByTechId: Map<number, number>;
-  namesByTechId: Map<number, string>;
-  technicianIds: Set<number>;
-  warnings: string[];
-}
-
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function parseTechnicianId(raw: unknown): number {
   return Math.round(toNumber(raw));
 }
@@ -243,48 +140,48 @@ function toLeadSalesMetrics(metrics?: Partial<LeadSalesMetrics>): LeadSalesMetri
   };
 }
 
-function parseRevenueReport(response: unknown): RevenueByTech[] {
-  const rows = extractReportRows(response);
+function parseRevenueReport(report: ReportExecution | null): RevenueByTech[] {
+  const rows = report?.data ?? [];
   const result: RevenueByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[REVENUE_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     result.push({
       id,
-      name: parseTechnicianName(row[REVENUE_FIELD.Name], id),
-      revenue: round(toNumber(row[REVENUE_FIELD.CompletedRevenue]), 2),
-      averageTicket: round(toNumber(row[REVENUE_FIELD.OpportunityJobAverage]), 2),
-      opportunities: Math.round(toNumber(row[REVENUE_FIELD.Opportunity])),
-      convertedJobs: Math.round(toNumber(row[REVENUE_FIELD.ConvertedJobs])),
-      conversionRate: round(toNumber(row[REVENUE_FIELD.OpportunityConversionRate]) * 100, 1),
-      customerSatisfaction: round(toNumber(row[REVENUE_FIELD.CustomerSatisfaction]), 2),
+      name: parseTechnicianName(row.Name, id),
+      revenue: round(toNumber(row.CompletedRevenue), 2),
+      averageTicket: round(toNumber(row.OpportunityJobAverage), 2),
+      opportunities: Math.round(toNumber(row.Opportunity)),
+      convertedJobs: Math.round(toNumber(row.ConvertedJobs)),
+      conversionRate: round(toNumber(row.OpportunityConversionRate) * 100, 1),
+      customerSatisfaction: round(toNumber(row.CustomerSatisfaction), 2),
     });
   }
 
   return result;
 }
 
-function parseProductivityReport(response: unknown): ProductivityByTech[] {
-  const rows = extractReportRows(response);
+function parseProductivityReport(report: ReportExecution | null): ProductivityByTech[] {
+  const rows = report?.data ?? [];
   const result: ProductivityByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[PRODUCTIVITY_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     result.push({
       id,
-      name: parseTechnicianName(row[PRODUCTIVITY_FIELD.Name], id),
-      revenuePerHour: round(toNumber(row[PRODUCTIVITY_FIELD.RevenuePerHour]), 2),
-      billableEfficiency: round(toNumber(row[PRODUCTIVITY_FIELD.BillableEfficiency]), 3),
-      recallsCaused: Math.round(toNumber(row[PRODUCTIVITY_FIELD.RecallsCaused])),
-      upsold: round(toNumber(row[PRODUCTIVITY_FIELD.Upsold]), 2),
+      name: parseTechnicianName(row.Name, id),
+      revenuePerHour: round(toNumber(row.RevenuePerHour), 2),
+      billableEfficiency: round(toNumber(row.BillableEfficiency), 3),
+      recallsCaused: Math.round(toNumber(row.RecallsCaused)),
+      upsold: round(toNumber(row.Upsold), 2),
     });
   }
 
@@ -317,27 +214,27 @@ function hasAnyLeadSalesMetrics(metrics: LeadSalesMetrics): boolean {
   );
 }
 
-function parseLeadGenerationReport(response: unknown): LeadGenerationByTech[] {
-  const rows = extractReportRows(response);
+function parseLeadGenerationReport(report: ReportExecution | null): LeadGenerationByTech[] {
+  const rows = report?.data ?? [];
   const result: LeadGenerationByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[LEAD_GENERATION_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     const tech: LeadGenerationByTech = {
       id,
-      name: parseTechnicianName(row[LEAD_GENERATION_FIELD.Name], id),
-      replacementOpps: Math.round(toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity])),
-      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
-      avgLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
+      name: parseTechnicianName(row.Name, id),
+      replacementOpps: Math.round(toNumber(row.ReplacementOpportunity)),
+      leadsSet: Math.round(toNumber(row.LeadsSet)),
+      avgLeadSale: round(toNumber(row.AverageLeadSale), 2),
       conversionRate: round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]) * 100,
+        toNumber(row.ReplacementLeadConversionRate) * 100,
         1,
       ),
-      totalLeadSales: round(toNumber(row[LEAD_GENERATION_FIELD.TotalLeadSales]), 2),
+      totalLeadSales: round(toNumber(row.TotalLeadSales), 2),
     };
 
     if (hasAnyLeadGenerationMetrics(tech)) {
@@ -348,22 +245,22 @@ function parseLeadGenerationReport(response: unknown): LeadGenerationByTech[] {
   return result;
 }
 
-function parseMembershipsReport(response: unknown): MembershipsByTech[] {
-  const rows = extractReportRows(response);
+function parseMembershipsReport(report: ReportExecution | null): MembershipsByTech[] {
+  const rows = report?.data ?? [];
   const result: MembershipsByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[MEMBERSHIPS_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     const tech: MembershipsByTech = {
       id,
-      name: parseTechnicianName(row[MEMBERSHIPS_FIELD.Name], id),
-      opportunities: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipOpportunities])),
-      sold: Math.round(toNumber(row[MEMBERSHIPS_FIELD.MembershipsSold])),
-      conversionRate: round(toNumber(row[MEMBERSHIPS_FIELD.MembershipConversionRate]) * 100, 1),
+      name: parseTechnicianName(row.Name, id),
+      opportunities: Math.round(toNumber(row.MembershipOpportunities)),
+      sold: Math.round(toNumber(row.MembershipsSold)),
+      conversionRate: round(toNumber(row.MembershipConversionRate) * 100, 1),
     };
 
     if (hasAnyMembershipMetrics(tech)) {
@@ -374,22 +271,22 @@ function parseMembershipsReport(response: unknown): MembershipsByTech[] {
   return result;
 }
 
-function parseSalesFromTechLeadsReport(response: unknown): LeadSalesByTech[] {
-  const rows = extractReportRows(response);
+function parseSalesFromTechLeadsReport(report: ReportExecution | null): LeadSalesByTech[] {
+  const rows = report?.data ?? [];
   const result: LeadSalesByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[SALES_FROM_TECH_LEADS_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     const tech: LeadSalesByTech = {
       id,
-      name: parseTechnicianName(row[SALES_FROM_TECH_LEADS_FIELD.Name], id),
-      totalSales: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.TotalSalesFromTgl]), 2),
-      avgSale: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.ClosedAverageSaleFromTgl]), 2),
-      closeRate: round(toNumber(row[SALES_FROM_TECH_LEADS_FIELD.CloseRateFromTgl]) * 100, 1),
+      name: parseTechnicianName(row.Name, id),
+      totalSales: round(toNumber(row.TotalSalesFromTgl), 2),
+      avgSale: round(toNumber(row.ClosedAverageSaleFromTgl), 2),
+      closeRate: round(toNumber(row.CloseRateFromTgl) * 100, 1),
     };
 
     if (hasAnyLeadSalesMetrics(tech)) {
@@ -400,29 +297,29 @@ function parseSalesFromTechLeadsReport(response: unknown): LeadSalesByTech[] {
   return result;
 }
 
-function parseSalesFromMarketingLeadsReport(response: unknown): LeadSalesByTech[] {
-  const rows = extractReportRows(response);
+function parseSalesFromMarketingLeadsReport(report: ReportExecution | null): LeadSalesByTech[] {
+  const rows = report?.data ?? [];
   const result: LeadSalesByTech[] = [];
 
   for (const row of rows) {
-    const id = parseTechnicianId(row[SALES_FROM_MARKETING_LEADS_FIELD.TechnicianId]);
+    const id = parseTechnicianId(row.TechnicianId);
     if (id <= 0) {
       continue;
     }
 
     const tech: LeadSalesByTech = {
       id,
-      name: parseTechnicianName(row[SALES_FROM_MARKETING_LEADS_FIELD.Name], id),
+      name: parseTechnicianName(row.Name, id),
       totalSales: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.TotalSalesFromMarketingLeads]),
+        toNumber(row.TotalSalesFromMarketingLeads),
         2,
       ),
       avgSale: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.ClosedAverageSaleFromMarketingLeads]),
+        toNumber(row.ClosedAverageSaleFromMarketingLeads),
         2,
       ),
       closeRate: round(
-        toNumber(row[SALES_FROM_MARKETING_LEADS_FIELD.CloseRateFromMarketingLeads]) * 100,
+        toNumber(row.CloseRateFromMarketingLeads) * 100,
         1,
       ),
     };
@@ -433,185 +330,6 @@ function parseSalesFromMarketingLeadsReport(response: unknown): LeadSalesByTech[
   }
 
   return result;
-}
-
-function normalizeTechnicianName(name: string): string {
-  return name.trim().toLowerCase();
-}
-
-function normalizeReportFieldName(name: string): string {
-  return name.replace(/[^a-z0-9]/gi, "").toLowerCase();
-}
-
-function buildNameToTechIds(
-  ...techGroups: ReadonlyArray<ReadonlyArray<TechnicianIdentity>>
-): Map<string, Set<number>> {
-  const byName = new Map<string, Set<number>>();
-
-  const add = (name: string, id: number): void => {
-    const key = normalizeTechnicianName(name);
-    if (key.length === 0 || id <= 0) {
-      return;
-    }
-
-    const existing = byName.get(key) ?? new Set<number>();
-    existing.add(id);
-    byName.set(key, existing);
-  };
-
-  for (const techGroup of techGroups) {
-    for (const tech of techGroup) {
-      add(tech.name, tech.id);
-    }
-  }
-
-  return byName;
-}
-
-function findReportFieldIndex(
-  response: unknown,
-  candidateNames: readonly string[],
-  fallbackIndex?: number,
-): number | null {
-  if (isRecord(response) && Array.isArray(response.fields)) {
-    const normalizedCandidates = new Set(candidateNames.map(normalizeReportFieldName));
-    const matchedIndex = response.fields.findIndex((field) => {
-      if (!isRecord(field) || typeof field.name !== "string") {
-        return false;
-      }
-      return normalizedCandidates.has(normalizeReportFieldName(field.name));
-    });
-
-    if (matchedIndex >= 0) {
-      return matchedIndex;
-    }
-  }
-
-  return fallbackIndex ?? null;
-}
-
-function splitAssignedTechnicianNames(value: unknown): string[] {
-  const text = toText(value);
-  if (!text) {
-    return [];
-  }
-
-  return text
-    .split(",")
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-}
-
-function parseAssignedTechnicianIds(value: unknown): number[] {
-  if (Array.isArray(value)) {
-    return value
-      .map((entry) => Math.round(toNumber(entry)))
-      .filter((entry) => entry > 0);
-  }
-
-  if (typeof value === "number") {
-    const id = Math.round(value);
-    return id > 0 ? [id] : [];
-  }
-
-  const text = toText(value);
-  if (!text) {
-    return [];
-  }
-
-  return text
-    .split(/[;,]/)
-    .map((part) => Math.round(toNumber(part.trim())))
-    .filter((entry) => entry > 0);
-}
-
-function countCompletedJobsByTech(
-  response: unknown,
-  nameToTechIds: Map<string, Set<number>>,
-): CompletedJobAttribution {
-  const rows = extractReportRows(response);
-  const completedByTechId = new Map<number, number>();
-  const namesByTechId = new Map<number, string>();
-  const technicianIds = new Set<number>();
-  const warningMessages = new Set<string>();
-  const assignedTechnicianIdIndex = findReportFieldIndex(
-    response,
-    REPORT_165_ASSIGNED_TECHNICIAN_ID_FIELDS,
-  );
-  const assignedTechnicianNameIndex = findReportFieldIndex(
-    response,
-    REPORT_165_ASSIGNED_TECHNICIAN_NAME_FIELDS,
-    JOB_DETAIL_FIELD.AssignedTechnicians,
-  );
-
-  for (const row of rows) {
-    const assignedNames = assignedTechnicianNameIndex === null
-      ? []
-      : splitAssignedTechnicianNames(row[assignedTechnicianNameIndex]);
-    const assignedIds = assignedTechnicianIdIndex === null
-      ? []
-      : parseAssignedTechnicianIds(row[assignedTechnicianIdIndex]);
-
-    if (assignedNames.length === 0 && assignedIds.length === 0) {
-      continue;
-    }
-
-    const matchedIds = new Set<number>();
-
-    if (assignedIds.length > 0) {
-      assignedIds.forEach((id, index) => {
-        matchedIds.add(id);
-        technicianIds.add(id);
-
-        const assignedName = assignedNames[index] ?? (assignedNames.length === 1 ? assignedNames[0] : undefined);
-        if (assignedName) {
-          namesByTechId.set(id, assignedName);
-        }
-      });
-    } else {
-      for (const rawName of assignedNames) {
-        const normalizedName = normalizeTechnicianName(rawName);
-        if (normalizedName.length === 0) {
-          continue;
-        }
-
-        const ids = nameToTechIds.get(normalizedName);
-        if (!ids) {
-          continue;
-        }
-
-        if (ids.size > 1) {
-          warningMessages.add(
-            `Skipped completed-job attribution for ambiguous technician name "${rawName}" in Report 165.`,
-          );
-          console.warn(
-            `Skipped completed-job attribution for ambiguous technician name "${rawName}" in Report 165.`,
-          );
-          continue;
-        }
-
-        const [id] = ids;
-        if (id === undefined) {
-          continue;
-        }
-
-        matchedIds.add(id);
-        technicianIds.add(id);
-        namesByTechId.set(id, rawName);
-      }
-    }
-
-    for (const id of matchedIds) {
-      completedByTechId.set(id, (completedByTechId.get(id) ?? 0) + 1);
-    }
-  }
-
-  return {
-    countsByTechId: completedByTechId,
-    namesByTechId,
-    technicianIds,
-    warnings: Array.from(warningMessages),
-  };
 }
 
 function hasAnyActivity(tech: TechnicianScorecard): boolean {

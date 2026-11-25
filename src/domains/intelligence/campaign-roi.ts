@@ -9,7 +9,6 @@ import {
   fetchAllPagesWithTotal,
   fetchWithWarning,
   firstValue,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -18,7 +17,7 @@ import {
   toText,
 } from "./helpers.js";
 import { sumReport175TotalRevenue } from "./revenue.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 
 const campaignPerformanceSchema = z.object({
   startDate: z.string().describe("Start date (YYYY-MM-DD)"),
@@ -34,21 +33,6 @@ const campaignPerformanceSchema = z.object({
 });
 
 type GenericRecord = Record<string, unknown>;
-
-const LEAD_GENERATION_FIELD = {
-  Name: 0,
-  LeadGenerationOpportunity: 1,
-  LeadsSet: 2,
-  LeadConversionRate: 3,
-  AverageLeadSale: 4,
-  ReplacementOpportunity: 5,
-  ReplacementLeadsSet: 6,
-  ReplacementLeadConversionRate: 7,
-  MembershipSales: 8,
-  AdjustmentRevenue: 9,
-  TotalRevenue: 10,
-  NonJobRevenue: 11,
-} as const;
 
 interface LeadGenerationByBusinessUnit {
   name: string;
@@ -97,14 +81,6 @@ function countByCampaign(records: GenericRecord[]): Map<number, number> {
   return result;
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function hasAnyLeadActivity(bu: LeadGenerationByBusinessUnit): boolean {
   return (
     bu.leadGenerationOpportunity !== 0 ||
@@ -116,33 +92,33 @@ function hasAnyLeadActivity(bu: LeadGenerationByBusinessUnit): boolean {
   );
 }
 
-function parseLeadGenerationReport(response: unknown): LeadGenerationByBusinessUnit[] {
-  const rows = extractReportRows(response);
+function parseLeadGenerationReport(report: ReportExecution | null): LeadGenerationByBusinessUnit[] {
+  const rows = report?.data ?? [];
   const result: LeadGenerationByBusinessUnit[] = [];
 
   for (const row of rows) {
     const bu: LeadGenerationByBusinessUnit = {
-      name: toText(row[LEAD_GENERATION_FIELD.Name]) ?? "Unknown",
+      name: toText(row.Name) ?? "Unknown",
       leadGenerationOpportunity: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.LeadGenerationOpportunity]),
+        toNumber(row.LeadGenerationOpportunity),
       ),
-      leadsSet: Math.round(toNumber(row[LEAD_GENERATION_FIELD.LeadsSet])),
-      leadConversionRate: round(toNumber(row[LEAD_GENERATION_FIELD.LeadConversionRate]), 3),
-      averageLeadSale: round(toNumber(row[LEAD_GENERATION_FIELD.AverageLeadSale]), 2),
+      leadsSet: Math.round(toNumber(row.LeadsSet)),
+      leadConversionRate: round(toNumber(row.LeadConversionRate), 3),
+      averageLeadSale: round(toNumber(row.AverageLeadSale), 2),
       replacementOpportunity: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementOpportunity]),
+        toNumber(row.ReplacementOpportunity),
       ),
       replacementLeadsSet: Math.round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadsSet]),
+        toNumber(row.ReplacementLeadsSet),
       ),
       replacementLeadConversionRate: round(
-        toNumber(row[LEAD_GENERATION_FIELD.ReplacementLeadConversionRate]),
+        toNumber(row.ReplacementLeadConversionRate),
         3,
       ),
-      membershipSales: round(toNumber(row[LEAD_GENERATION_FIELD.MembershipSales]), 2),
-      adjustmentRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.AdjustmentRevenue]), 2),
-      totalRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.TotalRevenue]), 2),
-      nonJobRevenue: round(toNumber(row[LEAD_GENERATION_FIELD.NonJobRevenue]), 2),
+      membershipSales: round(toNumber(row.MembershipSales), 2),
+      adjustmentRevenue: round(toNumber(row.AdjustmentRevenue), 2),
+      totalRevenue: round(toNumber(row.TotalRevenue), 2),
+      nonJobRevenue: round(toNumber(row.NonJobRevenue), 2),
     };
 
     if (hasAnyLeadActivity(bu)) {
@@ -238,9 +214,7 @@ export function registerIntelligenceCampaignPerformanceTool(
 
         const callsByCampaignId = countByCampaign(calls);
         const bookingsByCampaignId = countByCampaign(bookings);
-        const leadGeneration = leadGenerationReport
-          ? parseLeadGenerationReport(leadGenerationReport)
-          : [];
+        const leadGeneration = parseLeadGenerationReport(leadGenerationReport);
 
         const campaignRows: Array<{
           id: number;
@@ -293,7 +267,7 @@ export function registerIntelligenceCampaignPerformanceTool(
         const unattributedBookings = bookings.length - totalsBookings;
 
         // Extract total revenue from Report 175 instead of paginating all invoices
-        const totalsRevenue = revenueReport === null ? 0 : sumReport175TotalRevenue(revenueReport);
+        const totalsRevenue = sumReport175TotalRevenue(revenueReport);
 
         const result: Record<string, unknown> = {
           period: {

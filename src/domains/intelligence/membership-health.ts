@@ -2,13 +2,12 @@ import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -22,25 +21,6 @@ const membershipHealthSchema = z.object({
   endDate: z.string().describe("End date (YYYY-MM-DD)"),
   includeServiceRevenue: z.boolean().optional().default(false).describe("Include tenant-wide totalServiceRevenue by fetching every available invoice page for the period. Default: false."),
 });
-
-const MEMBERSHIP_SUMMARY_FIELD = {
-  Name: 0,
-  Suspended: 1,
-  Canceled: 2,
-  Expired: 3,
-  Deleted: 4,
-  Renewed: 5,
-  Reactivated: 6,
-  NewSales: 7,
-  ActiveAtEnd: 8,
-} as const;
-
-const MEMBERSHIP_CONVERSION_FIELD = {
-  Name: 0,
-  Opportunities: 1,
-  Converted: 2,
-  ConversionRate: 3,
-} as const;
 
 type GenericRecord = Record<string, unknown>;
 
@@ -63,14 +43,6 @@ interface BusinessUnitMembershipConversion {
   conversionRate: number;
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function parseCount(value: unknown): number {
   return Math.round(toNumber(value));
 }
@@ -88,21 +60,21 @@ function hasAnyReportActivity(type: MembershipTypeSummary): boolean {
   );
 }
 
-function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[] {
-  const rows = extractReportRows(response);
+function parseMembershipSummaryReport(report: ReportExecution | null): MembershipTypeSummary[] {
+  const rows = report?.data ?? [];
   const summaries: MembershipTypeSummary[] = [];
 
   for (const row of rows) {
     const summary: MembershipTypeSummary = {
-      name: toText(row[MEMBERSHIP_SUMMARY_FIELD.Name]) ?? "Unknown",
-      suspended: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Suspended]),
-      canceled: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Canceled]),
-      expired: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Expired]),
-      deleted: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Deleted]),
-      renewed: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Renewed]),
-      reactivated: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.Reactivated]),
-      newSales: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.NewSales]),
-      activeAtEnd: parseCount(row[MEMBERSHIP_SUMMARY_FIELD.ActiveAtEnd]),
+      name: toText(row.Name) ?? "Unknown",
+      suspended: parseCount(row.Suspended),
+      canceled: parseCount(row.Canceled),
+      expired: parseCount(row.Expired),
+      deleted: parseCount(row.Deleted),
+      renewed: parseCount(row.Renewed),
+      reactivated: parseCount(row.Reactivated),
+      newSales: parseCount(row.NewSales),
+      activeAtEnd: parseCount(row.ActiveAtEnd),
     };
 
     if (!hasAnyReportActivity(summary)) {
@@ -115,23 +87,23 @@ function parseMembershipSummaryReport(response: unknown): MembershipTypeSummary[
   return summaries;
 }
 
-function parseMembershipConversionReport(response: unknown): BusinessUnitMembershipConversion[] {
-  const rows = extractReportRows(response);
+function parseMembershipConversionReport(report: ReportExecution | null): BusinessUnitMembershipConversion[] {
+  const rows = report?.data ?? [];
   const conversions: BusinessUnitMembershipConversion[] = [];
 
   for (const row of rows) {
-    const opportunities = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Opportunities]);
-    const converted = parseCount(row[MEMBERSHIP_CONVERSION_FIELD.Converted]);
+    const opportunities = parseCount(row.MembershipOpportunities);
+    const converted = parseCount(row.MembershipsConverted);
 
     if (opportunities === 0 && converted === 0) {
       continue;
     }
 
     conversions.push({
-      name: toText(row[MEMBERSHIP_CONVERSION_FIELD.Name]) ?? "Unknown",
+      name: toText(row.Name) ?? "Unknown",
       opportunities,
       converted,
-      conversionRate: round(toNumber(row[MEMBERSHIP_CONVERSION_FIELD.ConversionRate]) * 100, 1),
+      conversionRate: round(toNumber(row.MembershipConversionRate) * 100, 1),
     });
   }
 
@@ -172,8 +144,8 @@ export function registerIntelligenceMembershipHealthTool(
         // Parallelize all data fetches — independent API calls
         // invoices only fetched when includeServiceRevenue=true (opt-in to avoid ~1-2s overhead)
         const fetches: [
-          Promise<unknown>,
-          Promise<unknown>,
+          Promise<ReportExecution | null>,
+          Promise<ReportExecution | null>,
           Promise<GenericRecord[]>,
         ] = [
           fetchWithWarning(
@@ -209,12 +181,8 @@ export function registerIntelligenceMembershipHealthTool(
         const [membershipSummaryReport, membershipConversionReport, invoices] =
           await Promise.all(fetches);
 
-        const membershipTypeStats = membershipSummaryReport
-          ? parseMembershipSummaryReport(membershipSummaryReport)
-          : [];
-        const conversionByBusinessUnit = membershipConversionReport
-          ? parseMembershipConversionReport(membershipConversionReport)
-          : [];
+        const membershipTypeStats = parseMembershipSummaryReport(membershipSummaryReport);
+        const conversionByBusinessUnit = parseMembershipConversionReport(membershipConversionReport);
         const totalServiceRevenue = input.includeServiceRevenue
           ? round(sumBy(invoices, invoiceTotal), 2)
           : null;

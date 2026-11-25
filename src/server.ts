@@ -7,6 +7,7 @@ import { prepareToolCatalog, type SystemToolName } from "./prepare-tool-catalog.
 import { ToolRegistry, type ToolDefinition } from "./registry.js";
 import { checkCatalogReadiness } from "./readiness.js";
 import { getRequestContext, throwIfAborted } from "./request-context.js";
+import { toolResultChunk } from "./result-delivery.js";
 import { toolResult } from "./utils.js";
 
 declare const __PACKAGE_VERSION__: string | undefined;
@@ -36,10 +37,11 @@ export async function prepareMcpDeployment(config: ServiceTitanConfig, options: 
       st_readiness_check: async params => toolResult(await checkCatalogReadiness(client, config, catalog, { reports: (params as { reports?: boolean }).reports })),
       st_result_read: async params => {
         const { resultId, offset = 0 } = params as { resultId: string; offset?: number };
-        return toolResult(registry.readResult(resultId, offset));
+        return toolResultChunk(registry.readResult(resultId, offset));
       },
     };
     registry.registerCatalog(systemHandlers);
+    server.server.onclose = () => registry.clearResults();
     const close = server.close.bind(server);
     server.close = async () => { registry.clearResults(); await close(); };
     return { server, registry, client, logger };

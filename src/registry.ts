@@ -8,11 +8,11 @@ import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
 import { ExperimentalWritesDisabledError } from "./config.js";
 import { withRequestContext } from "./request-context.js";
-import { ResultStore } from "./result-store.js";
+import { type ResultChunk, ResultDelivery, getResponseDeliveryFailure } from "./result-delivery.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
-import { getResponseDeliveryFailure, toolError, toolResult } from "./utils.js";
 import { DOMAIN_FILTER_REASON, ToolCatalog } from "./tool-catalog.js";
+import { toolError, toolResult } from "./utils.js";
 
 export type ToolOperation = "read" | "write" | "delete";
 export const EXPERIMENTAL_MUTATION_NOTICE = "EXPERIMENTAL: This mutation has not been verified against a live ServiceTitan Integration environment. ";
@@ -81,7 +81,7 @@ export class ToolRegistry {
   private readonly registeredTools: ToolDefinition[] = [];
   private client: ServiceTitanClient | null = null;
   private activeCalls = 0;
-  private readonly resultStore = new ResultStore();
+  private sessionResults?: ResultDelivery;
   readonly catalog: ToolCatalog;
 
   constructor(
@@ -113,10 +113,19 @@ export class ToolRegistry {
       exclusionReason ? [[tool.name, exclusionReason]] : []));
   }
 
-  clearResults(): void { this.resultStore.clear(); }
-  readResult(resultId: string, offset: number): Record<string, unknown> {
-    // Worst-case JSON escaping and duplicated text/structured content stay within the response budget.
-    return this.resultStore.read(resultId, offset, Math.max(1, Math.floor((this.config.maxResponseChars - 180) / 16)));
+  clearResults(): void {
+    // Legacy SSE reconnects the registry to a new transport. In-flight calls
+    // from the closed session keep their closed publisher.
+    this.sessionResults?.close();
+    this.sessionResults = undefined;
+  }
+
+  private get resultDelivery(): ResultDelivery {
+    return this.sessionResults ??= new ResultDelivery();
+  }
+
+  readResult(resultId: string, offset: number): ResultChunk {
+    return this.resultDelivery.read(resultId, offset, this.config.maxResponseChars);
   }
 
 
@@ -295,7 +304,7 @@ export class ToolRegistry {
       timer.unref();
       const signal = extra?.signal ? AbortSignal.any([extra.signal, deadline.signal]) : deadline.signal;
       try {
-        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, storeOversized: payload => this.resultStore.put(payload) }, async () => {
+        return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, resultDelivery: this.resultDelivery }, async () => {
           if (signal.aborted) return toolError("Tool execution cancelled");
           if (this.activeCalls >= (this.config.maxConcurrentToolCalls ?? 16)) return toolError("Server is busy; retry after active tool calls complete");
           this.activeCalls += 1;
