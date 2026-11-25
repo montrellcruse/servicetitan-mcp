@@ -11,7 +11,9 @@ The PR #38 candidate passed the following local checks on darwin-arm64. Both run
 
 Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The report fixtures verify that malformed hours and invoice amounts don't enter the cache, invalid pay preserves valid hours, and a null technician ID leaves other rows usable. Readiness tests cover the estimates feed and reports required by tools added to an embedded server. HTTP wire tests distinguish a clean drain from a deadline that interrupts work, even after the client disconnects. The packed consumer exercised package imports and stdio with synthetic inputs.
 
-The acceptance record identifies the tested source by fingerprint and records these results under the current gates. Earlier dependency-security evidence is recorded separately under `maintenanceRefresh` and below. Bounded read-only production validation is pending for this candidate. [Acceptance record](v3-acceptance.json)
+The acceptance record identifies the tested source by fingerprint. Earlier dependency-security evidence is recorded separately under `maintenanceRefresh` and below. [Acceptance record](v3-acceptance.json)
+
+The first production check of the merged PR exposed a Report 166 response with all three hour fields null on some rows. The follow-up accepts those rows as having no recorded hours, preserves pay if the report supplies it, and still rejects partially missing or malformed hour values. The acceptance record distinguishes the original run from the follow-up and records each against its tested source.
 
 ## November 15, 2026 dependency-security continuity refresh (unpublished)
 

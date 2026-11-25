@@ -33,6 +33,8 @@ export interface ReportExecution {
   binding: ReportBinding;
 }
 
+const LABOR_HOUR_FIELDS = ["RegularHours", "OvertimeHours", "DoubleOvertimeHours"] as const;
+
 export const INTELLIGENCE_REPORT_CONTRACTS = [
   {
     key: "162", category: "operations", reportId: 162,
@@ -59,9 +61,9 @@ export const INTELLIGENCE_REPORT_CONTRACTS = [
   {
     key: "166", category: "accounting", reportId: 166,
     requiredParameters: ["From", "To"],
-    fields: ["EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours"],
+    fields: ["EmployeeName", "Date", ...LABOR_HOUR_FIELDS],
     optionalFields: ["GrossPay"],
-    numericFields: ["RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"],
+    numericFields: [...LABOR_HOUR_FIELDS, "GrossPay"],
   },
   {
     key: "168", category: "technician-dashboard", reportId: 168,
@@ -344,7 +346,11 @@ function validateReportCells(
   pageLabel: string,
   optionalFieldWarnings: Map<string, string>,
 ): void {
+  // Report 166 can return rows with no recorded time in any hour bucket.
+  // Preserve those rows (including any pay), but reject partially missing hours.
+  const noRecordedLaborHours = contract.key === "166" && LABOR_HOUR_FIELDS.every(field => row[field] === null);
   for (const [field, value] of Object.entries(row)) {
+    if (noRecordedLaborHours && LABOR_HOUR_FIELDS.some(hourField => hourField === field)) continue;
     if (isValidReportCell(contract, field, value)) continue;
     const warning = `${pageLabel} returned an invalid value for ${field}`;
     if (!contract.optionalFields?.includes(field)) throw new Error(warning);
