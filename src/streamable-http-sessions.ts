@@ -186,15 +186,18 @@ export class StreamableHttpSessions {
     this.logger.info("Shutdown signal received, draining HTTP sessions");
 
     let closingListener = false;
+    let interruptedWork = false;
     const stopListening = () => {
       if (closingListener) return;
       closingListener = true;
       httpServer.close(error => {
         clearTimeout(deadline);
-        onClosed(error ? 1 : 0);
+        onClosed(error || interruptedWork ? 1 : 0);
       });
     };
     const deadline = setTimeout(() => {
+      interruptedWork = [...this.sessions.values()].some(session => session.activeRequests > 0);
+      if (interruptedWork) this.logger.error("HTTP drain deadline reached with unfinished requests");
       for (const session of this.sessions.values()) void this.closeSession(session, "shutdown-deadline");
       stopListening();
       httpServer.closeAllConnections();

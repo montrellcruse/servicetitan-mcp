@@ -2,16 +2,16 @@
 
 ## Architecture integration candidate for #32
 
-The PR #38 candidate passed the following local checks on darwin-arm64 after addressing the review. Node 22 built the JavaScript and public declarations. Both runtimes exercised the built wire and packed consumer interfaces.
+The PR #38 candidate passed the following local checks on darwin-arm64. Both runtimes built the JavaScript and public declarations and exercised the wire and installed package interfaces.
 
 | Node | Tests | Built wire | Packaging | Installed profiles | Synthetic client scenarios |
 | --- | --- | --- | --- | --- | --- |
-| v22.20.0 | 651 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
-| v24.22.1 | 651 across 48 files | 24 | 2 | 5 | 10 load, 9 fault |
+| v22.20.0 | 652 across 48 files | 25 | 2 | 5 | 10 load, 9 fault |
+| v24.22.1 | 652 across 48 files | 25 | 2 | 5 | 10 load, 9 fault |
 
-Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The report and readiness regressions ran against synthetic fixtures. The packed consumer exercised package imports and stdio with synthetic inputs.
+Lint, pinned contract verification, v3 discovery compatibility, and synthetic analytics checks passed. Export verification covered 44 registered operations and five documented exclusions. The report fixtures verify that missing or invalid pay preserves valid hours and that a null technician ID leaves other rows usable. The HTTP wire tests distinguish a clean drain from a deadline that interrupts work. The packed consumer exercised package imports and stdio with synthetic inputs.
 
-The acceptance record identifies the tested source by fingerprint. Bounded read-only production validation is pending for this candidate. [Acceptance record](v3-acceptance.json)
+The acceptance record identifies the tested source by fingerprint and records these results under `architectureCandidate`. The November 15 sections below retain earlier dependency-security evidence. Bounded read-only production validation is pending for this candidate. [Acceptance record](v3-acceptance.json)
 
 ## November 15, 2026 dependency-security continuity refresh (unpublished)
 

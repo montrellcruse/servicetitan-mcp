@@ -84,6 +84,25 @@ describe("intelligence report executor", () => {
     expect(errors).toEqual(["parameter DateType expects an array where a scalar is required"]);
   });
 
+  it("does not cache an hours-only result when the exposed GrossPay is invalid", async () => {
+    const fields = responseFields([...fields166, "GrossPay"]);
+    const post = vi.fn()
+      .mockResolvedValueOnce({ fields, data: [["Ada", "d", 8, 0, 0, null]], hasMore: false })
+      .mockResolvedValueOnce({ fields, data: [["Ada", "d", 8, 0, 0, 160]], hasMore: false });
+    const client = clientWith(post);
+    const run = () => executeReport(client, "166", params("2026-07-01"), undefined, {
+      cooldownMs: 100, now: () => 1000, sleep: async () => {},
+    });
+    const hoursOnly = await run();
+    expect(hoursOnly.data[0]?.RegularHours).toBe(8);
+    expect(hoursOnly.complete).toBe(false);
+    const complete = await run();
+    expect(complete.data[0]?.GrossPay).toBe(160);
+    expect(complete.complete).toBe(true);
+    expect(await run()).toBe(complete);
+    expect(post).toHaveBeenCalledTimes(2);
+  });
+
   it("preserves a verified optional GrossPay column and rejects malformed rows", async () => {
     const names = [...fields166, "GrossPay"];
     const good = vi.fn().mockResolvedValue({ fields: responseFields(names), data: [["Ada", "d", 1, 0, 0, 125]], hasMore: false, totalCount: 1 });

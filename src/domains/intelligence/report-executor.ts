@@ -18,6 +18,8 @@ export type ReportRow = Readonly<Record<string, unknown>>;
 
 export interface ReportExecution {
   fields: ReadonlySet<string>;
+  /** A present optional column can be unusable without invalidating the required data. */
+  optionalFieldWarnings: ReadonlyMap<string, string>;
   data: ReportRow[];
   page: number;
   pageSize: number;
@@ -137,15 +139,20 @@ function readReportColumns(fields: unknown, label: string): Map<string, number> 
 
 const DECIMAL_NUMBER = /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:e[+-]?\d+)?$/i;
 
-function validateReportCells(contract: ReportContract, row: ReportRow, pageLabel: string): void {
+function validateReportCells(
+  contract: ReportContract,
+  row: ReportRow,
+  pageLabel: string,
+  optionalFieldWarnings: Map<string, string>,
+): void {
   for (const [field, value] of Object.entries(row)) {
     if (contract.collectionFields?.includes(field)) continue;
     let valid = value === null || typeof value === "string" || typeof value === "boolean" || Number.isFinite(value);
     if (field === "TechnicianId") {
-      // Report consumers skip non-positive integer IDs.
-      valid = typeof value === "string"
+      // Report consumers skip unidentified rows and non-positive integer IDs.
+      valid = value === null || (typeof value === "string"
         ? /^[+-]?\d+$/.test(value.trim()) && Number.isSafeInteger(Number(value))
-        : Number.isSafeInteger(value);
+        : Number.isSafeInteger(value));
     } else if (field === "GrossPay") {
       // Require a complete decimal because toNumber also accepts numeric prefixes.
       valid = typeof value === "string"
@@ -158,7 +165,10 @@ function validateReportCells(contract: ReportContract, row: ReportRow, pageLabel
         valid = Number.isFinite(typeof value === "string" ? Number.parseFloat(value) : value);
       }
     }
-    if (!valid) throw new Error(`${pageLabel} returned an invalid value for ${field}`);
+    if (valid) continue;
+    const warning = `${pageLabel} returned an invalid value for ${field}`;
+    if (!contract.optionalFields?.includes(field)) throw new Error(warning);
+    if (!optionalFieldWarnings.has(field)) optionalFieldWarnings.set(field, warning);
   }
 }
 
@@ -217,6 +227,7 @@ export async function executeReport(
     const cachedAfterWait = state.cache.get(requestKey);
     if (cachedAfterWait && cachedAfterWait.expiresAt > now()) return cachedAfterWait.value;
     const allRows: ReportRow[] = [];
+    const optionalFieldWarnings = new Map<string, string>();
     let fields = new Set<string>();
     let responseFields: Set<string> | undefined;
     let totalCount: number | undefined;
@@ -284,7 +295,7 @@ export async function executeReport(
           throw new Error(`${pageLabel} returned a row with ${cells.length} cells for ${columns.size} fields`);
         }
         const row: ReportRow = Object.fromEntries(outputColumns.map(([name, index]) => [name, cells[index]]));
-        validateReportCells(contract, row, pageLabel);
+        validateReportCells(contract, row, pageLabel, optionalFieldWarnings);
         allRows.push(row);
       }
       pagesFetched += 1;
@@ -298,7 +309,11 @@ export async function executeReport(
     if (totalCount !== undefined && allRows.length !== totalCount) {
       throw new Error(`Report ${key} returned ${allRows.length} rows but totalCount was ${totalCount}`);
     }
-    const result: ReportExecution = { fields, data: allRows, page: 1, pageSize, hasMore: false, totalCount, complete: true, pagesFetched, binding };
+    const result: ReportExecution = {
+      fields, optionalFieldWarnings, data: allRows, page: 1, pageSize, hasMore: false,
+      totalCount, complete: optionalFieldWarnings.size === 0, pagesFetched, binding,
+    };
+    if (!result.complete) return result;
     for (const [cacheKey, entry] of state.cache) if (entry.expiresAt <= now()) state.cache.delete(cacheKey);
     while (state.cache.size >= 100) state.cache.delete(state.cache.keys().next().value as string);
     state.cache.set(requestKey,{expiresAt:now()+cooldownMs,value:result});

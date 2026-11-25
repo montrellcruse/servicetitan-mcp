@@ -102,12 +102,13 @@ describe("intelligence report feeds over MCP", () => {
     let grossPay: unknown = value;
     await withMcpReportFixture(
       "intel_labor_cost",
-      async (path) => {
+      async (path, _body, { page }) => {
         expect(path).toBe("/tenant/{tenant}/report-category/custom/reports/9166/data");
         return {
           fields: fields("EmployeeName", "Date", "RegularHours", "OvertimeHours", "DoubleOvertimeHours", "GrossPay"),
-          data: [["Ada", "2026-01-01", 7, 1, 0, grossPay]],
-          hasMore: false,
+          data: page === 1 ? [["Ada", "2026-01-01", 7, 1, 0, 160]] : [["Lin", "2026-01-02", 3, 1, 1, grossPay]],
+          hasMore: page === 1,
+          totalCount: 2,
         };
       },
       async (client) => {
@@ -115,21 +116,32 @@ describe("intelligence report feeds over MCP", () => {
         const partial = await client.callTool(request);
         expect(partial.isError).not.toBe(true);
         expect(partial.structuredContent).toMatchObject({
+          totalHours: 13,
+          regularHours: 10,
+          overtimeHours: 2,
+          doubleOvertimeHours: 1,
           totalGrossPay: null,
           avgHourlyRate: null,
-          costAvailability: { available: false },
-          employees: [],
-          _warnings: [expect.stringMatching(/Report 166.*invalid value for GrossPay/)],
+          costAvailability: { available: false, reason: expect.stringContaining("GrossPay") },
+          employees: [
+            { name: "Ada", totalHours: 8, grossPay: null, avgHourlyRate: null },
+            { name: "Lin", totalHours: 5, grossPay: null, avgHourlyRate: null },
+          ],
+          _warnings: [expect.stringMatching(/Report 166 page 2.*invalid value for GrossPay/)],
         });
 
         grossPay = " +1.6025e2 ";
         const complete = await client.callTool(request);
         expect(complete.isError).not.toBe(true);
         expect(complete.structuredContent).toMatchObject({
-          totalGrossPay: 160.25,
-          avgHourlyRate: 20.03,
+          totalHours: 13,
+          totalGrossPay: 320.25,
+          avgHourlyRate: 24.63,
           costAvailability: { available: true },
-          employees: [{ name: "Ada", totalHours: 8, grossPay: 160.25 }],
+          employees: [
+            { name: "Lin", totalHours: 5, grossPay: 160.25 },
+            { name: "Ada", totalHours: 8, grossPay: 160 },
+          ],
         });
         expect(complete.structuredContent).not.toHaveProperty("_warnings");
       },
@@ -159,6 +171,7 @@ describe("intelligence report feeds over MCP", () => {
                 ["Ada", "120.50", null, 0.5, 2, 1, null, technicianId, 0, 120.5],
                 ["Total", 120.5, null, 0.5, 2, 1, null, 0, 0, 120.5],
                 ["Unassigned", 120.5, null, 0.5, 2, 1, null, "-1", 0, 120.5],
+                ["Unidentified", 900, null, 0.5, 2, 1, null, null, 0, 900],
               ],
               hasMore: false,
             };

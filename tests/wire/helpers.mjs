@@ -108,14 +108,14 @@ export async function launchHttp(overrides = {}, entrypoint = "streamable-http.j
   child.stdout.resume();
   const exited = once(child, "exit");
   let stopped = false;
-  async function stop() {
+  async function stop(expectedExitCode = 0) {
     if (stopped) return;
     stopped = true;
     if (child.exitCode === null) child.kill("SIGTERM");
     let timer;
     try {
       const outcome = await Promise.race([exited, new Promise((_, reject) => { timer = setTimeout(() => reject(new Error("HTTP process failed to shut down after SIGTERM")), 12000); })]);
-      assert.equal(outcome[0], 0, `HTTP process exit: ${outcome}; ${stderr}`);
+      assert.deepEqual(outcome, [expectedExitCode, null], `HTTP process exit: ${outcome}; ${stderr}`);
       assert.doesNotMatch(stderr, /wire-fixture-secret|wire-fixture-app-key/);
     } finally {
       clearTimeout(timer);

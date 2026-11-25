@@ -147,7 +147,9 @@ export function registerIntelligenceLaborCostTool(
         );
 
         const rows = reportResponse?.data ?? [];
-        const costAvailable = reportResponse?.fields.has("GrossPay") ?? false;
+        const grossPayWarning = reportResponse?.optionalFieldWarnings.get("GrossPay");
+        if (grossPayWarning) warnings.push(grossPayWarning);
+        const costAvailable = !grossPayWarning && (reportResponse?.fields.has("GrossPay") ?? false);
         const employeeMap = new Map<string, EmployeeAccumulator>();
         const businessUnitMap = new Map<string, BusinessUnitAccumulator>();
 
@@ -319,7 +321,7 @@ export function registerIntelligenceLaborCostTool(
             available: costAvailable,
             reason: costAvailable
               ? "GrossPay is present in the configured report binding."
-              : "ServiceTitan Report 166 provides hours but no gross-pay field; labor cost cannot be calculated from this source.",
+              : grossPayWarning ?? "ServiceTitan Report 166 provides hours but no gross-pay field; labor cost cannot be calculated from this source.",
           },
           overtimePercent: round(
             safeDivide(totalOvertimeHours + totalDoubleOvertimeHours, totalHoursWorked) * 100,

@@ -189,9 +189,32 @@ test("built HTTP aborts unfinished work at the first signal's ten-second deadlin
     assert.equal((await rawMcp(runtime.url)).status, 503);
     const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
     assert.deepEqual(await command(1), { upstreamAborted: 8 });
-    assert.deepEqual(await exited, [0, null]);
+    assert.deepEqual(await exited, [1, null]);
     assert.equal(await completion, "");
     await assert.rejects(fetch(`${runtime.url}/health`, { signal: AbortSignal.timeout(1000) }));
+  } finally {
+    await runtime.stop(1);
+  }
+});
+
+test("built HTTP exits cleanly at the drain deadline when no work remains", { timeout: 20000 }, async () => {
+  const runtime = await launchHttp({}, "streamable-http.js", drainFixture);
+  const { child } = runtime;
+  try {
+    const { sessionId } = await rawMcp(runtime.url);
+    assert(sessionId);
+    const idle = await idleStream(runtime.url, { "mcp-session-id": sessionId });
+    assert.equal(idle.status, 200);
+
+    const frozen = once(child, "message", { signal: AbortSignal.timeout(5000) });
+    child.send("freeze-clock");
+    assert.equal((await frozen)[0], "clock-frozen");
+    child.kill("SIGTERM");
+    await idle.text();
+
+    const exited = once(child, "exit", { signal: AbortSignal.timeout(5000) });
+    child.send(10000);
+    assert.deepEqual(await exited, [0, null]);
   } finally {
     await runtime.stop();
   }

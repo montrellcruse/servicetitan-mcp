@@ -119,7 +119,7 @@ Bind a company's reports with JSON in `ST_REPORT_BINDINGS`:
 ST_REPORT_BINDINGS={"166":{"category":"accounting","reportId":900166}}
 ```
 
-The keys are the logical report IDs used by analytics; the values select this company's category and actual report ID. Required fields are validated by name and reordered before calculations. Default Report 166 provides hours but no gross pay; labor costs and hourly rates are `null` with explicit availability metadata. A compatible configured report that includes `GrossPay` can supply those metrics.
+The keys are the logical report IDs used by analytics; the values select this company's category and actual report ID. Required fields are validated by name and reordered before calculations. Default Report 166 provides hours but no gross pay; labor costs and hourly rates are `null` with explicit availability metadata. A compatible configured report that includes `GrossPay` can supply those metrics. If any pay value is missing or invalid, the tool still returns valid hours and leaves pay-derived metrics `null`.
 
 Analytics reads complete report feeds and matches each page's columns by name. Pages can present the same fields in different orders. A changed field set or malformed row makes that feed unavailable. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
 
@@ -147,7 +147,7 @@ Requests with a browser Origin require an exact `ST_CORS_ORIGIN` match. Without 
 
 `ST_ALLOWED_CALLERS` uses authenticated SDK identity. Request `_meta` and arbitrary forwarded identity headers are ignored. With the built-in shared API key, the authenticated principal is `ST_MCP_CLIENT_ID` (default `api-key`); this is one credential identity, not per-user identity. Embedders needing user identities must provide validated SDK `authInfo` through an authenticated transport.
 
-HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. During Streamable HTTP shutdown, new sessions and upstream tool calls are rejected. Pending handshakes and idle streams close. Admitted calls and existing-session result retrieval have up to ten seconds from the shutdown signal.
+HTTP sessions are bounded by `ST_MAX_SESSIONS` (32 default). Registry tool concurrency defaults to 16; ordinary API requests have a bounded queue and concurrency. Idle sessions are reaped after 30 minutes; active requests/streams are tracked. Session state and result handles are process-local, so multi-instance deployments need sticky routing. During Streamable HTTP shutdown, new sessions and upstream tool calls are rejected. Pending handshakes and idle streams close. Admitted calls and existing-session result retrieval have up to ten seconds from the shutdown signal. If the deadline interrupts a request, the process exits with status `1`.
 
 Legacy SSE is a single-client compatibility entrypoint: a new SSE connection replaces the prior one. Prefer Streamable HTTP.
 
