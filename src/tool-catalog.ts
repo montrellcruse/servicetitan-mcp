@@ -37,6 +37,7 @@ export class ToolCatalog {
   }
 
   add(tool: ToolDeclaration): ToolCatalogEntry {
+    assertWritePolicy(this.config);
     if (this.entries.has(tool.name)) throw new Error(`Tool "${tool.name}" is already registered`);
 
     const declaration = { ...tool, domain: tool.domain.toLowerCase() };
