@@ -5,7 +5,6 @@ import type { ToolRegistry } from "../../registry.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   fetchWithWarning,
-  isRecord,
   round,
   safeDivide,
   sumBy,
@@ -24,14 +23,6 @@ const laborCostSchema = z.object({
   technicianId: z.number().int().optional().describe("Filter by technician ID"),
   technicianName: z.string().optional().describe("Filter by technician name (resolved via cache, e.g. 'John'). Alternative to technicianId."),
 });
-
-const FIELD = {
-  EmployeeName: 0,
-  Date: 1,
-  RegularHours: 2,
-  OvertimeHours: 3,
-  DoubleOvertimeHours: 4,
-} as const;
 
 interface ActivityAccumulator {
   activity: string;
@@ -77,14 +68,6 @@ interface EmployeeLaborSummary {
   grossPay: number;
   avgHourlyRate: number;
   activityBreakdown: ActivityBreakdown[];
-}
-
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
 }
 
 function normalizeKey(value: string): string {
@@ -162,22 +145,19 @@ export function registerIntelligenceLaborCostTool(
           null,
         );
 
-        const rows = reportResponse ? extractReportRows(reportResponse) : [];
-        const grossPayIndex = reportResponse && Array.isArray(reportResponse.fields)
-          ? reportResponse.fields.findIndex((field) => field.name === "GrossPay")
-          : -1;
-        const costAvailable = grossPayIndex >= 0;
+        const rows = reportResponse?.data ?? [];
+        const costAvailable = reportResponse?.fields.has("GrossPay") ?? false;
         const employeeMap = new Map<string, EmployeeAccumulator>();
         const businessUnitMap = new Map<string, BusinessUnitAccumulator>();
 
         for (const row of rows) {
-          const employeeName = toText(row[FIELD.EmployeeName]) ?? "Unknown Employee";
+          const employeeName = toText(row.EmployeeName) ?? "Unknown Employee";
           const activityName = "Reported hours";
           const businessUnitName = "Unavailable from Report 166";
-          const regularHours = toNumber(row[FIELD.RegularHours]);
-          const overtimeHours = toNumber(row[FIELD.OvertimeHours]);
-          const doubleOvertimeHours = toNumber(row[FIELD.DoubleOvertimeHours]);
-          const grossPay = costAvailable ? toNumber(row[grossPayIndex]) : 0;
+          const regularHours = toNumber(row.RegularHours);
+          const overtimeHours = toNumber(row.OvertimeHours);
+          const doubleOvertimeHours = toNumber(row.DoubleOvertimeHours);
+          const grossPay = costAvailable ? toNumber(row.GrossPay) : 0;
           const hours = totalHours(regularHours, overtimeHours, doubleOvertimeHours);
 
           const employeeKey = normalizeKey(employeeName);
