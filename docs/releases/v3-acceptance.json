@@ -1,5 +1,5 @@
 {
-  "version": "3.0.2",
+  "version": "4.0.0",
   "supportPolicy": {
     "id": "readonly-v1",
     "stableOperations": [
@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "fa68e0187b5969d971eae7a4eece48f6eb557e3faea7fa25ed505cdf16406ce1",
+  "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -72,7 +72,7 @@
     "liveProduction": {
       "status": "pending",
       "summary": "VALIDATION-v3.md",
-      "boundary": "The previous production evidence applies to the earlier source. This CRM contact-filter candidate is not a verified publication artifact."
+      "boundary": "Production verification is pending against the installed 4.0.0 release candidate."
     },
     "liveIntegration": {
       "status": "scoped_out",

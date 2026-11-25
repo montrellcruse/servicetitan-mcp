@@ -1,4 +1,8 @@
-# V3 stable read-only validation
+# Stable read-only validation
+
+## 4.0.0 release evidence
+
+The [acceptance record](v3-acceptance.json) identifies the tested source, runtime builds, and scope of production verification for 4.0.0. The production checks are representative and read-only against one company. They don't certify write operations, independent-company compatibility, or dashboard parity. The sections below describe earlier builds.
 
 ## Production read corrections
 
