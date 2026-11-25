@@ -7,7 +7,8 @@ import { type AuditEntry, AuditLogger, sanitizeParams } from "./audit.js";
 import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
 import { ExperimentalWritesDisabledError } from "./config.js";
-import { withRequestContext } from "./request-context.js";
+import type { ReportKey } from "./domains/intelligence/report-executor.js";
+import { getRequestContext, withRequestContext } from "./request-context.js";
 import { type ResultChunk, ResultDelivery, getResponseDeliveryFailure } from "./result-delivery.js";
 import type { Logger } from "./logger.js";
 import type { ToolResponse } from "./types.js";
@@ -56,7 +57,7 @@ export interface ToolDefinition {
   annotations?: ToolAnnotationOverrides;
   /** Pinned operation identity or the candidate request for a documented exclusion. */
   apiContract?: { operationId: string } | { unsupportedRequest: { method: string; path: string } };
-  reports?: { required?: readonly string[]; optional?: readonly string[] };
+  reports?: { required?: readonly ReportKey[]; optional?: readonly ReportKey[] };
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;
 }
@@ -217,6 +218,7 @@ export class ToolRegistry {
     const requiresDeleteConfirmation = tool.operation === "delete";
     const isMutating = tool.operation === "write" || tool.operation === "delete";
     const shouldAudit = isMutating;
+    const isLocalResultRead = tool.domain === "_system" && tool.operation === "read" && tool.name === "st_result_read";
 
     const schema: Record<string, ZodType> = requiresDeleteConfirmation
       ? {
@@ -308,9 +310,12 @@ export class ToolRegistry {
       try {
         return await withRequestContext({ signal, timezone: this.config.timezone, maxResponseChars: this.config.maxResponseChars, mutatingOperation: false, resultDelivery: this.resultDelivery }, async () => {
           if (signal.aborted) return toolError("Tool execution cancelled");
+          const handlerExtra = { ...extra, signal };
+          // Local reads can finish while an admitted call occupies the upstream slot.
+          if (isLocalResultRead && getRequestContext().drainingHttpSession) return executeHandler(params, handlerExtra);
           if (this.activeCalls >= (this.config.maxConcurrentToolCalls ?? 16)) return toolError("Server is busy; retry after active tool calls complete");
           this.activeCalls += 1;
-          try { return await executeHandler(params, { ...extra, signal }); }
+          try { return await executeHandler(params, handlerExtra); }
           finally { this.activeCalls -= 1; }
         });
       } finally { clearTimeout(timer); }

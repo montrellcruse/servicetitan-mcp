@@ -4,6 +4,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { sendJson } from "./http-policy.js";
 import type { Logger } from "./logger.js";
+import { withRequestContext } from "./request-context.js";
 
 const SESSION_IDLE_TTL_MS = 30 * 60 * 1000;
 const SESSION_REAP_INTERVAL_MS = 60 * 1000;
@@ -132,7 +133,7 @@ export class StreamableHttpSessions {
     res.once("finish", finish);
     res.once("close", finish);
     try {
-      await session.transport.handleRequest(req, res, body);
+      await withRequestContext({ drainingHttpSession: this.draining }, () => session.transport.handleRequest(req, res, body));
     } catch (error) {
       await this.closeSession(session, "transport-failed");
       throw error;

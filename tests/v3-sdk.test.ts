@@ -45,12 +45,19 @@ describe("v3 real SDK integration",()=>{
         const chunk = result.structuredContent as { text: string; nextOffset: number | null };
         expect(JSON.parse((result.content[0] as { text: string }).text)).toEqual(chunk);
         expect(chunk.text.length).toBeGreaterThan(0);
+        expect(chunk.text.isWellFormed()).toBe(true);
         if (chunk.nextOffset !== null) expect(chunk.nextOffset).toBe(offset + chunk.text.length);
         text += chunk.text;
         offset = chunk.nextOffset;
       }
       expect(offset).toBeNull();
       expect(text).toBe(JSON.stringify(expected));
+
+      const invalidOffset = await client.callTool({
+        name: "st_result_read", arguments: { resultId: handle.resultId, offset: text.indexOf("😀") + 1 },
+      });
+      expect(invalidOffset.isError).toBe(true);
+      expect(invalidOffset.structuredContent).toMatchObject({ error: { message: "Invalid result offset" } });
     } finally {
       await client.close();
       await runtime.server.close();
@@ -58,7 +65,7 @@ describe("v3 real SDK integration",()=>{
   });
 
   it("preserves all readable handles when a completed mutation cannot publish its result", async () => {
-    const budget = 500;
+    const budget = 470;
     const get = vi.fn(async () => ({ data: "x".repeat(4000) }));
     const patch = vi.fn(async () => ({ data: "y".repeat(4000) }));
     const logger = new Logger("error");
@@ -110,6 +117,7 @@ describe("v3 real SDK integration",()=>{
       expect(fifth.structuredContent).toMatchObject({ delivery: "stored" });
       const evicted = await client.callTool({ name: "st_result_read", arguments: { resultId: handles[0] } });
       expect(evicted.isError).toBe(true);
+      expect(JSON.stringify(evicted).length).toBeLessThanOrEqual(budget);
       expect(evicted.structuredContent).toMatchObject({ error: { message: expect.stringMatching(/unavailable or expired/) } });
     } finally {
       await client.close();
@@ -157,11 +165,15 @@ describe("v3 real SDK integration",()=>{
     const runtime = await createMcpServer(loadConfig({
       ...env, ST_TOOL_PROFILE: "crm", ST_MAX_RESPONSE_CHARS: String(budget),
     }), { client: { get: vi.fn(async () => ({ data: "x".repeat(4000) })) } as unknown as ServiceTitanClient });
+    const onServerClose = vi.fn();
+    runtime.server.server.onclose = onServerClose;
     const clients = [new Client({ name: "original", version: "1" }), new Client({ name: "reconnected", version: "1" })];
     let oldHandle = "";
     try {
       for (const client of clients) {
         const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+        const onTransportClose = vi.fn();
+        serverTransport.onclose = onTransportClose;
         await runtime.server.connect(serverTransport);
         await client.connect(clientTransport);
         if (oldHandle) {
@@ -174,7 +186,9 @@ describe("v3 real SDK integration",()=>{
         expect(fresh.structuredContent).toMatchObject({ delivery: "stored", resultId: expect.any(String) });
         oldHandle = (fresh.structuredContent as { resultId: string }).resultId;
         await client.close();
+        expect(onTransportClose).toHaveBeenCalledTimes(1);
       }
+      expect(onServerClose).toHaveBeenCalledTimes(2);
     } finally {
       await Promise.allSettled(clients.map(client => client.close()));
       await runtime.server.close();

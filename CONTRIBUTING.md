@@ -52,7 +52,7 @@ Use the six Glama TDQS dimensions as review questions: purpose, usage guidance, 
 
 For equivalent endpoints, name the equivalent tool and explain that fetching both duplicates the same feed. Consider that profiles or allowlists can expose only one name. API versions, single-resource versus cross-resource lists, and incremental exports can have different contracts even when names are similar. Compare resolved routes, inputs, scopes, and returned data before calling tools equivalent.
 
-Descriptions remain at their registration sites; regenerate `TOOLS.md` with `npm run docs:tools`. The export factory inventory in `scripts/check-contracts.mjs` requires literal arguments on one line. If registration syntax changes, update its parser and prove that factory operations remain covered.
+Keep descriptions at their registration sites and regenerate `TOOLS.md` with `npm run docs:tools`. For export tools, `npm run contracts:check` verifies catalog registrations by comparing each fixture request's captured method and full path with its pinned operation. Account for any unsupported export with a documented exclusion.
 
 `npm run discovery:check` compares real SDK discovery with the v3.0.0 contract fixture at `tests/fixtures/discovery-v3.0.0.json` across default, focused, filtered, and experimental configurations. It uses a client that rejects every upstream request and permits description changes while checking tool names, profile membership, validation constraints, and annotations. Build first with `npm run build`. Update the fixture only when intentionally changing the public tool contract, with the corresponding compatibility review.
 

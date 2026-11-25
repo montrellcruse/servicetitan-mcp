@@ -41,7 +41,18 @@ export async function prepareMcpDeployment(config: ServiceTitanConfig, options: 
       },
     };
     registry.registerCatalog(systemHandlers);
-    server.server.onclose = () => registry.clearResults();
+    const connect = server.server.connect.bind(server.server);
+    server.server.connect = transport => {
+      if (!server.server.transport) {
+        // The SDK composes the transport callback when it attaches the connection.
+        const onclose = transport.onclose;
+        transport.onclose = () => {
+          if (server.server.transport === transport) registry.clearResults();
+          onclose?.();
+        };
+      }
+      return connect(transport);
+    };
     const close = server.close.bind(server);
     server.close = async () => { registry.clearResults(); await close(); };
     return { server, registry, client, logger };

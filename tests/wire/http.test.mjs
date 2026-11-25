@@ -107,7 +107,7 @@ function idleStream(url, headers) {
 }
 
 test("built HTTP drains admitted work and keeps both existing and newly published handles readable", { timeout: 20000 }, async () => {
-  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000" }, "streamable-http.js", drainFixture);
+  const runtime = await launchHttp({ ST_TOOL_TIMEOUT_MS: "15000", ST_MAX_CONCURRENT_TOOLS: "1" }, "streamable-http.js", drainFixture);
   try {
     const { sessionId } = await rawMcp(runtime.url);
     assert(sessionId);
@@ -124,18 +124,17 @@ test("built HTTP drains admitted work and keeps both existing and newly publishe
     void admitted.catch(() => {});
     const [upstream] = await started;
     assert.deepEqual(upstream, { upstreamStarted: 8 });
+    const busy = await call(toolCall(4, "crm_customers_get", { id: 9 }));
+    assert.match(busy.text, /Server is busy/);
     runtime.child.kill("SIGTERM");
     await idle.text();
-    if (runtime.child.connected) runtime.child.send("release-customer", () => {});
-    const finished = toolResult(await admitted);
-    assert.equal(finished.delivery, "stored");
 
     assert.equal((await rawMcp(runtime.url)).status, 503);
-    assert.equal((await call(toolCall(4, "crm_customers_get", { id: 9 }))).status, 503);
+    assert.equal((await call(toolCall(5, "crm_customers_get", { id: 9 }))).status, 503);
     assert.equal((await rawMcp(runtime.url, { method: "GET", headers })).status, 503);
 
-    let requestId = 5;
-    for (const [handle, customerId] of [[earlier, 7], [finished, 8]]) {
+    let requestId = 6;
+    async function readCustomer(handle, customerId) {
       let text = "";
       let offset = 0;
       do {
@@ -146,6 +145,11 @@ test("built HTTP drains admitted work and keeps both existing and newly publishe
       } while (offset !== null);
       assert.deepEqual(JSON.parse(text), { id: customerId, name: "x".repeat(2000) });
     }
+    await readCustomer(earlier, 7);
+    if (runtime.child.connected) runtime.child.send("release-customer", () => {});
+    const finished = toolResult(await admitted);
+    assert.equal(finished.delivery, "stored");
+    await readCustomer(finished, 8);
     assert.equal((await rawMcp(runtime.url, { method: "DELETE", headers })).status, 200);
   } finally {
     await runtime.stop();

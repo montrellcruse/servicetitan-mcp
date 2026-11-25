@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import type { ServiceTitanClient } from "./client.js";
 import type { ServiceTitanConfig } from "./config.js";
 import { ServiceTitanApiError } from "./client.js";
-import { INTELLIGENCE_REPORT_CONTRACTS, inspectReportDefinition } from "./domains/intelligence/report-executor.js";
+import { INTELLIGENCE_REPORT_CONTRACTS, inspectReportDefinition, type ReportKey } from "./domains/intelligence/report-executor.js";
 import { Logger } from "./logger.js";
 import { prepareToolCatalog } from "./prepare-tool-catalog.js";
 import { getRequestContext, throwIfAborted } from "./request-context.js";
@@ -43,7 +43,7 @@ type ReadinessOptions = { reports?: boolean; domains?: readonly string[] };
 
 function planReports(catalog: ToolCatalog, reports: boolean | undefined) {
   if (reports === false) return [];
-  const requirements = new Map<string, boolean>();
+  const requirements = new Map<ReportKey, boolean>();
   for (const tool of catalog.getSelectedTools()) {
     for (const key of tool.reports?.optional ?? []) {
       if (!requirements.has(key)) requirements.set(key, false);

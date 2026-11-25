@@ -89,6 +89,24 @@ describe("readiness compatibility manifests",()=>{
       reports: [{ key: "166", status: reportStatus, required: true }],
     });
   });
+  const laborDefinition = definitions.get("166")!;
+  it.each([
+    ["duplicate field names", { fields: [...laborDefinition.fields, laborDefinition.fields[0]] }],
+    ["invalid field metadata", { fields: [...laborDefinition.fields, { name: " " }] }],
+    ["unsupported required parameter PayrollCode", {
+      parameters: [...laborDefinition.parameters, { name: "PayrollCode", isRequired: true }],
+    }],
+  ])("is partial when the required labor definition has %s", async (reason, override) => {
+    const result = await mcpReadiness(fakeClient({ "166": { ...laborDefinition, ...override } }), "intel_labor_cost");
+
+    expect(result).toMatchObject({
+      status: "partial",
+      reports: [{
+        key: "166", status: "incompatible", required: true,
+        errors: expect.arrayContaining([expect.stringContaining(reason)]),
+      }],
+    });
+  });
   it("reports unavailable extended metrics while default scorecard readiness stays ready", async () => {
     const client = fakeClient({ "171": new ServiceTitanApiError(404, "Missing fixture definition", "/report") });
     const result = await mcpReadiness(client, "intel_technician_scorecard");
