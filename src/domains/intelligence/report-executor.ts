@@ -12,9 +12,11 @@ export interface ReportContract extends ReportBinding {
   parameterTypes?: Readonly<Record<string, string>>;
 }
 
+export type ReportRow = Readonly<Record<string, unknown>>;
+
 export interface ReportExecution {
-  fields: Array<{ name: string; [key: string]: unknown }>;
-  data: unknown[][];
+  fields: ReadonlySet<string>;
+  data: ReportRow[];
   page: number;
   pageSize: number;
   hasMore: boolean;
@@ -106,8 +108,50 @@ interface ExecutorOptions {
 interface ReportState { lastStartedAt: number; tail: Promise<void>; cache: Map<string,{expiresAt:number;value:ReportExecution}> }
 const CLIENT_STATES = new WeakMap<object, Map<string, ReportState>>();
 
-function fieldNames(fields: unknown): string[] {
-  return Array.isArray(fields) ? fields.filter(isRecord).map((f) => f.name).filter((v):v is string => typeof v === "string") : [];
+function readReportColumns(fields: unknown, pageLabel: string): Map<string, number> {
+  if (!Array.isArray(fields)) throw new Error(`${pageLabel} returned invalid fields`);
+  const columns = new Map<string, number>();
+  for (const [index, field] of fields.entries()) {
+    if (!isRecord(field) || typeof field.name !== "string" || field.name.trim().length === 0) {
+      throw new Error(`${pageLabel} returned invalid field metadata`);
+    }
+    if (columns.has(field.name)) throw new Error(`${pageLabel} has duplicate field names`);
+    columns.set(field.name, index);
+  }
+  return columns;
+}
+
+// These reports already require numeric metric values and a business unit name.
+const BUSINESS_UNIT_NUMERIC_FIELDS = new Map<string, readonly string[]>([
+  ["175", [
+    "CompletedRevenue", "OpportunityConversionRate", "Opportunity", "ConvertedJobs",
+    "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+  ]],
+  ["177", [
+    "RevenuePerHour", "BillableEfficiency", "Upsold", "TasksPerOpportunity",
+    "OptionsPerOpportunity", "RecallsCaused", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+  ]],
+  ["179", [
+    "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity", "OptionsPerOpportunity",
+    "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+  ]],
+]);
+
+function validateBusinessUnitCells(key: string, row: ReportRow, pageLabel: string): void {
+  const numericFields = BUSINESS_UNIT_NUMERIC_FIELDS.get(key);
+  if (numericFields === undefined) return;
+
+  const name = row.Name;
+  if (typeof name !== "string" || name.trim().length === 0) {
+    throw new Error(`${pageLabel} returned an invalid value for Name`);
+  }
+  for (const field of numericFields) {
+    const value = row[field];
+    const number = typeof value === "string" ? Number.parseFloat(value) : value;
+    if (!Number.isFinite(number)) {
+      throw new Error(`${pageLabel} returned an invalid value for ${field}`);
+    }
+  }
 }
 
 function canonical(value: unknown): unknown {
@@ -164,13 +208,13 @@ export async function executeReport(
   try {
     const cachedAfterWait = state.cache.get(requestKey);
     if (cachedAfterWait && cachedAfterWait.expiresAt > now()) return cachedAfterWait.value;
-    const allRows: unknown[][] = [];
-    let fields: Array<{name:string;[key:string]:unknown}> = [];
-    let responseFieldNames: string[] = [];
+    const allRows: ReportRow[] = [];
+    let fields = new Set<string>();
+    let responseFields: Set<string> | undefined;
     let totalCount: number | undefined;
     let hasMore = false;
     let pagesFetched = 0;
-    for (let page=1; page<=maxPages; page += 1) {
+    for (let page = 1; page <= maxPages; page += 1) {
       throwIfAborted(signal);
       const waitMs = Math.max(0, state.lastStartedAt + cooldownMs - now());
       if (waitMs > 0) await sleep(waitMs);
@@ -190,40 +234,63 @@ export async function executeReport(
         }
         throw new Error(message);
       }
-      if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`Report ${key} returned an invalid page`);
-      if (typeof response.hasMore !== "boolean") throw new Error(`Report ${key} page ${page} omitted boolean hasMore`);
+      const pageLabel = `Report ${key} page ${page}`;
+      if (!isRecord(response) || !Array.isArray(response.data)) throw new Error(`${pageLabel} returned an invalid page`);
+      if (typeof response.hasMore !== "boolean") throw new Error(`${pageLabel} omitted boolean hasMore`);
       if (response.page !== undefined && response.page !== page) throw new Error(`Report ${key} returned page ${String(response.page)} while page ${page} was requested`);
-      if (response.totalCount !== undefined && (!Number.isSafeInteger(response.totalCount) || (response.totalCount as number) < 0)) {
-        throw new Error(`Report ${key} returned an invalid totalCount`);
+      if (response.pageSize !== undefined && response.pageSize !== pageSize) {
+        throw new Error(`${pageLabel} reported pageSize ${String(response.pageSize)} instead of ${pageSize}`);
       }
-      const names = fieldNames(response.fields);
-      if (new Set(names).size !== names.length) throw new Error(`Report ${key} page ${page} has duplicate field names`);
-      if (page === 1) {
-        const missing = contract.fields.filter((name) => !names.includes(name));
+      if (response.data.length > pageSize) throw new Error(`${pageLabel} returned more than ${pageSize} rows`);
+      if (response.data.length === 0 && (page > 1 || response.hasMore)) {
+        throw new Error(`${pageLabel} returned no rows despite indicating more data`);
+      }
+      const declaredTotal = response.totalCount;
+      if (declaredTotal !== undefined && declaredTotal !== null) {
+        if (typeof declaredTotal !== "number" || !Number.isSafeInteger(declaredTotal) || declaredTotal < 0) {
+          throw new Error(`${pageLabel} returned an invalid totalCount`);
+        }
+        if (totalCount !== undefined && totalCount !== declaredTotal) {
+          throw new Error(`${pageLabel} changed totalCount from ${totalCount} to ${declaredTotal}`);
+        }
+        totalCount = declaredTotal;
+      }
+      const columns = readReportColumns(response.fields, pageLabel);
+      if (responseFields === undefined) {
+        const missing = contract.fields.filter((name) => !columns.has(name));
         if (missing.length) throw new Error(`Report ${key} is missing required fields: ${missing.join(", ")}`);
-        responseFieldNames = names;
-        const outputNames = [...contract.fields, ...(contract.optionalFields ?? []).filter((name) => names.includes(name))];
-        fields = outputNames.map((name) => ({ name }));
-        if (typeof response.totalCount === "number") totalCount = response.totalCount;
-      } else if (names.join("\0") !== responseFieldNames.join("\0")) {
+        responseFields = new Set(columns.keys());
+        const optionalFields = (contract.optionalFields ?? []).filter((name) => columns.has(name));
+        fields = new Set([...contract.fields, ...optionalFields]);
+      } else if (columns.size !== responseFields.size || [...responseFields].some((name) => !columns.has(name))) {
         throw new Error(`Report ${key} fields changed between pages`);
       }
-      const indexes = fields.map((field) => names.indexOf(field.name));
-      const rows = (response.data.filter(Array.isArray) as unknown[][])
-        .map((row) => {
-          if (row.length !== names.length) throw new Error(`Report ${key} page ${page} returned a row with ${row.length} cells for ${names.length} fields`);
-          return indexes.map((index) => row[index]);
-        });
-      allRows.push(...rows); pagesFetched += 1; hasMore = response.hasMore === true;
-      if (allRows.length > maxRows) throw new Error(`Report ${key} exceeded the ${maxRows}-row safety limit`);
+      const outputColumns = [...columns].filter(([name]) => fields.has(name));
+
+      if (allRows.length + response.data.length > maxRows) {
+        throw new Error(`Report ${key} exceeded the ${maxRows}-row safety limit`);
+      }
+      for (const cells of response.data) {
+        if (!Array.isArray(cells)) throw new Error(`${pageLabel} returned an invalid row`);
+        if (cells.length !== columns.size) {
+          throw new Error(`${pageLabel} returned a row with ${cells.length} cells for ${columns.size} fields`);
+        }
+        const row: ReportRow = Object.fromEntries(outputColumns.map(([name, index]) => [name, cells[index]]));
+        validateBusinessUnitCells(key, row, pageLabel);
+        allRows.push(row);
+      }
+      pagesFetched += 1;
+      hasMore = response.hasMore;
       if (!hasMore) break;
-      if (rows.length === 0) throw new Error(`Report ${key} returned hasMore=true with no rows`);
+      if (totalCount !== undefined && allRows.length >= totalCount) {
+        throw new Error(`${pageLabel} reported hasMore=true after reaching totalCount ${totalCount}`);
+      }
     }
-    if (hasMore) throw new Error(`Report ${key} exceeded the ${maxPages}-page safety limit`);
+    if (hasMore || pagesFetched === 0) throw new Error(`Report ${key} exceeded the ${maxPages}-page safety limit`);
     if (totalCount !== undefined && allRows.length !== totalCount) {
       throw new Error(`Report ${key} returned ${allRows.length} rows but totalCount was ${totalCount}`);
     }
-    const result: ReportExecution = { fields, data:allRows, page:1, pageSize, hasMore:false, totalCount, complete:true, pagesFetched, binding };
+    const result: ReportExecution = { fields, data: allRows, page: 1, pageSize, hasMore: false, totalCount, complete: true, pagesFetched, binding };
     for (const [cacheKey, entry] of state.cache) if (entry.expiresAt <= now()) state.cache.delete(cacheKey);
     while (state.cache.size >= 100) state.cache.delete(state.cache.keys().next().value as string);
     state.cache.set(requestKey,{expiresAt:now()+cooldownMs,value:result});

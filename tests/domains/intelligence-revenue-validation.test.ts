@@ -4,14 +4,22 @@ import type { ServiceTitanClient } from "../../src/client.js";
 import type { ServiceTitanConfig } from "../../src/config.js";
 import { loadIntelligenceDomain } from "../../src/domains/intelligence/index.js";
 import { clearIntelCache } from "../../src/domains/intelligence/helpers.js";
-import {
-  extractReportRows,
-  validateReport175Response,
-} from "../../src/domains/intelligence/revenue.js";
 import { ToolRegistry } from "../../src/registry.js";
 import type { ToolResponse } from "../../src/types.js";
 
-const EMPTY_REPORT = { fields: [], data: [], hasMore: false };
+const revenuePath = "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data";
+const salesPath = "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data";
+const revenueFields = [
+  "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+  "ConvertedJobs", "CustomerSatisfaction", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+].map((name) => ({ name }));
+const salesFields = [
+  "Name", "TotalSales", "ClosedAverageSale", "CloseRate", "SalesOpportunity",
+  "OptionsPerOpportunity", "AdjustmentRevenue", "TotalRevenue", "NonJobRevenue",
+].map((name) => ({ name }));
+const emptyReport = (fields: Array<{ name: string }>) => ({ fields, data: [], hasMore: false });
+const period = { startDate: "2026-01-01", endDate: "2026-01-31" };
+
 function createConfig(overrides: Partial<ServiceTitanConfig> = {}): ServiceTitanConfig {
   return {
     clientId: "client-id",
@@ -65,89 +73,63 @@ describe("intelligence revenue validation", () => {
     clearIntelCache();
   });
 
-  it("allows passthrough fields on valid Report 175 payloads", () => {
-    const response = validateReport175Response({
-      fields: [
-        { name: "Name", label: "Business Unit" },
-        { name: "CompletedRevenue" },
-        { name: "OpportunityJobAverage" },
-        { name: "OpportunityConversionRate" },
-        { name: "Opportunity" },
-        { name: "ConvertedJobs" },
-        { name: "CustomerSatisfaction" },
-        { name: "AdjustmentRevenue" },
-        { name: "TotalRevenue" },
-        { name: "NonJobRevenue" },
-      ],
-      data: [
-        ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
-      ],
-      hasMore: false,
-      generatedAt: "2026-01-31T12:00:00Z",
+  it("allows passthrough fields on valid Report 175 payloads", async () => {
+    const { handlers, postMock } = createContext();
+    const handler = handlers.get("intel_revenue_summary")!;
+
+    postMock.mockImplementation(async (path: string) => {
+      if (path === salesPath) return emptyReport(salesFields);
+      if (path !== revenuePath) throw new Error(`Unexpected path: ${path}`);
+      return {
+        fields: [
+          { name: "Name", label: "Business Unit" },
+          ...revenueFields.slice(1),
+          { name: "TenantExtra" },
+        ],
+        data: [["HVAC - Install", 400, 200, 1, 5, 5, 0, 0, 450, 50, null]],
+        hasMore: false,
+        generatedAt: "2026-01-31T12:00:00Z",
+      };
     });
 
-    expect(response).toMatchObject({
-      hasMore: false,
-      generatedAt: "2026-01-31T12:00:00Z",
-      data: [["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50]],
-    });
-    expect(response.fields[0]).toMatchObject({
-      name: "Name",
-      label: "Business Unit",
+    const result = await handler(period);
+    expect(result.isError).not.toBe(true);
+    expect(JSON.parse(result.content[0]?.text ?? "{}")).toMatchObject({
+      totalRevenue: 450,
+      revenueBreakdown: { completedRevenue: 400, nonJobRevenue: 50, adjustmentRevenue: 0 },
     });
   });
 
-  it("normalizes empty Report 175 payloads to data/count", () => {
-    expect(extractReportRows(EMPTY_REPORT)).toEqual({
-      data: [],
-      count: 0,
+  it("returns complete zero revenue for empty feeds with valid field metadata", async () => {
+    const { handlers, postMock } = createContext();
+    const handler = handlers.get("intel_revenue_summary")!;
+    postMock.mockImplementation(async (path: string) => {
+      if (path === revenuePath) return emptyReport(revenueFields);
+      if (path === salesPath) return emptyReport(salesFields);
+      throw new Error(`Unexpected path: ${path}`);
     });
+
+    const result = await handler(period);
+    expect(result.isError).not.toBe(true);
+    const payload = JSON.parse(result.content[0]?.text ?? "{}");
+    expect(payload).toMatchObject({ totalRevenue: 0, byBusinessUnit: [] });
+    expect(payload).not.toHaveProperty("_warnings");
   });
 
   it("fails fast when the Report 175 structure changes", async () => {
     const { handlers, postMock } = createContext();
-    const handler = handlers.get("intel_revenue_summary");
-    if (!handler) {
-      throw new Error("Missing intel_revenue_summary handler");
-    }
-
+    const handler = handlers.get("intel_revenue_summary")!;
     postMock.mockImplementation(async (path: string) => {
-      if (path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/175/data") {
-        return {
-          fields: [
-            { name: "Name" },
-            { name: "CompletedRevenue" },
-            { name: "OpportunityJobAverage" },
-            { name: "OpportunityConversionRate" },
-            { name: "Opportunity" },
-            { name: "ConvertedJobs" },
-            { name: "CustomerSatisfaction" },
-            { name: "AdjustmentRevenue" },
-            { name: "GrossRevenue" },
-            { name: "NonJobRevenue" },
-          ],
-          data: [
-            ["HVAC - Install", 400, 200, 1.0, 5, 5, 0, 0, 450, 50],
-          ],
-          hasMore: false,
-        };
-      }
-
-      if (
-        path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/177/data" ||
-        path === "/tenant/{tenant}/report-category/business-unit-dashboard/reports/179/data"
-      ) {
-        return EMPTY_REPORT;
-      }
-
-      throw new Error(`Unexpected path: ${path}`);
+      if (path === salesPath) return emptyReport(salesFields);
+      if (path !== revenuePath) throw new Error(`Unexpected path: ${path}`);
+      return {
+        fields: revenueFields.map((field) => field.name === "TotalRevenue" ? { name: "GrossRevenue" } : field),
+        data: [["HVAC - Install", 400, 200, 1, 5, 5, 0, 0, 450, 50]],
+        hasMore: false,
+      };
     });
 
-    const result = await handler({
-      startDate: "2026-01-01",
-      endDate: "2026-01-31",
-    });
-
+    const result = await handler(period);
     expect(result.isError).not.toBe(true);
     const payload = JSON.parse(result.content[0]?.text ?? "{}");
     expect(payload.totalRevenue).toBe(0);

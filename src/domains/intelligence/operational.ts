@@ -9,7 +9,6 @@ import {
   fetchWithWarning,
   firstValue,
   formatCurrency,
-  isRecord,
   normalizeStatus,
   round,
   safeDivide,
@@ -18,22 +17,13 @@ import {
   toText,
   toSingleDayRange,
 } from "./helpers.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 
 const dailySnapshotSchema = z.object({
   date: z.string().optional().describe("Date to snapshot (YYYY-MM-DD, defaults to today)"),
 });
 
 const MAX_UPCOMING_JOBS = 20;
-
-const UPCOMING_JOBS_FIELD = {
-  JobNumber: 0,
-  ScheduledDate: 1,
-  CustomerName: 2,
-  LocationAddress: 7,
-  JobType: 10,
-  AssignedTechnicians: 11,
-} as const;
 
 type GenericRecord = Record<string, unknown>;
 
@@ -98,27 +88,19 @@ function isMissedCall(call: GenericRecord): boolean {
   );
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
-function parseUpcomingJobsReport(response: unknown): UpcomingJob[] {
-  const rows = extractReportRows(response);
+function parseUpcomingJobsReport(report: ReportExecution | null): UpcomingJob[] {
+  const rows = report?.data ?? [];
   const jobs: UpcomingJob[] = [];
 
   for (const row of rows) {
     jobs.push({
-      jobNumber: toText(row[UPCOMING_JOBS_FIELD.JobNumber]) ?? "Unknown",
-      scheduledDate: toText(row[UPCOMING_JOBS_FIELD.ScheduledDate]) ?? "",
-      customerName: toText(row[UPCOMING_JOBS_FIELD.CustomerName]) ?? "Unknown",
-      locationAddress: toText(row[UPCOMING_JOBS_FIELD.LocationAddress]) ?? "Unknown",
-      jobType: toText(row[UPCOMING_JOBS_FIELD.JobType]) ?? "Unknown",
+      jobNumber: toText(row.JobNumber) ?? "Unknown",
+      scheduledDate: toText(row.ScheduledDate) ?? "",
+      customerName: toText(row.CustomerName) ?? "Unknown",
+      locationAddress: toText(row.LocationAddress) ?? "Unknown",
+      jobType: toText(row.JobType) ?? "Unknown",
       assignedTechnicians:
-        toText(row[UPCOMING_JOBS_FIELD.AssignedTechnicians]) ?? "Unassigned",
+        toText(row.AssignedTechnicians) ?? "Unassigned",
     });
   }
 
@@ -290,7 +272,7 @@ export function registerIntelligenceDailySnapshotTool(
         const callsTotal = calls.length;
         const callsBooked = calls.filter(isBookedCall).length;
         const callsMissed = calls.filter(isMissedCall).length;
-        const allUpcomingJobs = upcomingJobsReport ? parseUpcomingJobsReport(upcomingJobsReport) : [];
+        const allUpcomingJobs = parseUpcomingJobsReport(upcomingJobsReport);
         const upcomingJobs = allUpcomingJobs.slice(0, MAX_UPCOMING_JOBS);
         const upcomingJobsByType = summarizeUpcomingJobsByType(allUpcomingJobs);
 

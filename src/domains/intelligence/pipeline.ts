@@ -2,7 +2,7 @@ import { z } from "../../schema.js";
 
 import type { ServiceTitanClient } from "../../client.js";
 import type { ToolRegistry } from "../../registry.js";
-import { executeReport } from "./report-executor.js";
+import { executeReport, type ReportExecution } from "./report-executor.js";
 import { toolError, toolResult } from "../../utils.js";
 import {
   dayDiff,
@@ -10,7 +10,6 @@ import {
   fetchAllPagesBlind,
   fetchWithWarning,
   firstValue,
-  isRecord,
   normalizeStatus,
   round,
   safeDivide,
@@ -30,18 +29,6 @@ type GenericRecord = Record<string, unknown>;
 
 type PipelineGroup = "open" | "sold" | "dismissed";
 
-const SALES_FIELD = {
-  Name: 0,
-  TotalSales: 1,
-  ClosedAverageSale: 2,
-  CloseRate: 3,
-  SalesOpportunity: 4,
-  OptionsPerOpportunity: 5,
-  TechnicianId: 6,
-  AdjustmentRevenue: 7,
-  CompletedRevenueWithAdjustments: 8,
-} as const;
-
 interface SalesByTechnician {
   id: number;
   name: string;
@@ -52,14 +39,6 @@ interface SalesByTechnician {
   optionsPerOpportunity: number;
 }
 
-function extractReportRows(response: unknown): unknown[][] {
-  if (!isRecord(response) || !Array.isArray(response.data)) {
-    return [];
-  }
-
-  return response.data.filter(Array.isArray);
-}
-
 function hasAnySalesActivity(tech: SalesByTechnician): boolean {
   return (
     tech.totalSales !== 0 ||
@@ -68,24 +47,24 @@ function hasAnySalesActivity(tech: SalesByTechnician): boolean {
   );
 }
 
-function parseSalesReport(response: unknown): SalesByTechnician[] {
-  const rows = extractReportRows(response);
+function parseSalesReport(report: ReportExecution | null): SalesByTechnician[] {
+  const rows = report?.data ?? [];
   const result: SalesByTechnician[] = [];
 
   for (const row of rows) {
-    const id = Math.round(toNumber(row[SALES_FIELD.TechnicianId]));
+    const id = Math.round(toNumber(row.TechnicianId));
     if (id <= 0) {
       continue;
     }
 
     const tech: SalesByTechnician = {
       id,
-      name: toText(row[SALES_FIELD.Name]) ?? `Technician ${id}`,
-      totalSales: round(toNumber(row[SALES_FIELD.TotalSales]), 2),
-      closedAverageSale: round(toNumber(row[SALES_FIELD.ClosedAverageSale]), 2),
-      closeRate: round(toNumber(row[SALES_FIELD.CloseRate]) * 100, 1),
-      salesOpportunity: Math.round(toNumber(row[SALES_FIELD.SalesOpportunity])),
-      optionsPerOpportunity: round(toNumber(row[SALES_FIELD.OptionsPerOpportunity]), 2),
+      name: toText(row.Name) ?? `Technician ${id}`,
+      totalSales: round(toNumber(row.TotalSales), 2),
+      closedAverageSale: round(toNumber(row.ClosedAverageSale), 2),
+      closeRate: round(toNumber(row.CloseRate) * 100, 1),
+      salesOpportunity: Math.round(toNumber(row.SalesOpportunity)),
+      optionsPerOpportunity: round(toNumber(row.OptionsPerOpportunity), 2),
     };
 
     if (hasAnySalesActivity(tech)) {
