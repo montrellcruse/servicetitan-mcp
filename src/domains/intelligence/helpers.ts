@@ -56,7 +56,7 @@ export async function withIntelCache<T>(
   const key = intelCacheKey(toolName, args);
   // A loader inherits its caller's AbortSignal. Sharing that promise would let
   // one cancelled MCP call cancel an unrelated waiter.
-  const deduplicateInflight = getRequestContext().signal === undefined && getRequestContext().storeOversized === undefined;
+  const deduplicateInflight = getRequestContext().signal === undefined && getRequestContext().resultDelivery === undefined;
 
   const now = Date.now();
   for (const [cacheKey, entry] of intelCache) {

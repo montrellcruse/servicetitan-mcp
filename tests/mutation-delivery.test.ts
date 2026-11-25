@@ -6,7 +6,7 @@ import { z } from "../src/schema.js";
 
 import { loadConfig } from "../src/config.js";
 import { ToolRegistry, type ToolOperation } from "../src/registry.js";
-import { ResultStore } from "../src/result-store.js";
+import { toolResultChunk } from "../src/result-delivery.js";
 import type { ToolResponse } from "../src/types.js";
 import { toolError, toolResult } from "../src/utils.js";
 
@@ -25,7 +25,7 @@ async function fixture(operation: ToolOperation, budget: number, handler: () => 
   registry.register({ name: "fixture_operation", domain: "crm", operation, description: "Synthetic operation", schema: {}, handler: called });
   registry.register({ name: "st_result_read", domain: "_system", operation: "read", description: "Synthetic stored result retrieval", schema: { resultId: z.string(), offset: z.number().int().optional() }, handler: async params => {
     const { resultId, offset = 0 } = params as { resultId: string; offset?: number };
-    try { return toolResult(registry.readResult(resultId, offset)); }
+    try { return toolResultChunk(registry.readResult(resultId, offset)); }
     catch (error) { return toolError(error); }
   } });
   const client = new Client({ name: "mutation-delivery-consumer", version: "1" });
@@ -76,25 +76,28 @@ describe("completed mutation response delivery", () => {
     } finally { await run.close(); }
   });
 
-  it("keeps completion when a stored pointer cannot fit the minimum budget without storing pointers recursively", async () => {
-    const put = vi.spyOn(ResultStore.prototype, "put");
+  it("keeps completion when a stored pointer cannot fit the minimum budget", async () => {
     const run = await fixture("write", 256, async () => toolResult({ data: "x".repeat(5000) }));
     try {
       completedDelivery(await run.wire(), 256, "RESPONSE_TOO_LARGE");
-      expect(put).toHaveBeenCalledTimes(1);
       expect(run.called).toHaveBeenCalledTimes(1);
       expect(run.audit.log).toHaveBeenCalledExactlyOnceWith(expect.objectContaining({ success: true, deliveryError: "RESPONSE_TOO_LARGE" }));
-    } finally { put.mockRestore(); await run.close(); }
+    } finally { await run.close(); }
   });
 
-  it("returns a completed-write pointer, retrieves its original result, and never recommends replay after removal", async () => {
+  it("returns a completed-write handle with a five-minute lifetime", async () => {
     const original = { id: 7, data: "x".repeat(5000) };
     const run = await fixture("write", 1000, async () => toolResult(original));
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.parse("2026-01-01T00:00:00Z"));
     try {
       const result = await run.wire();
       expect(result.isError).not.toBe(true);
       const pointer = payload(result, 1000);
-      expect(pointer).toMatchObject({ delivery: "stored", retrievalTool: "st_result_read", mutationCompleted: true, retryable: false });
+      expect(pointer).toMatchObject({
+        delivery: "stored", retrievalTool: "st_result_read", mutationCompleted: true, retryable: false,
+        expiresAt: "2026-01-01T00:05:00.000Z",
+      });
+      clock.mockReturnValue(Date.parse("2026-01-01T00:04:59.999Z"));
       let text = "", offset = 0;
       for (let page = 0; page < 200; page++) {
         const chunkResult = await run.client.callTool({ name: "st_result_read", arguments: { resultId: pointer.resultId, offset } });
@@ -105,15 +108,17 @@ describe("completed mutation response delivery", () => {
         expect(chunk.nextOffset).toBeGreaterThan(offset); offset = chunk.nextOffset;
       }
       expect(JSON.parse(text)).toEqual(original);
-      run.registry.clearResults();
+      clock.mockReturnValue(Date.parse("2026-01-01T00:05:00Z"));
       const expired = await run.client.callTool({ name: "st_result_read", arguments: { resultId: pointer.resultId } });
       expect(expired.isError).toBe(true);
-      expect(JSON.stringify(expired)).not.toMatch(/repeat.*original|retry.*original/i);
+      expect(payload(expired, 1000)).toMatchObject({
+        error: { code: "REQUEST_FAILED", message: expect.stringMatching(/unavailable or expired.*do not repeat a completed mutation/i) },
+      });
       expect(run.called).toHaveBeenCalledTimes(1);
       expect(run.audit.log).toHaveBeenCalledTimes(1);
       expect(run.audit.log.mock.calls[0][0]).toMatchObject({ success: true });
       expect(run.audit.log.mock.calls[0][0]).not.toHaveProperty("deliveryError");
-    } finally { await run.close(); }
+    } finally { clock.mockRestore(); await run.close(); }
   });
 
   it.each(["RESPONSE_TOO_LARGE", "INVALID_RESPONSE"])("does not infer audit success from an untrusted custom %s error code", async code => {
@@ -137,20 +142,6 @@ describe("completed mutation response delivery", () => {
       expect(run.called).not.toHaveBeenCalled();
       expect(run.audit.log).not.toHaveBeenCalled();
     } finally { await run.close(); }
-  });
-
-  it("does not recommend repeating a mutation when its stored result expires or belongs to another store", () => {
-    let now = 0;
-    const store = new ResultStore(1000, 10, () => now);
-    const pointer = store.put({ id: 7 });
-    const other = new ResultStore(1000, 10, () => now);
-    for (const read of [() => other.read(pointer.resultId as string, 0, 100), () => { now = 10; return store.read(pointer.resultId as string, 0, 100); }]) {
-      let failure: unknown;
-      try { read(); } catch (error) { failure = error; }
-      expect(failure).toBeInstanceOf(Error);
-      expect((failure as Error).message).toMatch(/unavailable or expired/);
-      expect((failure as Error).message).not.toMatch(/repeat.*original|retry.*original/i);
-    }
   });
 
   it("isolates concurrent readonly delivery failure from completed mutation metadata", async () => {
