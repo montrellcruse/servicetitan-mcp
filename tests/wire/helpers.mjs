@@ -93,12 +93,15 @@ async function freePort() {
   return port;
 }
 
-export async function launchHttp(overrides = {}, entrypoint = "streamable-http.js") {
+export async function launchHttp(overrides = {}, entrypoint = "streamable-http.js", fixture) {
   await assertBuild();
   const port = await freePort();
   const url = `http://127.0.0.1:${port}`;
-  const child = spawn(process.execPath, [resolve(ROOT, "build", entrypoint)], {
-    cwd: ROOT, env: childEnvironment({ ST_MCP_PORT: String(port), ...overrides }), stdio: ["ignore", "pipe", "pipe"],
+  const preload = fixture ? ["--import", fixture] : [];
+  const child = spawn(process.execPath, [...preload, resolve(ROOT, "build", entrypoint)], {
+    cwd: ROOT,
+    env: childEnvironment({ ST_MCP_PORT: String(port), ...overrides }),
+    stdio: fixture ? ["ignore", "pipe", "pipe", "ipc"] : ["ignore", "pipe", "pipe"],
   });
   let stderr = "";
   child.stderr.on("data", chunk => { stderr = (stderr + chunk.toString()).slice(-16000); });
