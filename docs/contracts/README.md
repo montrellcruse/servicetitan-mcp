@@ -15,3 +15,5 @@ npm run contracts:check
 ```
 
 Review the generated diff before committing it. The check command verifies that the generated files identify the current archive digest and that every supported domain call resolves to an operation in the pinned documents.
+
+For exports, the check reads the tool catalog and invokes each supported tool against a synthetic ServiceTitan response. It compares the captured method and full path with the pinned operation identified at registration and checks each documented exclusion against the same snapshot.

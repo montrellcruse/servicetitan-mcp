@@ -4,7 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import type { ServiceTitanClient } from "../src/client.js";
-import { findOfficialOperation, resolveServiceTitanPath } from "../src/contracts/index.js";
+import { findOfficialOperation, getOfficialOperation, resolveServiceTitanPath } from "../src/contracts/index.js";
 import { loadConfig } from "../src/config.js";
 import { registerDispatchArrivalWindowTools } from "../src/domains/dispatch/arrival-windows.js";
 import { registerDispatchJobTools } from "../src/domains/dispatch/jobs.js";
@@ -67,6 +67,7 @@ describe("list query schemas match the pinned official date filters", () => {
     const calls: Array<{ tool: string; path: string }> = [];
     const domains = join(root, "src/domains");
     for (const directory of readdirSync(domains)) {
+      if (directory === "export") continue;
       const domain = join(domains, directory);
       if (!statSync(domain).isDirectory()) continue;
       for (const file of readdirSync(domain).filter(name => name.endsWith(".ts"))) {
@@ -74,11 +75,6 @@ describe("list query schemas match the pinned official date filters", () => {
         for (const match of source.matchAll(/client\.get\s*\(\s*([`'"])(.*?)\1/gs)) {
           const names = [...source.slice(0, match.index).matchAll(/name:\s*"([^"]+)"/g)];
           if (names.at(-1)?.[1]) calls.push({ tool: names.at(-1)![1], path: match[2] });
-        }
-        if (file === "exporters.ts") {
-          for (const match of source.matchAll(/registerExportTool\([^\n]+?"(export_[^"]+)"\s*,\s*"[^"]+"\s*,\s*"([^"]+)"/g)) {
-            calls.push({ tool: match[1], path: match[2] });
-          }
         }
       }
     }
@@ -92,9 +88,11 @@ describe("list query schemas match the pinned official date filters", () => {
       for (const tool of runtime.registry.getRegisteredTools().filter(tool => tool.operation === "read")) {
         const exposed = Object.keys(tool.schema).filter(key => dateKeys.has(key)).sort();
         if (!exposed.length) continue;
-        const candidates = calls.filter(call => call.tool === tool.name);
+        const candidates = tool.apiContract && "operationId" in tool.apiContract
+          ? [getOfficialOperation(tool.apiContract.operationId).fullPath]
+          : calls.filter(call => call.tool === tool.name).map(call => call.path);
         if (candidates.length !== 1) { ambiguous.push(`${tool.name}:${candidates.length}`); continue; }
-        const concrete = candidates[0].path.replace(/\$\{[^}]+\}/g, "1");
+        const concrete = candidates[0].replace(/\$\{[^}]+\}/g, "1");
         const resolved = resolveServiceTitanPath(concrete, "42", "GET");
         const operation = findOfficialOperation("GET", resolved);
         expect(operation, `${tool.name}: ${resolved}`).toBeDefined();
