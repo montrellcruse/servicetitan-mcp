@@ -12,7 +12,7 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "dabde9827f280ee5cbe7ead50c1defa29903732df0333eed7699d44c022b126f",
+  "sourceFingerprint": "291e91e9bdde04c4f85829bc44bae1101e9d8d300850532067c7b726830be235",
   "gates": {
     "maintenance": {
       "status": "passed",
@@ -66,37 +66,9 @@
       "digestAlgorithm": "SHA256 of sorted build-relative paths + NUL + exact bytes + NUL, calculated separately for JavaScript and declarations"
     },
     "liveProduction": {
-      "status": "passed",
-      "boundary": "One production company, forcibly read-only. Representative module access and report definitions, plus a bounded sample of labor hours and invoice counts and amounts reconciled to API source rows. No dashboard parity, live business mutations, second-company certification, or deployment verification.",
+      "status": "pending",
       "summary": "VALIDATION-v3.md",
-      "sourceFingerprint": "dabde9827f280ee5cbe7ead50c1defa29903732df0333eed7699d44c022b126f",
-      "sourceRevision": "8642baab514d1738de51250675306ef11c5ba2b6",
-      "javascriptBuildSha256": "d9486c8f50ca6c49d7a1c85b199b83a1fef66a3d3f186b8f8f8b19f714dafe73",
-      "testedArchiveSha256": "e72a8f56feb52b5b054e9aacf6a3ab261461ed865c30612ce32a850ff56f6f56",
-      "runtime": "v24.22.1",
-      "checkedAt": "2026-11-25T18:49:02.617Z",
-      "freshTenantCalls": 37,
-      "readCallsByKind": {
-        "module-read": 15,
-        "definition": 19,
-        "report-data": 3
-      },
-      "authenticated": true,
-      "readOnlyTools": 264,
-      "readiness": {
-        "fullProfile": "ready",
-        "namedModuleChecks": 14,
-        "reportDefinitions": 18,
-        "pipelineOnly": "ready",
-        "pipelineEstimateAccess": true
-      },
-      "sampleWindow": {
-        "startDate": "2026-11-23",
-        "endDate": "2026-11-24"
-      },
-      "laborHoursReconciled": true,
-      "grossPayAvailable": false,
-      "invoiceCountsAndAmountsReconciled": true
+      "boundary": "The previous one-company live sample applies to the previous source. The corrected candidate requires its own bounded read-only validation."
     },
     "liveIntegration": {
       "status": "scoped_out",
@@ -309,5 +281,38 @@
       "laborReconciliation": "failed",
       "reason": "Report 166 returned rows with no recorded time in any hour bucket. The merged validator rejected the feed."
     }
+  },
+  "preReadCorrectionsLiveProduction": {
+    "status": "passed",
+    "boundary": "One production company, forcibly read-only. Representative module access and report definitions, plus a bounded sample of labor hours and invoice counts and amounts reconciled to API source rows. No dashboard parity, live business mutations, second-company certification, or deployment verification.",
+    "summary": "VALIDATION-v3.md",
+    "sourceFingerprint": "dabde9827f280ee5cbe7ead50c1defa29903732df0333eed7699d44c022b126f",
+    "sourceRevision": "8642baab514d1738de51250675306ef11c5ba2b6",
+    "javascriptBuildSha256": "d9486c8f50ca6c49d7a1c85b199b83a1fef66a3d3f186b8f8f8b19f714dafe73",
+    "testedArchiveSha256": "e72a8f56feb52b5b054e9aacf6a3ab261461ed865c30612ce32a850ff56f6f56",
+    "runtime": "v24.22.1",
+    "checkedAt": "2026-11-25T18:49:02.617Z",
+    "freshTenantCalls": 37,
+    "readCallsByKind": {
+      "module-read": 15,
+      "definition": 19,
+      "report-data": 3
+    },
+    "authenticated": true,
+    "readOnlyTools": 264,
+    "readiness": {
+      "fullProfile": "ready",
+      "namedModuleChecks": 14,
+      "reportDefinitions": 18,
+      "pipelineOnly": "ready",
+      "pipelineEstimateAccess": true
+    },
+    "sampleWindow": {
+      "startDate": "2026-11-23",
+      "endDate": "2026-11-24"
+    },
+    "laborHoursReconciled": true,
+    "grossPayAvailable": false,
+    "invoiceCountsAndAmountsReconciled": true
   }
 }

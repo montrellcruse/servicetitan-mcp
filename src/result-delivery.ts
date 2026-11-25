@@ -116,30 +116,33 @@ function keyIndicatesUtc(key: string | undefined): boolean {
   return UTC_SUFFIXED_KEY.test(key);
 }
 
+type PreserveTimestamp = (key: string | undefined, value: string) => boolean;
+
 export function convertTimestampsToLocal(
   data: unknown,
   timezone: string,
   parentKey?: string,
+  preserveTimestamp?: PreserveTimestamp,
 ): unknown {
   if (isUtcTimezone(timezone)) {
     return data;
   }
 
   if (Array.isArray(data)) {
-    return data.map((item) => convertTimestampsToLocal(item, timezone, parentKey));
+    return data.map((item) => convertTimestampsToLocal(item, timezone, parentKey, preserveTimestamp));
   }
 
   if (isPlainObject(data)) {
     return Object.fromEntries(
       Object.entries(data).map(([key, value]) => [
         key,
-        convertTimestampsToLocal(value, timezone, key),
+        convertTimestampsToLocal(value, timezone, key, preserveTimestamp),
       ]),
     );
   }
 
   if (typeof data === "string" && ISO_TIMESTAMP_PATTERN.test(data)) {
-    if (keyIndicatesUtc(parentKey)) {
+    if (keyIndicatesUtc(parentKey) || preserveTimestamp?.(parentKey, data)) {
       return data;
     }
     return utcToLocal(data, timezone);
@@ -322,14 +325,14 @@ function oversizedResponse(payload: Record<string, unknown>, originalSize: numbe
 
 export function toolResult(
   data: unknown,
-  options?: { shape?: boolean; timezone?: string },
+  options?: { shape?: boolean; timezone?: string; preserveTimestamp?: PreserveTimestamp },
 ): ToolResponse {
   const limit = responseBudget();
   try {
     const { resultDelivery, signal, timezone: displayTimezone, mutatingOperation } = getRequestContext();
     const shapedPayload = options?.shape ? shapeResponse(data) : data;
     const timezone = options?.timezone ?? displayTimezone ?? "UTC";
-    const converted = convertTimestampsToLocal(shapedPayload, timezone);
+    const converted = convertTimestampsToLocal(shapedPayload, timezone, undefined, options?.preserveTimestamp);
     const payload = isPlainObject(converted) ? converted : { data: converted ?? null };
     // Normalize to the actual JSON contract so undefined fields cannot differ
     // between structuredContent and the text consumed by older MCP clients.

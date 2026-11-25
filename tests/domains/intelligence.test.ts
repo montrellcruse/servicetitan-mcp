@@ -721,7 +721,7 @@ describe("intelligence domain", () => {
       {
         id: 10,
         name: "Mike Johnson",
-        jobsCompleted: 2,
+        jobsCompleted: null,
         revenue: 1000,
         averageTicket: 250,
         opportunities: 4,
@@ -732,7 +732,8 @@ describe("intelligence domain", () => {
         billableEfficiency: 0.85,
         recallsCaused: 1,
         upsold: 300,
-        jobsPerDay: 0.29,
+        jobsPerDay: null,
+        convertedJobsPerWeekday: 0.29,
         leadGeneration: {
           replacementOpps: 3,
           leadsSet: 2,
@@ -760,7 +761,7 @@ describe("intelligence domain", () => {
 
     // teamAverages now computed over 1 technician (Mike Johnson only)
     expect(payload.teamAverages).toEqual({
-      jobsCompleted: 2,
+      jobsCompleted: null,
       revenue: 1000,
       averageTicket: 250,
       opportunities: 4,
@@ -771,7 +772,8 @@ describe("intelligence domain", () => {
       billableEfficiency: 0.85,
       recallsCaused: 1,
       upsold: 300,
-      jobsPerDay: 0.29,
+      jobsPerDay: null,
+      convertedJobsPerWeekday: 0.29,
       leadGeneration: {
         replacementOpps: 3,
         leadsSet: 2,
@@ -867,6 +869,33 @@ describe("intelligence domain", () => {
     // Report 165 is no longer called (jobsCompleted now uses ConvertedJobs from Report 168)
   });
 
+  it("ranks the scorecard by revenue before limiting and never treats conversions as completions", async () => {
+    const { handlers, postMock } = createContext();
+    postMock.mockImplementation(async (path: string) => path.endsWith("/168/data") ? {
+      fields: reportFields(
+        "Name", "CompletedRevenue", "OpportunityJobAverage", "OpportunityConversionRate", "Opportunity",
+        "ConvertedJobs", "CustomerSatisfaction", "TechnicianId", "AdjustmentRevenue", "CompletedRevenueWithAdjustments",
+      ),
+      data: [
+        ["Low", 100, 100, 1, 1, 1, 0, 12, 0, 100],
+        ["High B", 900, 300, 1, 3, 3, 0, 11, 0, 900],
+        ["High A", 900, 450, 1, 2, 2, 0, 10, 0, 900],
+      ],
+      hasMore: false,
+    } : EMPTY_REPORT);
+
+    const payload = payloadFrom(await getHandler(handlers, "intel_technician_scorecard")({
+      startDate: "2026-01-05", endDate: "2026-01-09", limit: 2,
+    }));
+
+    expect(payload.technicians.map((tech: { id: number }) => tech.id)).toEqual([10, 11]);
+    expect(payload.technicians[0]).toMatchObject({
+      jobsCompleted: null, jobsPerDay: null, convertedJobs: 2, convertedJobsPerWeekday: 0.4,
+    });
+    expect(payload.teamAverages.revenue).toBe(633.33);
+    expect(payload.rankedBy).toBe("revenue");
+  });
+
   it("intel_technician_scorecard keeps partial data when one endpoint fails", async () => {
     const { handlers, postMock } = createContext();
     const handler = getHandler(handlers, "intel_technician_scorecard");
@@ -930,11 +959,11 @@ describe("intelligence domain", () => {
     const result = await handler({ startDate: "2026-01-01", endDate: "2026-01-31", includeExtendedMetrics: true });
     const payload = payloadFrom(result);
 
-    // jobsCompleted now uses convertedJobs from Report 168 (which failed), so it's 0
+    expect(payload.rankedBy).toBeNull();
     expect(payload.technicians[0]).toEqual({
       id: 10,
       name: "Mike Johnson",
-      jobsCompleted: 0,
+      jobsCompleted: null,
       revenue: 0,
       averageTicket: 0,
       opportunities: 0,
@@ -945,7 +974,8 @@ describe("intelligence domain", () => {
       billableEfficiency: 0.6,
       recallsCaused: 2,
       upsold: 80,
-      jobsPerDay: 0,
+      jobsPerDay: null,
+      convertedJobsPerWeekday: null,
       leadGeneration: {
         replacementOpps: 2,
         leadsSet: 1,
@@ -985,7 +1015,7 @@ describe("intelligence domain", () => {
 
     expect(payload.technicians).toEqual([]);
     expect(payload.teamAverages).toEqual({
-      jobsCompleted: 0,
+      jobsCompleted: null,
       revenue: 0,
       averageTicket: 0,
       opportunities: 0,
@@ -996,7 +1026,8 @@ describe("intelligence domain", () => {
       billableEfficiency: 0,
       recallsCaused: 0,
       upsold: 0,
-      jobsPerDay: 0,
+      jobsPerDay: null,
+      convertedJobsPerWeekday: 0,
       leadGeneration: ZERO_TECHNICIAN_LEAD_GENERATION,
       memberships: ZERO_TECHNICIAN_MEMBERSHIPS,
       salesFromTechLeads: ZERO_TECHNICIAN_LEAD_SALES,
@@ -1921,12 +1952,12 @@ describe("intelligence domain", () => {
       if (path === "/v3/tenant/{tenant}/calls") {
         return {
           data: [
-            { leadCall: { callType: "Booked" } },
-            { leadCall: { callType: "booked" } },
-            { leadCall: { callType: "Missed" } },
-            { leadCall: { callType: "Abandoned" } },
-            { status: "NoAnswer" },
-            { bookingId: 9 },
+            { leadCall: { id: 1, callType: "Booked", direction: "Outbound" } },
+            { leadCall: { id: 2, callType: "booked", direction: "Outbound" } },
+            { leadCall: { id: 3, callType: "Missed", direction: "Outbound" } },
+            { leadCall: { id: 4, callType: "Abandoned", direction: "Outbound" } },
+            { id: 5, status: "NoAnswer", direction: "Outbound" },
+            { id: 6, bookingId: 9, direction: "Outbound" },
           ],
           hasMore: false,
           page: 1,
@@ -2001,6 +2032,7 @@ describe("intelligence domain", () => {
       total: 6,
       booked: 3,
       missed: 3,
+      inbound: { total: 0, answered: 0, abandoned: 0, markedBooked: 0, eligibleLeads: 0, creditedJobs: 0, bookingRate: null },
     });
     expect(payload.upcomingJobs).toEqual({
       total: 2,
@@ -2053,6 +2085,92 @@ describe("intelligence domain", () => {
     );
   });
 
+  it("separates all calls, inbound leads, and unique canonically credited jobs across pages", async () => {
+    const { handlers, getMock, postMock } = createContext({ timezone: "America/New_York" });
+    const createdOn = "2026-11-24T15:00:00Z";
+    const leadCall = (id: number, callType: string, properties: Record<string, unknown> = {}) => ({
+      id, callType, createdOn, direction: "Inbound", ...properties,
+    });
+    getMock.mockImplementation(async (path: string, params: Record<string, unknown>) => {
+      if (path === "/v3/tenant/{tenant}/calls") {
+        expect(params).toMatchObject({
+          createdOnOrAfter: "2026-11-24T05:00:00.000Z",
+          createdBefore: "2026-11-25T05:00:00.000Z", sort: "Id", active: "Any",
+        });
+        if (params.page === 1) {
+          return { data: [
+            { id: 9, jobNumber: "JOB-9", leadCall: leadCall(1, "Booked") },
+            { id: 9, jobNumber: "JOB-9", leadCall: leadCall(2, "Booked") },
+            { id: 0, leadCall: leadCall(3, "Abandoned", { duration: "00:01:00" }) },
+          ], page: 1, totalCount: 8, hasMore: true };
+        }
+        return { data: [
+          { id: 0, leadCall: leadCall(4, "Abandoned", { duration: "00:00:59.9" }) },
+          { id: 0, leadCall: leadCall(5, "NotLead") },
+          { id: 0, leadCall: leadCall(6, "Unbooked") },
+          { id: 0, leadCall: leadCall(7, "NotLead", { direction: "Outbound" }) },
+          { id: 0, active: false, leadCall: leadCall(8, "Unbooked") },
+        ], page: 2, totalCount: 8, hasMore: false };
+      }
+      if (path === "/tenant/{tenant}/jobs" && params.ids === "9") {
+        return { data: [{ id: 9, leadCallId: 1, partnerLeadCallId: null }], hasMore: false };
+      }
+      if (path === "/tenant/{tenant}/invoices") {
+        expect(params).toMatchObject({
+          invoicedOnOrAfter: "2026-11-24T00:00:00.000Z", invoicedOnBefore: "2026-11-24T23:59:59.999Z",
+        });
+        return { data: [{ total: 100 }], hasMore: false };
+      }
+      return { data: [], hasMore: false };
+    });
+    postMock.mockResolvedValue(EMPTY_REPORT);
+    const result = await getHandler(handlers, "intel_daily_snapshot")({ date: "2026-11-24" });
+    const payload = payloadFrom(result);
+    expect(payload.revenue.invoiced).toBe(100);
+    expect(payload.calls).toMatchObject({
+      total: 8, booked: 2, missed: 2,
+      inbound: { total: 6, answered: 4, abandoned: 2, eligibleLeads: 4, markedBooked: 2, creditedJobs: 1, bookingRate: 25 },
+    });
+    expect(getMock.mock.calls.filter(([path, params]) => path === "/tenant/{tenant}/jobs" && params.ids)).toHaveLength(1);
+  });
+
+  it.each([
+    { broken: "duplicate call IDs", duplicate: true },
+    { broken: "unresolved canonical booking", duplicate: false },
+  ])("withholds unverified metrics for $broken", async ({ duplicate }) => {
+    const { handlers, getMock, postMock } = createContext();
+    const at = "2026-03-04T12:00:00Z";
+    getMock.mockImplementation(async (path: string, params: Record<string, unknown>) => {
+      if (path === "/v3/tenant/{tenant}/calls") {
+        const secondPage = params.page === 2;
+        return {
+          data: [{ id: 9, jobNumber: "JOB-9", leadCall: {
+            id: secondPage && !duplicate ? 2 : 1, direction: "Inbound", callType: "Booked", createdOn: at,
+          } }],
+          hasMore: !secondPage, page: params.page, totalCount: 2,
+        };
+      }
+      if (path === "/tenant/{tenant}/jobs" && params.ids === "9") {
+        return { data: [{ id: 9, leadCallId: 99, partnerLeadCallId: null }], hasMore: false };
+      }
+      return { data: [], hasMore: false };
+    });
+    postMock.mockResolvedValue(EMPTY_REPORT);
+
+    const payload = payloadFrom(await getHandler(handlers, "intel_daily_snapshot")({ date: "2026-03-04" }));
+    if (duplicate) {
+      expect(payload.calls).toEqual({ total: null, booked: null, missed: null, inbound: null });
+      expect(payload._warnings).toContainEqual(expect.stringContaining("repeated call IDs"));
+      expect(getMock.mock.calls.some(([path, params]) => path === "/tenant/{tenant}/jobs" && params.ids)).toBe(false);
+    } else {
+      expect(payload.calls).toMatchObject({
+        total: 2, booked: 2,
+        inbound: { eligibleLeads: 2, markedBooked: 2, creditedJobs: null, bookingRate: null },
+      });
+      expect(payload._warnings).toContainEqual(expect.stringContaining("outside the confirmed call window"));
+    }
+  });
+
   it("intel_daily_snapshot returns partial results and warnings when one feed fails", async () => {
     const { handlers, getMock, postMock } = createContext();
     const handler = getHandler(handlers, "intel_daily_snapshot");
@@ -2074,7 +2192,8 @@ describe("intelligence domain", () => {
     const result = await handler({ date: "2026-03-04" });
     const payload = payloadFrom(result);
 
-    expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
+    expect(payload.calls).toEqual({ total: null, booked: null, missed: null, inbound: null });
+    expect(payload.highlights).toContain("Call activity is unavailable");
     expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload._warnings).toEqual([
       "Call data unavailable: calls down",
@@ -2094,7 +2213,10 @@ describe("intelligence domain", () => {
     expect(payload.appointments).toEqual({ total: 0, completed: 0, inProgress: 0, pending: 0 });
     expect(payload.jobs).toEqual({ total: 0, completed: 0, inProgress: 0, canceled: 0 });
     expect(payload.revenue).toEqual({ invoiced: 0, collected: 0, estimatesSold: 0 });
-    expect(payload.calls).toEqual({ total: 0, booked: 0, missed: 0 });
+    expect(payload.calls).toEqual({
+      total: 0, booked: 0, missed: 0,
+      inbound: { total: 0, answered: 0, abandoned: 0, markedBooked: 0, eligibleLeads: 0, creditedJobs: 0, bookingRate: null },
+    });
     expect(payload.upcomingJobs).toEqual({ total: 0, breakdownByJobType: [], jobs: [] });
     expect(payload.highlights).toEqual([
       "0 of 0 appointments completed (0%)",

@@ -145,6 +145,22 @@ describe("accounting domain", () => {
     expect(data[1]).toMatchObject({ id: 102, total: 750 });
   });
 
+  it("preserves the provider invoice date while localizing instants", async () => {
+    const { handlers, getMock } = createContext({ timezone: "America/New_York" });
+    getMock.mockResolvedValue({ data: [
+      { id: 101, invoiceDate: "2026-11-24T00:00:00Z", createdOn: "2026-11-24T00:00:00Z" },
+      { id: 102, invoiceDate: "2026-11-24T01:00:00Z" },
+      { id: 103, invoiceDate: null },
+    ], hasMore: false });
+    const result = await getHandler(handlers, "accounting_invoices_list")({ activeState: "All" });
+    expect(getMock).toHaveBeenCalledWith("/tenant/{tenant}/invoices", expect.objectContaining({ activeState: "All" }));
+    expect(parsePayload(result).data).toEqual([
+      { id: 101, invoiceDate: "2026-11-24T00:00:00Z", createdOn: "2026-11-23T19:00:00.000-05:00" },
+      { id: 102, invoiceDate: "2026-11-23T20:00:00.000-05:00" },
+      { id: 103, invoiceDate: null },
+    ]);
+  });
+
   it("accounting_invoices_list forwards filter params to the API client", async () => {
     const { handlers, getMock } = createContext();
     const handler = getHandler(handlers, "accounting_invoices_list");

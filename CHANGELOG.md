@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Fixed
+- Rank technician scorecards by completed revenue before applying the limit. Keep converted-job volume and pace separate from unavailable completed-job metrics.
+- Preserve invoice calendar dates in list and export results, and allow invoice lists to filter by activity state.
+- Separate total call traffic, inbound lead dispositions, and uniquely credited jobs in the daily snapshot. Flag incomplete data rather than reporting zero.
+- Align return-type and modified-contact requests with the provider's required query parameters. Clarify the limits of campaign attribution.
 - Preserve the exact JSON during result retrieval and keep existing handles readable when a new handle exceeds the response budget.
 - Validate explicit tool selections before startup and scope default readiness to the deployed catalog.
 - Decode report pages by field name and reject malformed or inconsistent feeds.

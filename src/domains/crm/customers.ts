@@ -438,10 +438,14 @@ export function registerCustomerTools(
     name: "crm_customers_contacts_modified_list",
     domain: "crm",
     operation: "read",
-    description: "Search contact records across specified customers using created or modified time ranges. Returns one page; use crm_customers_contacts_list for all contacts of one known customer.",
+    description: "Search contact records across customers. Supply modifiedBefore or modifiedOnOrAfter; created dates and parent IDs are additional filters. Returns one page; use crm_customers_contacts_list for all contacts of one known customer.",
     schema: customerModifiedContactsListSchema.shape,
     handler: async (params) => {
       const input = params as z.infer<typeof customerModifiedContactsListSchema>;
+
+      if (input.modifiedBefore === undefined && input.modifiedOnOrAfter === undefined) {
+        return toolError("Provide modifiedBefore or modifiedOnOrAfter to search modified contacts.");
+      }
 
       try {
         const data = await client.get(

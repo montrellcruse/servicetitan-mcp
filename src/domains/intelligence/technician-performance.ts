@@ -28,7 +28,7 @@ const technicianScorecardSchema = z.object({
     .min(1)
     .max(50)
     .optional()
-    .describe("Max technicians to analyze (default 25, max 50)"),
+    .describe("Max technicians to return, ranked by completed revenue when available (default 25, max 50)"),
   includeExtendedMetrics: z.boolean().optional().default(false).describe("Include memberships sold and sales from technician and marketing leads by running Reports 171, 173, and 174. Default: false."),
 });
 
@@ -86,7 +86,7 @@ interface LeadSalesByTech extends TechnicianIdentity, LeadSalesMetrics {}
 interface TechnicianScorecard {
   id: number;
   name: string;
-  jobsCompleted: number;
+  jobsCompleted: null;
   revenue: number;
   averageTicket: number;
   opportunities: number;
@@ -97,7 +97,8 @@ interface TechnicianScorecard {
   billableEfficiency: number;
   recallsCaused: number;
   upsold: number;
-  jobsPerDay: number;
+  jobsPerDay: null;
+  convertedJobsPerWeekday: number | null;
   leadGeneration: LeadGenerationMetrics;
   memberships: MembershipMetrics;
   salesFromTechLeads: LeadSalesMetrics;
@@ -334,8 +335,8 @@ function parseSalesFromMarketingLeadsReport(report: ReportExecution | null): Lea
 
 function hasAnyActivity(tech: TechnicianScorecard): boolean {
   return (
-    tech.jobsCompleted > 0 ||
-    tech.revenue > 0 ||
+    tech.convertedJobs > 0 ||
+    tech.revenue !== 0 ||
     tech.opportunities > 0 ||
     tech.customerSatisfaction > 0 ||
     tech.revenuePerHour > 0 ||
@@ -368,7 +369,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
     operation: "read",
     reports: { required: ["168", "169", "170"], optional: ["171", "173", "174"] },
     description:
-      "Build a technician scorecard for the selected date range from ServiceTitan technician reports. Returns revenue, converted jobs, opportunities, conversion, productivity, recalls, upsells, and lead-generation metrics; includeExtendedMetrics adds membership and tech/marketing-lead sales reports. Filter by technician or business unit when comparing a subset, and use limit to bound ranked results. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
+      "Build a technician scorecard for the selected date range from ServiceTitan technician reports. Returns revenue, converted jobs, opportunities, conversion, productivity, recalls, upsells, and lead-generation metrics; includeExtendedMetrics adds membership and tech/marketing-lead sales reports. Filter by technician or business unit. Results rank by Report 168 completed revenue before applying limit; converted jobs are distinct from completed jobs, which this scorecard does not measure. Report calls may wait for per-report/client spacing, and partial source failures are returned in _warnings." +
       '\n\nExamples:\n- "How are our techs performing this month?" -> startDate="2026-03-01", endDate="2026-04-01"\n- "Show me Andrew\'s numbers for Q1" -> startDate="2026-01-01", endDate="2026-04-01", technicianName="Andrew"\n- "Who is our top performer this year?" -> startDate="2026-01-01", endDate="2026-03-10"',
     schema: technicianScorecardSchema.shape,
     handler: async (params) => {
@@ -447,7 +448,6 @@ export function registerIntelligenceTechnicianPerformanceTool(
         }
 
         // Parallelize all 6 report fetches — independent API calls
-        // Note: jobsCompleted is derived from ConvertedJobs in Report 168 (eliminates Report 165 fetch)
         const [
           revenueReport,
           productivityReport,
@@ -562,9 +562,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
           const memberships = membershipsById.get(id);
           const salesFromTechLeads = salesFromTechLeadById.get(id);
           const salesFromMarketingLeads = salesFromMarketingLeadById.get(id);
-          // Use ConvertedJobs from Report 168 as proxy for jobsCompleted (eliminates Report 165 fetch)
-          const jobsCompleted = revenue?.convertedJobs ?? 0;
-          const jobsPerDay = round(safeDivide(jobsCompleted, workingDays), 2);
+          const convertedJobs = revenue?.convertedJobs ?? 0;
 
           const scorecard: TechnicianScorecard = {
             id,
@@ -576,18 +574,19 @@ export function registerIntelligenceTechnicianPerformanceTool(
               salesFromTechLeads?.name ??
               salesFromMarketingLeads?.name ??
               `Technician ${id}`,
-            jobsCompleted,
+            jobsCompleted: null,
             revenue: revenue?.revenue ?? 0,
             averageTicket: revenue?.averageTicket ?? 0,
             opportunities: revenue?.opportunities ?? 0,
-            convertedJobs: revenue?.convertedJobs ?? 0,
+            convertedJobs,
             conversionRate: revenue?.conversionRate ?? 0,
             customerSatisfaction: revenue?.customerSatisfaction ?? 0,
             revenuePerHour: productivity?.revenuePerHour ?? 0,
             billableEfficiency: productivity?.billableEfficiency ?? 0,
             recallsCaused: productivity?.recallsCaused ?? 0,
             upsold: productivity?.upsold ?? 0,
-            jobsPerDay,
+            jobsPerDay: null,
+            convertedJobsPerWeekday: revenueReport ? round(safeDivide(convertedJobs, workingDays), 2) : null,
             leadGeneration: toLeadGenerationMetrics(leadGeneration),
             memberships: toMembershipMetrics(memberships),
             salesFromTechLeads: toLeadSalesMetrics(salesFromTechLeads),
@@ -601,7 +600,7 @@ export function registerIntelligenceTechnicianPerformanceTool(
 
         const totalAvailable = scorecards.length;
         const teamAverages = {
-          jobsCompleted: averageBy(scorecards, (tech) => tech.jobsCompleted, 2),
+          jobsCompleted: null,
           revenue: averageBy(scorecards, (tech) => tech.revenue, 2),
           averageTicket: averageBy(scorecards, (tech) => tech.averageTicket, 2),
           opportunities: averageBy(scorecards, (tech) => tech.opportunities, 2),
@@ -612,7 +611,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
           billableEfficiency: averageBy(scorecards, (tech) => tech.billableEfficiency, 3),
           recallsCaused: averageBy(scorecards, (tech) => tech.recallsCaused, 2),
           upsold: averageBy(scorecards, (tech) => tech.upsold, 2),
-          jobsPerDay: averageBy(scorecards, (tech) => tech.jobsPerDay, 2),
+          jobsPerDay: null,
+          convertedJobsPerWeekday: revenueReport
+            ? averageBy(scorecards, (tech) => tech.convertedJobsPerWeekday ?? 0, 2)
+            : null,
           leadGeneration: {
             replacementOpps: averageBy(scorecards, (tech) => tech.leadGeneration.replacementOpps, 2),
             leadsSet: averageBy(scorecards, (tech) => tech.leadGeneration.leadsSet, 2),
@@ -644,8 +646,10 @@ export function registerIntelligenceTechnicianPerformanceTool(
             ),
           },
         };
-        const limitedScorecards =
-          scorecards.length > maxTechnicians ? scorecards.slice(0, maxTechnicians) : scorecards;
+        if (revenueReport) {
+          scorecards.sort((left, right) => right.revenue - left.revenue || left.id - right.id);
+        }
+        const limitedScorecards = scorecards.slice(0, maxTechnicians);
         if (scorecards.length > maxTechnicians) {
           warnings.push(
             `Limited to ${maxTechnicians} of ${totalAvailable} technicians. Use 'limit' param to increase (max 50) or 'technicianId' for a specific tech.`,
@@ -658,7 +662,13 @@ export function registerIntelligenceTechnicianPerformanceTool(
             end: input.endDate,
           },
           technicians: limitedScorecards,
+          rankedBy: revenueReport ? "revenue" : null,
           teamAverages,
+          metricDefinitions: {
+            revenue: "CompletedRevenue from technician Report 168.",
+            jobsCompleted: "Actual completed-job counts and jobsPerDay are unavailable in the selected scorecard reports.",
+            convertedJobsPerWeekday: "Report 168 converted jobs divided by weekdays in the selected window.",
+          },
         };
 
         if (warnings.length > 0) {
