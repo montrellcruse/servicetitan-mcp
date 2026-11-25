@@ -56,7 +56,7 @@ ServiceTitan paths are resolved by `src/contracts/resolve-route.ts` against the 
 
 Resolution validates both method and final path and fails closed for unknown or ambiguous operations. Explicit module-qualified paths are also checked against the pinned contracts. `src/contracts/request-schema.ts` converts official request JSON Schema into Zod schemas for operation-bound mutation bodies. `src/contracts/unsupported-tools.ts` records legacy tool names without an operation in the pinned public documents; the registry does not expose them.
 
-Run `npm run contracts:generate` only after deliberately replacing the pinned inputs, then run `npm run contracts:check`.
+The contract check verifies registered export operations against the pinned snapshot and their resolved requests using a synthetic adapter. It checks the other domains through the existing inventory during the export pilot. Run `npm run contracts:generate` only after deliberately replacing the pinned inputs, then run `npm run contracts:check`.
 
 ## Domains and registration
 
@@ -70,7 +70,7 @@ The built-in logger also sanitizes diagnostic messages and nested data at the fi
 
 ## Responses and large results
 
-`src/utils.ts` emits the same payload as text and `structuredContent`, converts recognized UTC timestamps to the configured display timezone, and preserves sanitized ServiceTitan error metadata. When a response exceeds `ST_MAX_RESPONSE_CHARS`, the server attempts to place the complete payload in a five-minute session-local result store for bounded `st_result_read` retrieval. If storage or even its retrieval metadata cannot fit the configured limits, it returns an explicit `RESPONSE_TOO_LARGE` error without partial records. Closing the server clears the store.
+`src/result-delivery.ts` formats tool results and errors as equivalent text and `structuredContent`. It publishes a session-owned result handle only when the complete payload can be stored and the handle fits the response budget. `st_result_read` retrieves exact chunks of the published JSON. Expiry, eviction, and session close release the stored text.
 
 For completed mutations, `RESPONSE_TOO_LARGE` and `INVALID_RESPONSE` describe a delivery failure: their error object includes `mutationCompleted: true` and `retryable: false`, even at the minimum response budget. Stored mutation results carry the same flags beside their retrieval handle. The registry sets mutation context only around the authorized handler, after confirmations. A private weak reference map tracks delivery failures for audit classification; an upstream or custom error code cannot establish successful execution. Expired handles never advise replaying the original mutation.
 

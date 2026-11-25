@@ -54,6 +54,8 @@ export interface ToolDefinition {
   description: string;
   /** Overrides for hints not fixed by `operation`; `readOnlyHint` cannot be overridden. */
   annotations?: ToolAnnotationOverrides;
+  /** Pinned operation identity or the candidate request for a documented exclusion. */
+  apiContract?: { operationId: string } | { unsupportedRequest: { method: string; path: string } };
   reports?: { required?: readonly string[]; optional?: readonly string[] };
   cacheTtlMs?: number;
   cacheKeyParams?: (params: unknown) => unknown;

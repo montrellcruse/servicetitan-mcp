@@ -3,16 +3,41 @@ import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
+import { build } from "esbuild";
 
-const root = path.resolve(new URL("..", import.meta.url).pathname);
+const root = fileURLToPath(new URL("../", import.meta.url));
+
+async function checkRegisteredExports(operations) {
+  // Keep the check independent of build/ and let Node resolve external packages from the checkout.
+  const directory = fs.mkdtempSync(path.join(root, ".tmp-contracts-"));
+  try {
+    const outfile = path.join(directory, "check-export-contracts.mjs");
+    await build({
+      entryPoints: [path.join(root, "scripts/check-export-contracts.ts")],
+      outfile,
+      bundle: true,
+      packages: "external",
+      platform: "node",
+      format: "esm",
+      target: "node22",
+    });
+    const { checkExportContracts } = await import(pathToFileURL(outfile).href);
+    return await checkExportContracts(operations);
+  } finally {
+    fs.rmSync(directory, { recursive: true, force: true });
+  }
+}
+
 const archive = path.join(root, "docs/contracts/official-openapi-2026-09-04.tar.gz");
 const names = execFileSync("tar", ["-tzf", archive], { encoding: "utf8" }).trim().split("\n").filter((name) => name.endsWith(".json"));
 const operations = [];
 let requestBodies = 0;
 for (const name of names) {
   const spec = JSON.parse(execFileSync("tar", ["-xOzf", archive, name], { encoding: "utf8", maxBuffer: 20_000_000 }));
+  const serverPath = new URL(spec.servers[0].url).pathname.replace(/\/$/, "");
   for (const [apiPath, item] of Object.entries(spec.paths ?? {})) for (const method of ["get", "post", "put", "patch", "delete"]) if (item[method]) {
-    operations.push({ method, path: apiPath });
+    operations.push({ id: item[method].operationId, method, path: apiPath, fullPath: `${serverPath}${apiPath}` });
     if (Object.keys(item[method].requestBody?.content ?? {}).length) requestBodies += 1;
   }
 }
@@ -35,6 +60,7 @@ function matchesTemplate(template, candidate) {
 const records = [];
 const domains = path.join(root, "src/domains");
 for (const directory of fs.readdirSync(domains)) {
+  if (directory === "export") continue;
   const dir = path.join(domains, directory); if (!fs.statSync(dir).isDirectory()) continue;
   for (const file of fs.readdirSync(dir).filter((name) => name.endsWith(".ts"))) {
     const source = fs.readFileSync(path.join(dir, file), "utf8");
@@ -45,11 +71,11 @@ for (const directory of fs.readdirSync(domains)) {
     }
   }
 }
-// Expand the two intentional dynamic factories.
+// Expand the remaining dynamic factory.
 const attribution = fs.readFileSync(path.join(domains, "marketing/attributions.ts"), "utf8");
 for (const match of attribution.matchAll(/name:\s*"(marketing_[^"]+_create)"[\s\S]*?path:\s*"([^"]+)"/g)) records.push({ tool: match[1], method: "post", path: match[2], file: "src/domains/marketing/attributions.ts" });
-const exporters = fs.readFileSync(path.join(domains, "export/exporters.ts"), "utf8");
-for (const match of exporters.matchAll(/registerExportTool\([^\n]+?"(export_[^"]+)"\s*,\s*"[^"]+"\s*,\s*"([^"]+)"/g)) records.push({ tool: match[1], method: "get", path: match[2], file: "src/domains/export/exporters.ts" });
+const exportOperations = await checkRegisteredExports(operations);
+records.push(...exportOperations.excluded);
 
 const failures = [];
 for (const record of records) {
@@ -60,4 +86,11 @@ for (const record of records) {
 for (const tool of unsupported) if (!records.some((record) => record.tool === tool)) failures.push({ tool, error: "unsupported tool is not present in source inventory" });
 if (unsupported.size !== 27) failures.push({ error: `expected 27 unsupported tools, found ${unsupported.size}` });
 if (failures.length) { console.error(JSON.stringify(failures, null, 2)); process.exit(1); }
-console.log(JSON.stringify({ officialOperations: operations.length, officialRequestBodies: requestBodies, handlerOperations: records.length, unsupportedTools: unsupported.size, status: "ok" }));
+console.log(JSON.stringify({
+  officialOperations: operations.length,
+  officialRequestBodies: requestBodies,
+  handlerOperations: records.length + exportOperations.verified,
+  unsupportedTools: unsupported.size,
+  exportOperations: { verified: exportOperations.verified, excluded: exportOperations.excluded.length },
+  status: "ok",
+}));
