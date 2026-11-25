@@ -1,5 +1,5 @@
 {
-  "version": "3.0.2",
+  "version": "4.0.0",
   "supportPolicy": {
     "id": "readonly-v1",
     "stableOperations": [
@@ -12,12 +12,12 @@
     "independentCompanyCertification": false,
     "dashboardParity": false
   },
-  "sourceFingerprint": "fa68e0187b5969d971eae7a4eece48f6eb557e3faea7fa25ed505cdf16406ce1",
+  "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98",
   "gates": {
     "maintenance": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Clean locked installs and zero reported vulnerabilities on Node 22 and 24. No deployment or publication."
+      "boundary": "Clean locked installs and zero npm audit findings on both tested Node versions."
     },
     "contracts": {
       "status": "passed",
@@ -27,7 +27,7 @@
     },
     "analytics": {
       "status": "passed",
-      "boundary": "Synthetic regression coverage separates technician ranking and conversion pace, invoice calendar dates, and canonical inbound job booking credit. The production gate records the bounded replay.",
+      "boundary": "Synthetic regression and cache/pagination checks passed on both Node versions; the separate production gate covers representative live metric reconciliation.",
       "summary": "VALIDATION-v3.md"
     },
     "interface": {
@@ -39,40 +39,66 @@
       "status": "passed",
       "runtimes": [
         "22.20.0",
-        "24.22.1"
+        "24.22.3"
       ],
       "platform": "darwin-arm64",
       "testFiles": 48,
-      "testsPerRuntime": 672,
+      "testsPerRuntime": 674,
       "wireTestsPerRuntime": 26,
       "packagingTestsPerRuntime": 2,
       "summary": "VALIDATION-v3.md",
       "packagingPassedPerRuntime": 2,
       "packagingSkippedPerRuntime": 0,
       "boundary": "Clean locked installs, pinned contracts, types, lint, coverage, built wire, discovery, and packaging passed per runtime. Docker context is tested without building an image. GitHub Linux CI is tracked separately.",
-      "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c"
+      "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98"
     },
     "packageSmoke": {
       "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "Fresh packed installs passed imports, five discovery profiles, and stdio on both runtimes. JavaScript and public declarations matched. The smoke tests made no tenant calls.",
-      "javascriptBuildSha256": "611f210cf66a521ae2247d32896e9f676da3ea7df65e8d635137854e3c739ab0",
+      "boundary": "Both Node majors exercised the installed release candidate (imports, five profiles, CLI stdio, no upstream calls). All packaged file contents matched across runtimes. The tested archive digest predates insertion of this acceptance record.",
+      "javascriptBuildSha256": "0b0fa3ae9723702a7f2bc96cdba8a05ad5d1c6c7347212cf91803a5594383763",
       "typescriptDeclarationsSha256": "375bdf7ac5fdf9a15bd9e374e796e8aeb9a5416a8fea7eacf7674b73bc140d72",
       "runtimes": [
         "22.20.0",
-        "24.22.1"
+        "24.22.3"
       ],
       "profilesPerRuntime": 5,
       "upstreamCalls": 0,
       "digestAlgorithm": "SHA256 of sorted build-relative paths + NUL + exact bytes + NUL, calculated separately for JavaScript and declarations",
-      "testedArchiveSha256": "fa59cb6ffea2147b2a7e68ed2c2caaf9e63ce5f8bf3444a9710fbf56fb9855dc",
+      "testedArchiveSha256": "d1b7931c6f4c2935b0883f2a6994c3ff6137f691135d4e048f989f431f8d0e16",
       "archiveFiles": 163,
-      "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c"
+      "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98"
     },
     "liveProduction": {
-      "status": "pending",
+      "status": "passed",
       "summary": "VALIDATION-v3.md",
-      "boundary": "The previous production evidence applies to the earlier source. This CRM contact-filter candidate is not a verified publication artifact."
+      "checkedAt": "2026-11-25T22:11:13.924Z",
+      "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98",
+      "packageVersion": "4.0.0",
+      "node": "v24.22.3",
+      "freshTenantCalls": 53,
+      "successfulOAuthRequests": 2,
+      "statusCounts": {
+        "200": 53
+      },
+      "readiness": {
+        "healthy": true,
+        "ready": true,
+        "modules": 14,
+        "definitions": 18
+      },
+      "checks": {
+        "topThreeRevenueRanking": true,
+        "unavailableCompletedJobMetrics": true,
+        "invoiceCalendarDateRowsVerified": 19,
+        "canonicalInboundBookingCredit": true,
+        "inventoryReturnTypes": true,
+        "customerAndLocationContactLookupsAndDateSync": true,
+        "noFilterRejectedLocally": true
+      },
+      "testedArchiveSha256": "d1b7931c6f4c2935b0883f2a6994c3ff6137f691135d4e048f989f431f8d0e16",
+      "javascriptBuildSha256": "0b0fa3ae9723702a7f2bc96cdba8a05ad5d1c6c7347212cf91803a5594383763",
+      "boundary": "Bounded read-only replay on one production company using the installed 4.0.0 candidate. No live business mutations, second-company certification, dashboard parity, or managed-host deployment. Standalone contacts, Scheduling Pro schedulers and CRM Leads were outside this replay; prior provider access limitations remain."
     },
     "liveIntegration": {
       "status": "scoped_out",
@@ -145,12 +171,12 @@
         "status": "passed",
         "runtimes": [
           "22.20.0",
-          "24.22.1"
+          "24.22.3"
         ],
         "loadScenariosPerRuntime": 10,
         "faultScenariosPerRuntime": 9,
         "upstream": "controlled adapter only",
-        "sourceFingerprint": "6202880bd735c4eb2a85195295bbe47b67eb58452d4141cd4a9325fda2590d5c"
+        "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98"
       }
     },
     "discoveryCompatibility": {
@@ -185,32 +211,10 @@
     }
   },
   "releasePreparation": {
-    "date": "2026-10-25",
-    "baseCommit": "3917429b5165c005e7523269ce8516b977025ac1",
+    "date": "2026-11-25",
     "status": "passed",
-    "scope": "Patch version, current README install pins, changelog and evidence metadata only. Runtime source, tests, build/release policy and dependencies match the merged October25 candidate. Historical live/load evidence and scoped-out mutations/second company remain unchanged.",
-    "localChecks": {
-      "node": "24.22.1",
-      "tests": 602,
-      "wireTests": 18,
-      "packagingTests": 2,
-      "discoveryProfiles": 9,
-      "upstreamCalls": 0,
-      "prepublishOnly": "passed"
-    },
-    "freshPackedConsumer": {
-      "node": "24.22.1",
-      "profiles": 5,
-      "tools": [
-        264,
-        33,
-        75,
-        34,
-        458
-      ],
-      "upstreamCalls": 0,
-      "status": "passed"
-    }
+    "scope": "Major version for intentional analytics response compatibility changes, current install pins, migration notes, and renewed artifact evidence.",
+    "sourceFingerprint": "64cc7ee1fd4f3d98bf7b485cee906a4224aa624271dd0a6cc3586c04b4b84a98"
   },
   "maintenanceRefresh": {
     "date": "2026-11-15",
@@ -319,5 +323,33 @@
     "laborHoursReconciled": true,
     "grossPayAvailable": false,
     "invoiceCountsAndAmountsReconciled": true
+  },
+  "historicalReleasePreparation": {
+    "date": "2026-10-25",
+    "baseCommit": "3917429b5165c005e7523269ce8516b977025ac1",
+    "status": "passed",
+    "scope": "Patch version, current README install pins, changelog and evidence metadata only. Runtime source, tests, build/release policy and dependencies match the merged October25 candidate. Historical live/load evidence and scoped-out mutations/second company remain unchanged.",
+    "localChecks": {
+      "node": "24.22.1",
+      "tests": 602,
+      "wireTests": 18,
+      "packagingTests": 2,
+      "discoveryProfiles": 9,
+      "upstreamCalls": 0,
+      "prepublishOnly": "passed"
+    },
+    "freshPackedConsumer": {
+      "node": "24.22.1",
+      "profiles": 5,
+      "tools": [
+        264,
+        33,
+        75,
+        34,
+        458
+      ],
+      "upstreamCalls": 0,
+      "status": "passed"
+    }
   }
 }

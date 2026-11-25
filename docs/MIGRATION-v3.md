@@ -1,8 +1,22 @@
-# Migrating from v2.6.4 to v3
+# ServiceTitan MCP upgrade guide
+
+## Upgrading from 3.x to 4
+
+Update the version pin in your MCP launcher to `@rowvyn/servicetitan-mcp@4.0.0`, keeping your credentials and tool profile. Reconnect and run `st_readiness_check` for that company before resuming saved workflows.
+
+- **Technician scorecards:** `jobsCompleted` and `jobsPerDay` now return `null` on technician rows and team averages because the selected reports don't measure completed-job counts. Use `convertedJobs` for conversion volume and `convertedJobsPerWeekday` for conversion pace. When Report 168 is available, the tool ranks by completed revenue before applying the limit.
+- **Daily snapshots:** `calls.total`, `calls.booked`, and `calls.missed` can be `null` when call data is unavailable. `calls.booked` counts call records marked booked across all directions. Use `calls.inbound.creditedJobs` and `calls.inbound.bookingRate` for verified inbound booking metrics; keep unknown values separate from zero.
+- **Invoice dates:** For accounting list and export data, use the calendar day in the provider's `invoiceDate` as supplied. Don't derive the day by converting it to the runtime timezone.
+- **Contact changes:** Use customer or location IDs alone for lookups and modified dates alone for incremental syncs. ServiceTitan can reject the combined filters.
+- **Campaign reporting:** The revenue total covers the tenant. The tool doesn't supply per-campaign revenue or ROAS.
+
+The `readonly-v1` support policy is unchanged. Writes and deletes still require explicit experimental opt-in.
+
+## Migrating from v2.6.4 to v3
 
 Version `3.0.0` is a correctness and portability release with intentional interface changes. Its `readonly-v1` support policy covers readonly use with a separate runtime/configuration for each company and requires readiness and report-definition validation for every company before use.
 
-## Discovery and deployment
+### Discovery and deployment
 
 - Readonly mode now hides write/delete tools. The 194 mutation adapters are experimental and outside stable v3 operational support. An existing v2 configuration with `ST_READONLY=false` must either add `ST_EXPERIMENTAL_WRITES=true` to opt in or return to `ST_READONLY=true`; disabling readonly without the experimental flag fails startup. Confirmations remain separate controls.
 - `ST_TOOL_PROFILE` and `ST_TOOLS` narrow discovery. The full profile does not include undocumented tools. Exact unsupported names and reasons appear in [TOOLS.md](../TOOLS.md).
@@ -11,7 +25,7 @@ Version `3.0.0` is a correctness and portability release with intentional interf
 - `_meta.caller` and forwarded identity headers no longer satisfy `ST_ALLOWED_CALLERS`. Built-in HTTP authenticates the shared credential as `ST_MCP_CLIENT_ID` (default `api-key`). Configure allowlists accordingly, or embed with authenticated SDK identity.
 - The package import entrypoint exports `createMcpServer`, `loadConfig`, `ServiceTitanClient`, and `checkReadiness`. Importing the package no longer starts stdio; command entrypoints still start transports.
 
-## Requests
+### Requests
 
 The shipped catalog is constrained to pinned official ServiceTitan operations. Module paths are resolved by method and authoritative full path; unknown/ambiguous routes fail before an API call. Unsupported operations are removed rather than retried under guessed paths.
 
@@ -23,7 +37,7 @@ The corrected write surfaces include customer/location/contact/note and membersh
 
 Official date-time fields accept RFC 3339 numeric timezone offsets as well as UTC timestamps, preserving the supplied instant. All 210 published JSON request schemas are checked by generated valid fixtures and required-field removal tests. Captured-call tests verify corrected high-risk adapters; this is not live execution of every write or independent dispatch coverage of every published request schema. Complete disposable-fixture integration tests before adopting write workflows.
 
-## Analytics and report bindings
+### Analytics and report bindings
 
 - Set `ST_REPORT_BINDINGS` to bind logical report IDs to each company's real report IDs/categories. Required fields are checked by name; field reordering is supported. Missing/duplicate fields and malformed/inconsistent pages fail visibly.
 - CSR completion date uses numeric option key 1. Upcoming appointment queries use key 6 (Jobs with Appt Date), distinct from key 7 (next appointment start).

@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [4.0.0] - 2026-11-25
+
+### Breaking changes
+- Technician scorecards and team averages return `null` for `jobsCompleted` and `jobsPerDay`. Use `convertedJobs` and `convertedJobsPerWeekday` for conversion metrics.
+- Daily snapshot call counts can be `null` when the source is unavailable. Use `calls.inbound.creditedJobs` for verified inbound booking credit; `calls.booked` counts all-direction call records marked booked.
+- See the [upgrade guide](docs/MIGRATION-v3.md#upgrading-from-3x-to-4) for consumer changes. The `readonly-v1` support policy is unchanged.
 
 ### Fixed
 - Rank technician scorecards by completed revenue before applying the limit. Keep converted-job volume and pace separate from unavailable completed-job metrics.

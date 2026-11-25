@@ -6,7 +6,7 @@
 
 A ServiceTitan MCP package for independently configured companies. V3 uses pinned official API contracts, readonly discovery, configurable report bindings, and explicit data-completeness checks.
 
-Built by [Rowvyn](https://rowvyn.com). Version **3.0.2** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [v3 migration guide](docs/MIGRATION-v3.md) before upgrading.
+Built by [Rowvyn](https://rowvyn.com). Version **4.0.0** provides stable read-only support under the `readonly-v1` policy: one separately configured runtime per company, followed by that company's readiness and report-definition validation. Read the [upgrade guide](docs/MIGRATION-v3.md#upgrading-from-3x-to-4) before upgrading.
 
 ## Start with a focused profile
 
@@ -28,7 +28,7 @@ For analytics:
   "mcpServers": {
     "servicetitan": {
       "command": "npx",
-      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.2"],
+      "args": ["-y", "@rowvyn/servicetitan-mcp@4.0.0"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -51,7 +51,7 @@ For CRM:
   "mcpServers": {
     "servicetitan": {
       "command": "npx",
-      "args": ["-y", "@rowvyn/servicetitan-mcp@3.0.2"],
+      "args": ["-y", "@rowvyn/servicetitan-mcp@4.0.0"],
       "env": {
         "ST_CLIENT_ID": "your-client-id",
         "ST_CLIENT_SECRET": "your-client-secret",
@@ -69,7 +69,7 @@ For CRM:
 
 For dispatch, change only `ST_TOOL_PROFILE` in either configuration to `dispatch`. Choose `full` for all 264 read tools. The profile, `ST_DOMAINS`, and `ST_TOOLS` filters intersect; a tool must satisfy each configured filter. For example, adding `ST_TOOLS=crm_customers_get` to the CRM configuration exposes that customer lookup plus the three system tools. Profiles select tools and do not grant ServiceTitan scopes. Start with `st_health_check` for authentication/read access and `st_readiness_check` for module and report compatibility.
 
-The [tool catalog](TOOLS.md) explains selection among list, get, and export operations. Four export feeds retain equivalent generic and domain-specific names for compatibility; use one available name per feed. Focused profiles naturally exclude the generic `export` domain. Every existing v3.0.0 name remains available under its original configuration in v3.0.2.
+The [tool catalog](TOOLS.md) explains selection among list, get, and export operations. Four export feeds retain equivalent generic and domain-specific names for compatibility; use one available name per feed. Focused profiles naturally exclude the generic `export` domain. Every existing v3.0.0 name remains available under its original configuration.
 
 ## Run from source
 
@@ -107,7 +107,7 @@ The [generated catalog](TOOLS.md) lists 458 tools: 261 ServiceTitan-facing read 
 
 System health, readiness, and result-retrieval tools remain accessible through the same authorization checks. Profiles do not grant upstream ServiceTitan scopes. Undocumented operations removed in v3 remain unavailable even in the full profile.
 
-Writes are outside the stable v3 support commitment. To expose these experimental adapters, set both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. `ST_CONFIRM_WRITES=true` then requires `_confirmed:true` for writes; deletes separately require `confirm:true`. These are safeguards against accidental changes, not independent human authorization. Uncertain write outcomes explicitly instruct checking ServiceTitan before retrying; the client does not blindly retry timeouts or 5xx writes.
+Writes are outside the stable read-only support commitment. To expose these experimental adapters, set both `ST_READONLY=false` and `ST_EXPERIMENTAL_WRITES=true`. `ST_CONFIRM_WRITES=true` then requires `_confirmed:true` for writes; deletes separately require `confirm:true`. These are safeguards against accidental changes, not independent human authorization. Uncertain write outcomes explicitly instruct checking ServiceTitan before retrying; the client does not blindly retry timeouts or 5xx writes.
 
 ## Readiness and report compatibility
 
@@ -123,7 +123,7 @@ The keys are the logical report IDs used by analytics; the values select this co
 
 Analytics reads complete report feeds and matches each page's columns by name. Pages can present the same fields in different orders. A changed field set or malformed row makes that feed unavailable. Optional feed failures remain in `_warnings`. Review warnings and completeness metadata before treating an answer as a complete business result. Report execution is scheduled per report and API client, with a 65-second interval between starts; expensive multi-page reports can take minutes. Set an appropriate host request timeout and use cancellation when abandoning a query. Separate server processes still share ServiceTitan's upstream report limit.
 
-Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Representative readonly behavior has been exercised with one production company. V3 does not certify dashboard parity or independent-company compatibility; Scheduling Pro access returned 403 in that validation and remains unverified.
+Metrics have explicit meanings. Period revenue minus payments is no longer labeled outstanding A/R; membership period counts are not labeled cohort retention; independent booked-call and booking counts are not treated as one conversion cohort. Representative readonly behavior has been exercised with one production company. The validation does not certify dashboard parity or independent-company compatibility. Standalone CRM contacts and Scheduling Pro schedulers returned HTTP 403, and CRM Leads returned 409 on the tested tenant.
 
 ## Structured and bounded results
 
