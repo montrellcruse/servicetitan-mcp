@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 import { toolResult, toolError, MIN_RESPONSE_CHARS } from "../src/utils.js";
 import { withRequestContext } from "../src/request-context.js";
 import { ServiceTitanApiError } from "../src/client.js";
@@ -42,23 +42,6 @@ describe("final MCP response budgets", () => {
     for (const value of [[{ id: 1 }], "done", 0, null, undefined]) {
       const result = bounded(1000, () => toolResult(value));
       expect(result.structuredContent).toEqual({ data: value ?? null });
-    }
-  });
-
-  it("stores the complete oversized result in a scoped store and returns bounded retrieval metadata", () => {
-    const store = vi.fn(() => ({ resultId: "opaque-id", retrievalTool: "st_result_read", totalChars: 10000, expiresAt: "2026-09-04T12:00:00Z" }));
-    const payload = { _warnings: ["partial feed"], data: "x".repeat(10000) };
-    const result = withRequestContext({ storeOversized: store }, () => bounded(1000, () => toolResult(payload)));
-    expect(store).toHaveBeenCalledExactlyOnceWith(payload);
-    expect(result.isError).toBeUndefined();
-    expect(result.structuredContent).toMatchObject({ delivery: "stored", complete: false, resultId: "opaque-id" });
-  });
-
-  it("does not recurse when storage is full or its metadata exceeds the budget", () => {
-    for (const store of [vi.fn(() => { throw new Error("full"); }), vi.fn(() => ({ resultId: "x".repeat(5000) }))]) {
-      const result = withRequestContext({ storeOversized: store }, () => bounded(500, () => toolResult({ data: "x".repeat(10000) })));
-      expect(store).toHaveBeenCalledTimes(1);
-      expect(result.isError).toBe(true);
     }
   });
 

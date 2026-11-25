@@ -9,6 +9,7 @@ import { Logger } from "./logger.js";
 import { ToolRegistry } from "./registry.js";
 import { checkReadiness } from "./readiness.js";
 import { getRequestContext, throwIfAborted } from "./request-context.js";
+import { toolResultChunk } from "./result-delivery.js";
 import { toolResult } from "./utils.js";
 
 declare const __PACKAGE_VERSION__: string | undefined;
@@ -48,8 +49,9 @@ export async function createMcpServer(config: ServiceTitanConfig, options: { cli
       offset: z.number().int().min(0).optional().default(0).describe("Zero-based character offset for the next JSON text chunk; start at 0 and then use nextOffset"),
     },
     description: "Retrieve a stored large result as bounded JSON text chunks. Start at offset 0, concatenate text in nextOffset order, then parse JSON. Results expire after five minutes and belong to this session.",
-    handler: async params => { const { resultId, offset = 0 } = params as { resultId: string; offset?: number }; return toolResult(registry.readResult(resultId, offset)); },
+    handler: async params => { const { resultId, offset = 0 } = params as { resultId: string; offset?: number }; return toolResultChunk(registry.readResult(resultId, offset)); },
   });
+  server.server.onclose = () => registry.clearResults();
   const close = server.close.bind(server);
   server.close = async () => { registry.clearResults(); await close(); };
   await loadDomainModules(registry, logger);

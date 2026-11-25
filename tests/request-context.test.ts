@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getRequestContext, withRequestContext } from "../src/request-context.js";
+import { ResultDelivery } from "../src/result-delivery.js";
 import { toolResult } from "../src/utils.js";
 
 describe("isolated MCP request contexts", () => {
@@ -20,11 +21,11 @@ describe("isolated MCP request contexts", () => {
 
   it("inherits outer cancellation/storage and restores the parent after nested contexts", async () => {
     const controller = new AbortController();
-    const store = () => ({ resultId: "id" });
-    await withRequestContext({ signal: controller.signal, timezone: "UTC", storeOversized: store }, async () => {
+    const resultDelivery = new ResultDelivery();
+    await withRequestContext({ signal: controller.signal, timezone: "UTC", resultDelivery }, async () => {
       await withRequestContext({ timezone: "America/New_York" }, async () => {
         await Promise.resolve();
-        expect(getRequestContext()).toMatchObject({ signal: controller.signal, timezone: "America/New_York", storeOversized: store });
+        expect(getRequestContext()).toMatchObject({ signal: controller.signal, timezone: "America/New_York", resultDelivery });
       });
       expect(getRequestContext().timezone).toBe("UTC");
     });
